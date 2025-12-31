@@ -1,5 +1,5 @@
 {
-  "$schema": "https://schema.tauri.app/config/2/capabilities",
+  "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Default capabilities for Storekeeper",
   "windows": ["main"],
@@ -13,6 +13,7 @@
     "notification:default",
     "notification:allow-show",
     "notification:allow-request-permission",
-    "notification:allow-is-permission-granted"
+    "notification:allow-is-permission-granted",
+    "core:tray:default"
   ]
 }

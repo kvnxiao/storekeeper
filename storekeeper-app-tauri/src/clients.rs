@@ -97,7 +97,7 @@ pub fn create_registry(config: &AppConfig, secrets: &SecretsConfig) -> GameClien
                 .or_else(|| match load_oauth_from_cache() {
                     Ok(code) => code,
                     Err(e) => {
-                        tracing::warn!("Failed to load Kuro OAuth code from cache: {}", e);
+                        tracing::warn!("Failed to load Kuro OAuth code from cache: {e}");
                         None
                     }
                 });

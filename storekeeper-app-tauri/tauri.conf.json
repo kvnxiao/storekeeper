@@ -29,14 +29,15 @@
       }
     ],
     "trayIcon": {
-      "iconPath": "icons/icon.png",
-      "iconAsTemplate": true,
-      "tooltip": "Storekeeper"
+      "id": "main",
+      "iconPath": "./icons/icon.png",
+      "iconAsTemplate": false,
+      "tooltip": "Storekeeper",
+      "title": "Storekeeper"
     },
     "security": {
       "csp": null
     }
   },
   "plugins": {}
-
 }

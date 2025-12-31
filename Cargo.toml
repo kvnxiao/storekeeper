@@ -20,7 +20,7 @@ repository = "https://github.com/kvnxiao/storekeeper"
 
 [workspace.dependencies]
 # Tauri
-tauri = { version = "2", features = ["tray-icon"] }
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
 tauri-plugin-notification = "2"
 
 # Async runtime
