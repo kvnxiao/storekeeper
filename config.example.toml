@@ -1,0 +1,67 @@
+# Storekeeper Configuration
+
+[general]
+# Polling interval in seconds (default: 300 = 5 minutes)
+poll_interval_secs = 300
+
+# Start the app minimized to system tray (default: true)
+start_minimized = true
+
+# Log level: error, warn, info, debug, trace (default: info)
+log_level = "info"
+
+[notifications]
+# Enable desktop notifications (default: true)
+enabled = true
+
+# Cooldown between notifications in minutes (default: 30)
+cooldown_minutes = 30
+
+# Per-resource notification thresholds
+# Uncomment and customize as needed
+#
+# [notifications.thresholds.resin]
+# enabled = true
+# threshold_value = 150
+# notify_when_full = true
+#
+# [notifications.thresholds.trailblaze_power]
+# enabled = true
+# threshold_value = 220
+# notify_when_full = true
+
+# =============================================================================
+# GAME CONFIGURATION
+# =============================================================================
+# Enable only the games you play. Each game requires:
+# 1. enabled = true
+# 2. Your UID/Player ID
+# 3. Credentials in secrets.toml (see secrets.example.toml)
+
+# Genshin Impact
+[games.genshin_impact]
+enabled = false
+uid = "YOUR_UID_HERE"
+# region = "os_usa"  # Optional: auto-detected from UID
+# tracked_resources = ["resin", "parametric_transformer", "realm_currency", "expeditions"]
+
+# Honkai: Star Rail
+[games.honkai_star_rail]
+enabled = false
+uid = "YOUR_UID_HERE"
+# region = "prod_official_usa"  # Optional: auto-detected from UID
+# tracked_resources = ["trailblaze_power"]
+
+# Zenless Zone Zero
+[games.zenless_zone_zero]
+enabled = false
+uid = "YOUR_UID_HERE"
+# region = "prod_gf_us"  # Optional: auto-detected from UID
+# tracked_resources = ["battery"]
+
+# Wuthering Waves
+[games.wuthering_waves]
+enabled = false
+player_id = "YOUR_PLAYER_ID_HERE"
+# region = "na"  # Optional: auto-detected from player ID
+# tracked_resources = ["waveplates"]

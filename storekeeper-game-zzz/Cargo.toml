@@ -1,0 +1,21 @@
+[package]
+name = "storekeeper-game-zzz"
+version = "0.1.0"
+description = "Zenless Zone Zero game implementation for Storekeeper"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+storekeeper-core.workspace = true
+storekeeper-client-hoyolab.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+async-trait.workspace = true
+tracing.workspace = true
+
+[lints]
+workspace = true

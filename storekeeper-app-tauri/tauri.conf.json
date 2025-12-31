@@ -1,0 +1,42 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Storekeeper",
+  "identifier": "com.storekeeper.desktop",
+  "version": "0.1.0",
+  "build": {
+    "beforeDevCommand": {
+      "script": "pnpm run dev",
+      "cwd": "../frontend"
+    },
+    "beforeBuildCommand": {
+      "script": "pnpm run build",
+      "cwd": "../frontend"
+    },
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../frontend/dist"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "Storekeeper",
+        "width": 420,
+        "height": 600,
+        "resizable": true,
+        "visible": false,
+        "center": true,
+        "decorations": true
+      }
+    ],
+    "trayIcon": {
+      "iconPath": "icons/icon.png",
+      "iconAsTemplate": true,
+      "tooltip": "Storekeeper"
+    },
+    "security": {
+      "csp": null
+    }
+  },
+  "plugins": {}
+
+}

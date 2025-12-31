@@ -1,0 +1,129 @@
+[workspace]
+members = [
+    "storekeeper-core",
+    "storekeeper-client-core",
+    "storekeeper-client-hoyolab",
+    "storekeeper-client-kuro",
+    "storekeeper-game-genshin",
+    "storekeeper-game-hsr",
+    "storekeeper-game-zzz",
+    "storekeeper-game-wuwa",
+    "storekeeper-app-tauri",
+]
+resolver = "2"
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+repository = "https://github.com/kvnxiao/storekeeper"
+
+[workspace.dependencies]
+# Tauri
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-notification = "2"
+
+# Async runtime
+tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "macros"] }
+tokio-util = { version = "0.7", features = ["rt"] }
+
+# HTTP & serialization
+reqwest = { version = "0.12", features = ["json", "cookies"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+
+# Time & utilities
+chrono = { version = "0.4", features = ["serde"] }
+dirs = "6"
+
+# Error handling
+thiserror = "2"
+anyhow = "1"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Rate limiting
+governor = "0.8"
+
+# Crypto
+md-5 = "0.10"
+
+# Enum utilities
+strum = { version = "0.27", features = ["derive"] }
+
+# Async trait (for GameClient trait)
+async-trait = "0.1"
+
+# Async utilities (for join_all)
+futures = "0.3"
+
+# HTTP middleware and retry
+reqwest-middleware = { version = "0.4", features = ["json"] }
+reqwest-retry = "0.8"
+
+# Random number generation (for jitter)
+rand = "0.8"
+
+# Workspace crates (for inter-crate dependencies)
+storekeeper-core = { path = "storekeeper-core" }
+storekeeper-client-core = { path = "storekeeper-client-core" }
+storekeeper-client-hoyolab = { path = "storekeeper-client-hoyolab" }
+storekeeper-client-kuro = { path = "storekeeper-client-kuro" }
+storekeeper-game-genshin = { path = "storekeeper-game-genshin" }
+storekeeper-game-hsr = { path = "storekeeper-game-hsr" }
+storekeeper-game-zzz = { path = "storekeeper-game-zzz" }
+storekeeper-game-wuwa = { path = "storekeeper-game-wuwa" }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+# Deny all warnings - treat them as errors
+all = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
+cargo = { level = "deny", priority = -1 }
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+
+# Unimplemented items can be left as warnings
+todo = "warn"
+unimplemented = "warn"
+
+# Correctness (deny)
+cast_lossless = "deny"
+cast_possible_truncation = "deny"
+cast_possible_wrap = "deny"
+cast_precision_loss = "deny"
+cast_sign_loss = "deny"
+
+# Performance (warn/deny)
+inefficient_to_string = "deny"
+large_enum_variant = "warn"
+large_stack_arrays = "warn"
+needless_pass_by_value = "warn"
+
+# Style (warn)
+missing_errors_doc = "warn"
+missing_panics_doc = "warn"
+
+# Allow multiple crate versions caused by transitive dependencies
+multiple_crate_versions = "allow"
+
+# Allow missing package metadata (readme, keywords, categories) for internal crates
+cargo_common_metadata = "allow"
+
+# Allow some pedantic lints that are too noisy
+doc_markdown = "allow"           # HoYoLab doesn't need backticks
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+strip = true
+
+[profile.dev]
+opt-level = 0
+debug = true

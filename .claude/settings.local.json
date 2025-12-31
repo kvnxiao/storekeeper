@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo check:*)",
+      "Bash(pnpm install:*)",
+      "Bash(cargo clippy:*)",
+      "Bash(cargo tauri build:*)",
+      "Bash(cargo fmt:*)",
+      "Bash(dir:*)"
+    ]
+  },
+  "spinnerTipsEnabled": false
+}

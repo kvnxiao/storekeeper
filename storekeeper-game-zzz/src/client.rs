@@ -1,0 +1,113 @@
+//! Zenless Zone Zero game client implementation.
+
+use async_trait::async_trait;
+use serde::Deserialize;
+use storekeeper_client_hoyolab::HoyolabClient;
+use storekeeper_core::{GameClient, GameId, Region, StaminaResource};
+
+use crate::error::{Error, Result};
+use crate::resource::ZzzResource;
+
+/// Battery regeneration rate: 1 battery per 6 minutes = 360 seconds.
+const BATTERY_REGEN_SECONDS: u32 = 360;
+
+/// API response structure for ZZZ note.
+#[derive(Debug, Deserialize)]
+struct NoteResponse {
+    energy: EnergyInfo,
+}
+
+#[derive(Debug, Deserialize)]
+struct EnergyInfo {
+    progress: EnergyProgress,
+    restore: u64,
+}
+
+#[derive(Debug, Deserialize)]
+struct EnergyProgress {
+    current: u32,
+    max: u32,
+}
+
+/// Zenless Zone Zero game client.
+#[derive(Debug, Clone)]
+pub struct ZzzClient {
+    hoyolab: HoyolabClient,
+    uid: String,
+    region: Region,
+}
+
+impl ZzzClient {
+    /// Creates a new ZZZ client.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the HoYoLab client cannot be created.
+    pub fn new(
+        ltuid: impl Into<String>,
+        ltoken: impl Into<String>,
+        uid: impl Into<String>,
+        region: Region,
+    ) -> Result<Self> {
+        let hoyolab = HoyolabClient::new(ltuid, ltoken)?;
+        Ok(Self {
+            hoyolab,
+            uid: uid.into(),
+            region,
+        })
+    }
+
+    /// Fetches the note data from the API.
+    async fn fetch_note(&self) -> Result<NoteResponse> {
+        tracing::debug!(uid = %self.uid, region = ?self.region, "Fetching ZZZ note");
+        let url = format!(
+            "https://sg-public-api.hoyolab.com/event/game_record_zzz/api/zzz/note?server={}&role_id={}",
+            self.region.zzz_region(),
+            self.uid
+        );
+
+        self.hoyolab.get(&url).await.map_err(Error::HoyolabApi)
+    }
+}
+
+#[async_trait]
+impl GameClient for ZzzClient {
+    type Resource = ZzzResource;
+    type Error = Error;
+
+    fn game_id(&self) -> GameId {
+        GameId::ZenlessZoneZero
+    }
+
+    fn game_name(&self) -> &'static str {
+        GameId::ZenlessZoneZero.display_name()
+    }
+
+    async fn fetch_resources(&self) -> Result<Vec<Self::Resource>> {
+        tracing::info!(game = "Zenless Zone Zero", "Fetching game resources");
+        let note = self.fetch_note().await?;
+
+        let seconds_until_full = if note.energy.restore > 0 {
+            Some(note.energy.restore)
+        } else {
+            None
+        };
+
+        tracing::debug!(
+            battery = note.energy.progress.current,
+            max_battery = note.energy.progress.max,
+            "ZZZ resources fetched successfully"
+        );
+
+        Ok(vec![ZzzResource::Battery(StaminaResource::new(
+            note.energy.progress.current,
+            note.energy.progress.max,
+            seconds_until_full,
+            BATTERY_REGEN_SECONDS,
+        ))])
+    }
+
+    async fn is_authenticated(&self) -> Result<bool> {
+        self.hoyolab.check_auth().await.map_err(Error::HoyolabApi)
+    }
+}

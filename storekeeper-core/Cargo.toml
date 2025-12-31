@@ -1,0 +1,22 @@
+[package]
+name = "storekeeper-core"
+version = "0.1.0"
+description = "Core traits, types, and configuration for Storekeeper"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+chrono.workspace = true
+dirs.workspace = true
+thiserror.workspace = true
+strum.workspace = true
+async-trait.workspace = true
+tracing.workspace = true
+
+[lints]
+workspace = true

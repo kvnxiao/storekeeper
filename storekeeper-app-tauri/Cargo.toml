@@ -1,0 +1,47 @@
+[package]
+name = "storekeeper-app-tauri"
+version = "0.1.0"
+description = "Storekeeper - Gacha Game Stamina Tracker (Tauri Application)"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# Tauri
+tauri = { workspace = true, features = ["tray-icon"] }
+tauri-plugin-notification.workspace = true
+
+# Workspace crates
+storekeeper-core.workspace = true
+storekeeper-client-hoyolab.workspace = true
+storekeeper-client-kuro.workspace = true
+storekeeper-game-genshin.workspace = true
+storekeeper-game-hsr.workspace = true
+storekeeper-game-zzz.workspace = true
+storekeeper-game-wuwa.workspace = true
+
+# Async runtime
+tokio.workspace = true
+tokio-util.workspace = true
+futures.workspace = true
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# Error handling
+anyhow.workspace = true
+
+# Logging
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+# Time
+chrono.workspace = true
+
+[lints]
+workspace = true
