@@ -45,6 +45,7 @@ impl DailyRewardRegistry {
 
     /// Returns true if no clients are registered.
     #[must_use]
+    #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
         self.clients.is_empty()
     }

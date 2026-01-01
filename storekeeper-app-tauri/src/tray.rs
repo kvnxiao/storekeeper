@@ -6,6 +6,7 @@ use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconEvent},
 };
+use tokio_util::sync::CancellationToken;
 
 /// Sets up the system tray icon and menu.
 ///
@@ -51,6 +52,13 @@ pub fn setup_tray(app: &App) -> Result<()> {
                 }
             }
             "quit" => {
+                tracing::info!("Quit requested from tray menu");
+
+                // Cancel background tasks before exiting
+                if let Some(cancel_token) = app.try_state::<CancellationToken>() {
+                    cancel_token.cancel();
+                }
+
                 app.exit(0);
             }
             _ => {}

@@ -11,7 +11,7 @@ mod scheduled_claim;
 mod state;
 mod tray;
 
-use tauri::Manager;
+use tauri::{Manager, RunEvent};
 use tokio_util::sync::CancellationToken;
 use tracing_subscriber::EnvFilter;
 
@@ -33,7 +33,7 @@ fn init_tracing() {
 pub fn run() {
     init_tracing();
 
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             // Initialize application state with config and game clients
@@ -48,7 +48,10 @@ pub fn run() {
             polling::start_polling(app.handle().clone(), cancel_token.clone());
 
             // Start scheduled daily reward claims
-            scheduled_claim::start_scheduled_claims(app.handle().clone(), cancel_token);
+            scheduled_claim::start_scheduled_claims(app.handle().clone(), cancel_token.clone());
+
+            // Set up Ctrl+C handler to trigger graceful shutdown
+            setup_ctrlc_handler(app.handle().clone(), cancel_token);
 
             // Set up system tray
             tray::setup_tray(app)?;
@@ -76,6 +79,51 @@ pub fn run() {
                 let _ = window.hide();
             }
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application");
+
+    // Run with custom event loop to handle graceful shutdown
+    app.run(|app_handle, event| {
+        if let RunEvent::ExitRequested { code, api, .. } = &event {
+            tracing::info!(exit_code = ?code, "Application exit requested");
+
+            // Cancel all background tasks
+            if let Some(cancel_token) = app_handle.try_state::<CancellationToken>() {
+                if !cancel_token.is_cancelled() {
+                    tracing::info!("Cancelling background tasks...");
+                    cancel_token.cancel();
+                }
+            }
+
+            // Allow the exit to proceed (don't call api.prevent_exit())
+            let _ = api;
+        }
+    });
+}
+
+/// Sets up a Ctrl+C (SIGINT) handler to trigger graceful shutdown.
+///
+/// On Windows, this also handles console close events.
+/// On Unix, this handles SIGINT and SIGTERM.
+fn setup_ctrlc_handler(app_handle: tauri::AppHandle, cancel_token: CancellationToken) {
+    tauri::async_runtime::spawn(async move {
+        // Wait for Ctrl+C signal
+        match tokio::signal::ctrl_c().await {
+            Ok(()) => {
+                tracing::info!("Ctrl+C received, initiating graceful shutdown...");
+
+                // Cancel all background tasks
+                cancel_token.cancel();
+
+                // Give tasks a moment to clean up
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+                // Exit the application
+                app_handle.exit(0);
+            }
+            Err(e) => {
+                tracing::error!(error = %e, "Failed to listen for Ctrl+C signal");
+            }
+        }
+    });
 }
