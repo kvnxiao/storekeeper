@@ -1,9 +1,10 @@
 //! Wuthering Waves game client implementation.
 
 use async_trait::async_trait;
+use chrono::{DateTime, Local};
 use serde::Deserialize;
 use storekeeper_client_kuro::KuroClient;
-use storekeeper_core::{GameClient, GameId, Region, StaminaResource};
+use storekeeper_core::{GameClient, GameId, Region, StaminaResource, serde_utils};
 
 use crate::error::{Error, Result};
 use crate::resource::WuwaResource;
@@ -23,7 +24,8 @@ struct RoleDataResponse {
 struct BaseInfo {
     energy: u32,
     max_energy: u32,
-    energy_recover_time: u64,
+    #[serde(deserialize_with = "serde_utils::timestamp_ms_to_datetime::deserialize")]
+    energy_recover_time: DateTime<Local>,
 }
 
 /// Wuthering Waves game client.
@@ -84,14 +86,6 @@ impl GameClient for WuwaClient {
         tracing::info!(game = "Wuthering Waves", "Fetching game resources");
         let data = self.fetch_role_data().await?;
 
-        // Calculate seconds until full from the recover timestamp
-        let now_ms = u64::try_from(chrono::Utc::now().timestamp_millis()).unwrap_or(0);
-        let seconds_until_full = if data.base.energy_recover_time > now_ms {
-            Some((data.base.energy_recover_time - now_ms) / 1000)
-        } else {
-            None
-        };
-
         tracing::info!(
             waveplates = data.base.energy,
             max_waveplates = data.base.max_energy,
@@ -101,7 +95,7 @@ impl GameClient for WuwaClient {
         Ok(vec![WuwaResource::Waveplates(StaminaResource::new(
             data.base.energy,
             data.base.max_energy,
-            seconds_until_full,
+            data.base.energy_recover_time,
             WAVEPLATE_REGEN_SECONDS,
         ))])
     }

@@ -11,6 +11,7 @@ pub mod game_id;
 pub mod macros;
 pub mod region;
 pub mod resource;
+pub mod serde_utils;
 
 pub use config::{
     AppConfig, ClaimTime, DEFAULT_AUTO_CLAIM_TIME, GenshinConfig, HsrConfig, NotificationConfig,

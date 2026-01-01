@@ -7,19 +7,19 @@ import GameSection from "./components/GameSection";
 interface StaminaResource {
   current: number;
   max: number;
-  seconds_until_full: number | null;
+  full_at: string | null; // ISO 8601 datetime string
   regen_rate_seconds: number;
 }
 
 interface CooldownResource {
   is_ready: boolean;
-  seconds_until_ready: number | null;
+  ready_at: string | null; // ISO 8601 datetime string
 }
 
 interface ExpeditionResource {
   current_expeditions: number;
   max_expeditions: number;
-  earliest_finish_seconds: number | null;
+  earliest_finish_at: string | null; // ISO 8601 datetime string
 }
 
 interface GenshinResource {

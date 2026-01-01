@@ -3,19 +3,19 @@ import { Show } from "solid-js";
 interface StaminaResource {
   current: number;
   max: number;
-  seconds_until_full: number | null;
+  full_at: string; // ISO 8601 datetime string
   regen_rate_seconds: number;
 }
 
 interface CooldownResource {
   is_ready: boolean;
-  seconds_until_ready: number | null;
+  ready_at: string; // ISO 8601 datetime string
 }
 
 interface ExpeditionResource {
   current_expeditions: number;
   max_expeditions: number;
-  earliest_finish_seconds: number | null;
+  earliest_finish_at: string; // ISO 8601 datetime string
 }
 
 interface Props {
@@ -24,11 +24,24 @@ interface Props {
   data: unknown;
 }
 
-function formatTime(seconds: number | null | undefined): string {
-  if (seconds === null || seconds === undefined || seconds <= 0) {
+/**
+ * Formats a datetime string to a human-readable time remaining format.
+ * Returns "Full" if the datetime is null, undefined, or in the past.
+ */
+function formatTime(datetime: string | null | undefined): string {
+  if (!datetime) {
     return "Full";
   }
 
+  const target = new Date(datetime);
+  const now = new Date();
+  const diffMs = target.getTime() - now.getTime();
+
+  if (diffMs <= 0) {
+    return "Full";
+  }
+
+  const seconds = Math.floor(diffMs / 1000);
   const hours = Math.floor(seconds / 3600);
   const mins = Math.floor((seconds % 3600) / 60);
 
@@ -36,6 +49,18 @@ function formatTime(seconds: number | null | undefined): string {
     return `${hours}h ${mins}m`;
   }
   return `${mins}m`;
+}
+
+/**
+ * Checks if a datetime string is in the past (i.e., completed/ready).
+ */
+function isPastDateTime(datetime: string | null | undefined): boolean {
+  if (!datetime) {
+    return true;
+  }
+  const target = new Date(datetime);
+  const now = new Date();
+  return target.getTime() <= now.getTime();
 }
 
 function getResourceDisplayName(type: string): string {
@@ -111,7 +136,7 @@ function ResourceCard(props: Props) {
                 />
               </div>
               <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                {isFull ? "Full!" : `Full in ${formatTime(stamina.seconds_until_full)}`}
+                {isFull ? "Full!" : `Full in ${formatTime(stamina.full_at)}`}
               </div>
             </>
           );
@@ -128,7 +153,7 @@ function ResourceCard(props: Props) {
                 when={cooldown.is_ready}
                 fallback={
                   <span class="text-yellow-600 dark:text-yellow-400">
-                    {formatTime(cooldown.seconds_until_ready)}
+                    {formatTime(cooldown.ready_at)}
                   </span>
                 }
               >
@@ -142,7 +167,7 @@ function ResourceCard(props: Props) {
       <Show when={isExpeditionResource(data())}>
         {(() => {
           const expedition = data() as ExpeditionResource;
-          const allDone = expedition.earliest_finish_seconds === 0;
+          const allDone = isPastDateTime(expedition.earliest_finish_at);
 
           return (
             <>
@@ -165,7 +190,7 @@ function ResourceCard(props: Props) {
                       </span>
                     }
                   >
-                    Next: {formatTime(expedition.earliest_finish_seconds)}
+                    Next: {formatTime(expedition.earliest_finish_at)}
                   </Show>
                 </Show>
               </div>

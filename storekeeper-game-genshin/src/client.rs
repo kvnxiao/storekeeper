@@ -1,11 +1,13 @@
 //! Genshin Impact game client implementation.
 
 use async_trait::async_trait;
-use serde::Deserialize;
+use chrono::{DateTime, Local, TimeDelta};
+use serde::{Deserialize, Deserializer};
 use storekeeper_client_hoyolab::{HoyolabClient, Method};
 use storekeeper_core::{
     ClaimResult, CooldownResource, DailyReward, DailyRewardClient, DailyRewardInfo,
     DailyRewardStatus, ExpeditionResource, GameClient, GameId, Region, StaminaResource,
+    serde_utils,
 };
 
 use crate::error::{Error, Result};
@@ -14,8 +16,9 @@ use crate::resource::GenshinResource;
 /// Resin regeneration rate: 1 resin per 8 minutes = 480 seconds.
 const RESIN_REGEN_SECONDS: u32 = 480;
 
-/// Realm currency regeneration rate varies by trust rank, use approximate.
-const REALM_REGEN_SECONDS: u32 = 2400; // Approximate
+/// Realm currency regeneration rate varies by trust rank, assume max trust rank
+/// "Fit for a King" which is 30 coins per hour.
+const REALM_REGEN_SECONDS: u32 = 120;
 
 /// Daily reward base URL for Genshin Impact (overseas).
 const GENSHIN_REWARD_URL: &str = "https://sg-hk4e-api.hoyolab.com/event/sol";
@@ -26,43 +29,104 @@ const GENSHIN_ACT_ID: &str = "e202102251931481";
 /// Sign game header value for Genshin Impact.
 const GENSHIN_SIGN_GAME: &str = "hk4e";
 
+// ============================================================================
+// Daily Note API Response Structures
+// ============================================================================
+
 /// API response structure for Genshin daily note.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 struct DailyNoteResponse {
     current_resin: u32,
     max_resin: u32,
-    resin_recovery_time: String,
+    #[serde(deserialize_with = "serde_utils::seconds_string_to_datetime::deserialize")]
+    resin_recovery_time: DateTime<Local>,
     current_home_coin: u32,
     max_home_coin: u32,
-    home_coin_recovery_time: String,
+    #[serde(deserialize_with = "serde_utils::seconds_string_to_datetime::deserialize")]
+    home_coin_recovery_time: DateTime<Local>,
     current_expedition_num: u32,
     max_expedition_num: u32,
     expeditions: Vec<ExpeditionInfo>,
     transformer: Option<TransformerInfo>,
 }
 
-#[derive(Debug, Deserialize)]
-struct ExpeditionInfo {
-    remained_time: String,
+/// Status of an expedition.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+pub enum ExpeditionStatus {
+    /// Expedition is still in progress.
+    Ongoing,
+    /// Expedition has finished and can be collected.
+    Finished,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
+struct ExpeditionInfo {
+    #[serde(deserialize_with = "serde_utils::seconds_string_to_datetime::deserialize")]
+    remained_time: DateTime<Local>,
+    /// URL to the avatar's side icon.
+    #[allow(dead_code)]
+    avatar_side_icon: String,
+    /// Current status of the expedition.
+    #[allow(dead_code)]
+    status: ExpeditionStatus,
+}
+
+/// Transformer information with custom deserialization.
+#[derive(Debug, Clone)]
 struct TransformerInfo {
     obtained: bool,
-    recovery_time: TransformerRecoveryTime,
+    ready_at: DateTime<Local>,
 }
 
-#[derive(Debug, Deserialize)]
-struct TransformerRecoveryTime {
-    #[serde(rename = "Day")]
-    day: u32,
-    #[serde(rename = "Hour")]
-    hour: u32,
-    #[serde(rename = "Minute")]
-    minute: u32,
-    #[serde(rename = "Second")]
-    second: u32,
-    reached: bool,
+impl<'de> Deserialize<'de> for TransformerInfo {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        /// Raw API structure for transformer recovery time.
+        #[derive(Deserialize)]
+        struct RawRecoveryTime {
+            #[serde(rename = "Day")]
+            day: u32,
+            #[serde(rename = "Hour")]
+            hour: u32,
+            #[serde(rename = "Minute")]
+            minute: u32,
+            #[serde(rename = "Second")]
+            second: u32,
+            reached: bool,
+        }
+
+        /// Raw API structure for transformer info.
+        #[derive(Deserialize)]
+        struct RawTransformerInfo {
+            obtained: bool,
+            recovery_time: RawRecoveryTime,
+        }
+
+        let raw = RawTransformerInfo::deserialize(deserializer)?;
+
+        let ready_at = if raw.recovery_time.reached {
+            Local::now()
+        } else {
+            let total_seconds = i64::from(raw.recovery_time.day) * 86400
+                + i64::from(raw.recovery_time.hour) * 3600
+                + i64::from(raw.recovery_time.minute) * 60
+                + i64::from(raw.recovery_time.second);
+
+            if total_seconds > 0 {
+                TimeDelta::try_seconds(total_seconds)
+                    .map_or_else(Local::now, |delta| Local::now() + delta)
+            } else {
+                Local::now()
+            }
+        };
+
+        Ok(TransformerInfo {
+            obtained: raw.obtained,
+            ready_at,
+        })
+    }
 }
 
 // ============================================================================
@@ -151,58 +215,43 @@ impl GameClient for GenshinClient {
         let mut resources = Vec::new();
 
         // Resin
-        let resin_seconds = note
-            .resin_recovery_time
-            .parse::<u64>()
-            .ok()
-            .filter(|&s| s > 0);
         resources.push(GenshinResource::Resin(StaminaResource::new(
             note.current_resin,
             note.max_resin,
-            resin_seconds,
+            note.resin_recovery_time,
             RESIN_REGEN_SECONDS,
         )));
 
         // Realm Currency
-        let realm_seconds = note
-            .home_coin_recovery_time
-            .parse::<u64>()
-            .ok()
-            .filter(|&s| s > 0);
         resources.push(GenshinResource::RealmCurrency(StaminaResource::new(
             note.current_home_coin,
             note.max_home_coin,
-            realm_seconds,
+            note.home_coin_recovery_time,
             REALM_REGEN_SECONDS,
         )));
 
         // Parametric Transformer
-        if let Some(transformer) = note.transformer {
+        if let Some(ref transformer) = note.transformer {
             if transformer.obtained {
-                let cooldown = if transformer.recovery_time.reached {
-                    CooldownResource::ready()
-                } else {
-                    let seconds = u64::from(transformer.recovery_time.day) * 86400
-                        + u64::from(transformer.recovery_time.hour) * 3600
-                        + u64::from(transformer.recovery_time.minute) * 60
-                        + u64::from(transformer.recovery_time.second);
-                    CooldownResource::on_cooldown(seconds)
-                };
+                let cooldown = CooldownResource::new(
+                    transformer.ready_at <= Local::now(),
+                    transformer.ready_at,
+                );
                 resources.push(GenshinResource::ParametricTransformer(cooldown));
             }
         }
 
-        // Expeditions
-        let earliest = note
+        // Expeditions - find the earliest finish time
+        let earliest_finish = note
             .expeditions
             .iter()
-            .filter_map(|e| e.remained_time.parse::<u64>().ok())
-            .filter(|&s| s > 0)
-            .min();
+            .map(|e| e.remained_time)
+            .min()
+            .unwrap_or_else(Local::now);
         resources.push(GenshinResource::Expeditions(ExpeditionResource::new(
             note.current_expedition_num,
             note.max_expedition_num,
-            earliest,
+            earliest_finish,
         )));
 
         tracing::info!(

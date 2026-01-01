@@ -1,11 +1,12 @@
 //! Honkai: Star Rail game client implementation.
 
 use async_trait::async_trait;
+use chrono::{DateTime, Local};
 use serde::Deserialize;
 use storekeeper_client_hoyolab::{HoyolabClient, Method};
 use storekeeper_core::{
     ClaimResult, DailyReward, DailyRewardClient, DailyRewardInfo, DailyRewardStatus, GameClient,
-    GameId, Region, StaminaResource,
+    GameId, Region, StaminaResource, serde_utils,
 };
 
 use crate::error::{Error, Result};
@@ -28,7 +29,8 @@ const HSR_SIGN_GAME: &str = "hkrpg";
 struct NoteResponse {
     current_stamina: u32,
     max_stamina: u32,
-    stamina_recover_time: u64,
+    #[serde(deserialize_with = "serde_utils::seconds_u64_to_datetime::deserialize")]
+    stamina_recover_time: DateTime<Local>,
 }
 
 // ============================================================================
@@ -115,12 +117,6 @@ impl GameClient for HsrClient {
         tracing::info!(game = "Honkai: Star Rail", "Fetching game resources");
         let note = self.fetch_note().await?;
 
-        let seconds_until_full = if note.stamina_recover_time > 0 {
-            Some(note.stamina_recover_time)
-        } else {
-            None
-        };
-
         tracing::info!(
             trailblaze_power = note.current_stamina,
             max_power = note.max_stamina,
@@ -130,7 +126,7 @@ impl GameClient for HsrClient {
         Ok(vec![HsrResource::TrailblazePower(StaminaResource::new(
             note.current_stamina,
             note.max_stamina,
-            seconds_until_full,
+            note.stamina_recover_time,
             POWER_REGEN_SECONDS,
         ))])
     }

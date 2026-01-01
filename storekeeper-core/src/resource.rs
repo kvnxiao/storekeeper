@@ -1,5 +1,6 @@
 //! Resource types representing in-game stamina and cooldown resources.
 
+use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 
 /// Trait for game resources that can be displayed in the UI.
@@ -17,14 +18,14 @@ pub trait DisplayableResource {
 ///
 /// All stamina resources (Resin, Trailblaze Power, Battery, Waveplates)
 /// share these common fields.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StaminaResource {
     /// Current amount of the resource.
     pub current: u32,
     /// Maximum capacity of the resource.
     pub max: u32,
-    /// Seconds until the resource is fully recovered (None if already full).
-    pub seconds_until_full: Option<u64>,
+    /// DateTime when the resource will be fully recovered.
+    pub full_at: DateTime<Local>,
     /// How many seconds it takes to regenerate one unit.
     pub regen_rate_seconds: u32,
 }
@@ -32,16 +33,11 @@ pub struct StaminaResource {
 impl StaminaResource {
     /// Creates a new stamina resource.
     #[must_use = "this returns a new StaminaResource"]
-    pub fn new(
-        current: u32,
-        max: u32,
-        seconds_until_full: Option<u64>,
-        regen_rate_seconds: u32,
-    ) -> Self {
+    pub fn new(current: u32, max: u32, full_at: DateTime<Local>, regen_rate_seconds: u32) -> Self {
         Self {
             current,
             max,
-            seconds_until_full,
+            full_at,
             regen_rate_seconds,
         }
     }
@@ -63,22 +59,19 @@ impl StaminaResource {
 }
 
 /// Shared cooldown data for items like Parametric Transformer.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CooldownResource {
     /// Whether the item is ready to use.
     pub is_ready: bool,
-    /// Seconds until the item is ready (None if already ready).
-    pub seconds_until_ready: Option<u64>,
+    /// DateTime when the item will be ready.
+    pub ready_at: DateTime<Local>,
 }
 
 impl CooldownResource {
     /// Creates a new cooldown resource.
     #[must_use = "this returns a new CooldownResource"]
-    pub fn new(is_ready: bool, seconds_until_ready: Option<u64>) -> Self {
-        Self {
-            is_ready,
-            seconds_until_ready,
-        }
+    pub fn new(is_ready: bool, ready_at: DateTime<Local>) -> Self {
+        Self { is_ready, ready_at }
     }
 
     /// Creates a cooldown resource that is ready.
@@ -86,29 +79,29 @@ impl CooldownResource {
     pub fn ready() -> Self {
         Self {
             is_ready: true,
-            seconds_until_ready: None,
+            ready_at: Local::now(),
         }
     }
 
     /// Creates a cooldown resource that is on cooldown.
     #[must_use = "this returns a new CooldownResource"]
-    pub fn on_cooldown(seconds_until_ready: u64) -> Self {
+    pub fn on_cooldown(ready_at: DateTime<Local>) -> Self {
         Self {
             is_ready: false,
-            seconds_until_ready: Some(seconds_until_ready),
+            ready_at,
         }
     }
 }
 
 /// Expedition tracking data.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExpeditionResource {
     /// Number of currently active expeditions.
     pub current_expeditions: u32,
     /// Maximum number of expeditions allowed.
     pub max_expeditions: u32,
-    /// Seconds until the earliest expedition finishes (None if no active expeditions).
-    pub earliest_finish_seconds: Option<u64>,
+    /// DateTime when the earliest expedition finishes.
+    pub earliest_finish_at: DateTime<Local>,
 }
 
 impl ExpeditionResource {
@@ -117,12 +110,12 @@ impl ExpeditionResource {
     pub fn new(
         current_expeditions: u32,
         max_expeditions: u32,
-        earliest_finish_seconds: Option<u64>,
+        earliest_finish_at: DateTime<Local>,
     ) -> Self {
         Self {
             current_expeditions,
             max_expeditions,
-            earliest_finish_seconds,
+            earliest_finish_at,
         }
     }
 
@@ -135,6 +128,6 @@ impl ExpeditionResource {
     /// Returns true if any expedition is ready to collect.
     #[must_use]
     pub fn has_completed(&self) -> bool {
-        self.earliest_finish_seconds == Some(0)
+        self.earliest_finish_at <= Local::now()
     }
 }

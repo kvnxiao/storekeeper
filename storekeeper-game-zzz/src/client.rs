@@ -1,11 +1,12 @@
 //! Zenless Zone Zero game client implementation.
 
 use async_trait::async_trait;
+use chrono::{DateTime, Local};
 use serde::Deserialize;
 use storekeeper_client_hoyolab::{HoyolabClient, Method};
 use storekeeper_core::{
     ClaimResult, DailyReward, DailyRewardClient, DailyRewardInfo, DailyRewardStatus, GameClient,
-    GameId, Region, StaminaResource,
+    GameId, Region, StaminaResource, serde_utils,
 };
 
 use crate::error::{Error, Result};
@@ -32,7 +33,8 @@ struct NoteResponse {
 #[derive(Debug, Deserialize)]
 struct EnergyInfo {
     progress: EnergyProgress,
-    restore: u64,
+    #[serde(deserialize_with = "serde_utils::seconds_u64_to_datetime::deserialize")]
+    restore: DateTime<Local>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -125,12 +127,6 @@ impl GameClient for ZzzClient {
         tracing::info!(game = "Zenless Zone Zero", "Fetching game resources");
         let note = self.fetch_note().await?;
 
-        let seconds_until_full = if note.energy.restore > 0 {
-            Some(note.energy.restore)
-        } else {
-            None
-        };
-
         tracing::info!(
             battery = note.energy.progress.current,
             max_battery = note.energy.progress.max,
@@ -140,7 +136,7 @@ impl GameClient for ZzzClient {
         Ok(vec![ZzzResource::Battery(StaminaResource::new(
             note.energy.progress.current,
             note.energy.progress.max,
-            seconds_until_full,
+            note.energy.restore,
             BATTERY_REGEN_SECONDS,
         ))])
     }

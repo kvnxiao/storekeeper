@@ -9,7 +9,9 @@
       "Bash(dir:*)",
       "Bash(ls:*)",
       "Bash(cargo test:*)",
-      "Bash(cargo build:*)"
+      "Bash(cargo build:*)",
+      "WebFetch",
+      "WebSearch"
     ]
   },
   "spinnerTipsEnabled": false
