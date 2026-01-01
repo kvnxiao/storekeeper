@@ -6,7 +6,7 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 use storekeeper_client_core::{ApiResponse, ClientError, HoyolabApiResponse, HttpClientBuilder};
 
-use crate::ds::generate_ds_overseas;
+use crate::ds::generate_dynamic_secret_overseas;
 use crate::error::{Error, Result};
 
 /// HoYoLab API client.
@@ -44,7 +44,7 @@ impl HoyolabClient {
     ///
     /// Returns an error if the request fails or the response cannot be parsed.
     pub async fn get<T: DeserializeOwned>(&self, url: &str) -> Result<T> {
-        let ds = generate_ds_overseas();
+        let ds = generate_dynamic_secret_overseas();
         // Use v2 cookie format which is current HoYoLab standard
         let cookie = format!("ltuid_v2={}; ltoken_v2={}", self.ltuid, self.ltoken);
 
@@ -117,7 +117,7 @@ impl HoyolabClient {
         body: Option<&B>,
         extra_headers: &[(&str, &str)],
     ) -> Result<T> {
-        let ds = generate_ds_overseas();
+        let ds = generate_dynamic_secret_overseas();
         let cookie = format!("ltuid_v2={}; ltoken_v2={}", self.ltuid, self.ltoken);
 
         tracing::debug!(url = %url, method = %method, "HoYoLab API request");

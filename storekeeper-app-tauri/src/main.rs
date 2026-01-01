@@ -8,6 +8,8 @@
     windows_subsystem = "windows"
 )]
 
-fn main() {
-    storekeeper_app_tauri::run();
+use anyhow::Result;
+
+fn main() -> Result<()> {
+    storekeeper_app_tauri::run()
 }

@@ -19,6 +19,7 @@ chrono.workspace = true
 governor.workspace = true
 md-5.workspace = true
 tracing.workspace = true
+rand.workspace = true
 
 [lints]
 workspace = true

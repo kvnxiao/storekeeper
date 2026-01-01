@@ -11,6 +11,7 @@ mod scheduled_claim;
 mod state;
 mod tray;
 
+use anyhow::{Context, Result};
 use tauri::{Manager, RunEvent};
 use tokio_util::sync::CancellationToken;
 use tracing_subscriber::EnvFilter;
@@ -26,11 +27,10 @@ fn init_tracing() {
 
 /// Runs the Storekeeper application.
 ///
-/// # Panics
+/// # Errors
 ///
-/// Panics if the Tauri application fails to build or run.
-#[allow(clippy::missing_panics_doc, clippy::expect_used)]
-pub fn run() {
+/// Returns an error if the Tauri application fails to build.
+pub fn run() -> Result<()> {
     init_tracing();
 
     let app = tauri::Builder::default()
@@ -80,7 +80,7 @@ pub fn run() {
             }
         })
         .build(tauri::generate_context!())
-        .expect("error while building tauri application");
+        .context("error while building tauri application")?;
 
     // Run with custom event loop to handle graceful shutdown
     app.run(|app_handle, event| {
@@ -99,6 +99,8 @@ pub fn run() {
             let _ = api;
         }
     });
+
+    Ok(())
 }
 
 /// Sets up a Ctrl+C (SIGINT) handler to trigger graceful shutdown.

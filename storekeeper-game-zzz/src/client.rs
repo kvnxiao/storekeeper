@@ -131,7 +131,7 @@ impl GameClient for ZzzClient {
             None
         };
 
-        tracing::debug!(
+        tracing::info!(
             battery = note.energy.progress.current,
             max_battery = note.energy.progress.max,
             "ZZZ resources fetched successfully"

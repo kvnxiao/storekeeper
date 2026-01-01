@@ -6,6 +6,7 @@
 use std::fmt::Write;
 
 use md5::{Digest, Md5};
+use rand::Rng;
 
 /// Salt for overseas (global) HoYoLab API.
 const SALT_OVERSEAS: &str = "6s25p5ox5y14umn1p61aqyyvbvvl3lrt";
@@ -20,9 +21,9 @@ const SALT_CHINESE: &str = "xV8v4Qu54lUKrEYFZkJhB8cuOh9Asafs";
 /// - random: 6 random ASCII letters
 /// - hash: MD5("salt={salt}&t={t}&r={r}")
 #[must_use]
-pub fn generate_ds_overseas() -> String {
+pub fn generate_dynamic_secret_overseas() -> String {
     let timestamp = chrono::Utc::now().timestamp();
-    let random = generate_random_string(6);
+    let random = generate_random_lowercase_string(6);
     let hash = compute_md5_overseas(timestamp, &random);
 
     format!("{timestamp},{random},{hash}")
@@ -35,7 +36,7 @@ pub fn generate_ds_overseas() -> String {
 /// - random: Random integer between 100001 and 200000
 /// - hash: MD5("salt={salt}&t={t}&r={r}&b={body}&q={query}")
 #[must_use]
-pub fn generate_ds_chinese(body: &str, query: &str) -> String {
+pub fn generate_dynamic_secret_chinese(body: &str, query: &str) -> String {
     let timestamp = chrono::Utc::now().timestamp();
     let random = generate_random_int();
     let hash = compute_md5_chinese(timestamp, random, body, query);
@@ -43,43 +44,18 @@ pub fn generate_ds_chinese(body: &str, query: &str) -> String {
     format!("{timestamp},{random},{hash}")
 }
 
-/// Generates a random 6-character ASCII string.
-fn generate_random_string(len: usize) -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
-
-    // Simple pseudo-random generation using system time
-    let seed = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_nanos())
-        .unwrap_or(0);
-
-    let mut result = String::with_capacity(len);
-    let mut state = seed;
-
-    for _ in 0..len {
-        state = state.wrapping_mul(1_103_515_245).wrapping_add(12345);
-        #[allow(clippy::cast_possible_truncation)]
-        let char_index = ((state >> 16) % 26) as u8;
-        result.push((b'a' + char_index) as char);
-    }
-
-    result
+/// Generates a random string of lowercase ASCII letters.
+fn generate_random_lowercase_string(len: usize) -> String {
+    rand::thread_rng()
+        .sample_iter(rand::distributions::Uniform::new_inclusive(b'a', b'z'))
+        .take(len)
+        .map(char::from)
+        .collect()
 }
 
-/// Generates a random integer between 100001 and 200000.
+/// Generates a random integer between 100001 and 200000 (inclusive).
 fn generate_random_int() -> u32 {
-    use std::time::{SystemTime, UNIX_EPOCH};
-
-    let seed = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_nanos())
-        .unwrap_or(0);
-
-    let state = seed.wrapping_mul(1_103_515_245).wrapping_add(12345);
-    let range = 200_000 - 100_001;
-    #[allow(clippy::cast_possible_truncation)]
-    let result = 100_001 + ((state >> 16) as u32 % range);
-    result
+    rand::thread_rng().gen_range(100_001..=200_000)
 }
 
 /// Computes MD5 hash for overseas DS header.
@@ -125,7 +101,7 @@ mod tests {
 
     #[test]
     fn test_ds_format() {
-        let ds = generate_ds_overseas();
+        let ds = generate_dynamic_secret_overseas();
         let parts: Vec<&str> = ds.split(',').collect();
         assert_eq!(parts.len(), 3);
         // First part should be a timestamp (digits only)

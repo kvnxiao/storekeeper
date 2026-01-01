@@ -121,7 +121,7 @@ impl GameClient for HsrClient {
             None
         };
 
-        tracing::debug!(
+        tracing::info!(
             trailblaze_power = note.current_stamina,
             max_power = note.max_stamina,
             "HSR resources fetched successfully"

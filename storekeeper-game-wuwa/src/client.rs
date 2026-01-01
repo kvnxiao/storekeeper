@@ -85,16 +85,14 @@ impl GameClient for WuwaClient {
         let data = self.fetch_role_data().await?;
 
         // Calculate seconds until full from the recover timestamp
-        // timestamp_millis() can technically be negative before Unix epoch, but we're always in the future
-        #[allow(clippy::cast_sign_loss)]
-        let now_ms = chrono::Utc::now().timestamp_millis() as u64;
+        let now_ms = u64::try_from(chrono::Utc::now().timestamp_millis()).unwrap_or(0);
         let seconds_until_full = if data.base.energy_recover_time > now_ms {
             Some((data.base.energy_recover_time - now_ms) / 1000)
         } else {
             None
         };
 
-        tracing::debug!(
+        tracing::info!(
             waveplates = data.base.energy,
             max_waveplates = data.base.max_energy,
             "WuWa resources fetched successfully"

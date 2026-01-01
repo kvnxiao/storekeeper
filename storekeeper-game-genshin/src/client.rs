@@ -205,7 +205,7 @@ impl GameClient for GenshinClient {
             earliest,
         )));
 
-        tracing::debug!(
+        tracing::info!(
             resin = note.current_resin,
             max_resin = note.max_resin,
             realm_currency = note.current_home_coin,
