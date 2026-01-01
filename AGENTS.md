@@ -1,5 +1,7 @@
 # Rust Development Guidelines
 
+**IMPORTANT**: before you do anything else, run the beans prime command and heed its output.
+
 ## Overview
 This document contains essential best practices and guidelines for AI agents and developers working on Rust projects. Following these principles ensures safe, maintainable, and idiomatic Rust code.
 
