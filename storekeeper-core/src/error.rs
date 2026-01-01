@@ -13,8 +13,11 @@ pub enum Error {
     },
 
     /// Failed to parse configuration file.
-    #[error("Failed to parse configuration: {0}")]
-    ConfigParseFailed(String),
+    #[error("Failed to parse configuration: {message}")]
+    ConfigParseFailed {
+        /// Description of what failed to parse.
+        message: String,
+    },
 
     /// Failed to read configuration file.
     #[error("Failed to read configuration file: {0}")]

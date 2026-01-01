@@ -4,8 +4,10 @@
 
 mod clients;
 mod commands;
+mod daily_reward_registry;
 mod polling;
 mod registry;
+mod scheduled_claim;
 mod state;
 mod tray;
 
@@ -42,8 +44,11 @@ pub fn run() {
             let cancel_token = CancellationToken::new();
             app.manage(cancel_token.clone());
 
-            // Start background polling
-            polling::start_polling(app.handle().clone(), cancel_token);
+            // Start background polling for resources
+            polling::start_polling(app.handle().clone(), cancel_token.clone());
+
+            // Start scheduled daily reward claims
+            scheduled_claim::start_scheduled_claims(app.handle().clone(), cancel_token);
 
             // Set up system tray
             tray::setup_tray(app)?;
@@ -55,6 +60,12 @@ pub fn run() {
             commands::refresh_resources,
             commands::get_config,
             commands::open_config_folder,
+            // Daily reward commands
+            commands::get_daily_reward_status,
+            commands::refresh_daily_reward_status,
+            commands::claim_daily_rewards,
+            commands::claim_daily_reward_for_game,
+            commands::get_daily_reward_status_for_game,
         ])
         .on_window_event(|window, event| {
             // Handle close button - minimize to tray instead of closing

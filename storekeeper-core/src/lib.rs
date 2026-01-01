@@ -4,6 +4,7 @@
 //! all game implementations and the main application.
 
 pub mod config;
+pub mod daily_reward;
 pub mod error;
 pub mod game;
 pub mod game_id;
@@ -11,7 +12,14 @@ pub mod macros;
 pub mod region;
 pub mod resource;
 
-pub use config::{AppConfig, NotificationConfig, SecretsConfig, ensure_configs_exist};
+pub use config::{
+    AppConfig, ClaimTime, DEFAULT_AUTO_CLAIM_TIME, GenshinConfig, HsrConfig, NotificationConfig,
+    SecretsConfig, ZzzConfig, ensure_configs_exist, next_claim_datetime_utc,
+};
+pub use daily_reward::{
+    ClaimResult, DailyReward, DailyRewardClient, DailyRewardInfo, DailyRewardStatus,
+    DynDailyRewardClient,
+};
 pub use error::{Error, Result};
 pub use game::{DynGameClient, GameClient};
 pub use game_id::{ApiProvider, GameId};

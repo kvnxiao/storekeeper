@@ -9,3 +9,6 @@ pub mod error;
 
 pub use client::HoyolabClient;
 pub use error::{Error, Result};
+
+// Re-export reqwest::Method for use in game crates
+pub use reqwest::Method;

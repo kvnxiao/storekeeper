@@ -1,10 +1,12 @@
 //! Tauri commands for frontend-backend communication.
 
-use storekeeper_core::AppConfig;
+use std::collections::HashMap;
+
+use storekeeper_core::{AppConfig, GameId};
 use tauri::{AppHandle, State};
 
 use crate::polling;
-use crate::state::{AllResources, AppState};
+use crate::state::{AllDailyRewardStatus, AllResources, AppState};
 
 /// Gets all cached resources.
 #[tauri::command]
@@ -60,4 +62,72 @@ pub fn open_config_folder() -> Result<(), String> {
     }
 
     Ok(())
+}
+
+// ============================================================================
+// Daily Reward Commands
+// ============================================================================
+
+/// Gets the cached daily reward status for all games.
+#[tauri::command]
+pub async fn get_daily_reward_status(
+    state: State<'_, AppState>,
+) -> Result<AllDailyRewardStatus, String> {
+    Ok(state.get_daily_reward_status().await)
+}
+
+/// Refreshes the daily reward status from all configured games.
+#[tauri::command]
+pub async fn refresh_daily_reward_status(
+    state: State<'_, AppState>,
+) -> Result<AllDailyRewardStatus, String> {
+    let status = state.fetch_all_daily_reward_status().await;
+    state.set_daily_reward_status(status.clone()).await;
+    Ok(status)
+}
+
+/// Claims daily rewards for all configured games.
+///
+/// Returns a map of game ID to claim result.
+#[tauri::command]
+pub async fn claim_daily_rewards(
+    state: State<'_, AppState>,
+) -> Result<HashMap<GameId, serde_json::Value>, String> {
+    tracing::info!("Manual daily reward claim requested");
+    let results = state.claim_all_daily_rewards().await;
+
+    // Refresh status after claiming
+    let status = state.fetch_all_daily_reward_status().await;
+    state.set_daily_reward_status(status).await;
+
+    Ok(results)
+}
+
+/// Claims daily reward for a specific game.
+#[tauri::command]
+pub async fn claim_daily_reward_for_game(
+    game_id: GameId,
+    state: State<'_, AppState>,
+) -> Result<serde_json::Value, String> {
+    tracing::info!(game_id = ?game_id, "Manual daily reward claim requested for specific game");
+    let result = state.claim_daily_reward_for_game(game_id).await?;
+
+    // Refresh status for this game after claiming
+    if let Ok(game_status) = state.get_daily_reward_status_for_game(game_id).await {
+        let mut current_status = state.get_daily_reward_status().await;
+        current_status.games.insert(game_id, game_status);
+        current_status.last_checked = Some(chrono::Utc::now());
+        state.set_daily_reward_status(current_status).await;
+    }
+
+    Ok(result)
+}
+
+/// Gets the daily reward status for a specific game.
+#[tauri::command]
+pub async fn get_daily_reward_status_for_game(
+    game_id: GameId,
+    state: State<'_, AppState>,
+) -> Result<serde_json::Value, String> {
+    state.get_daily_reward_status_for_game(game_id).await
 }

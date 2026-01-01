@@ -2,9 +2,10 @@
 
 use async_trait::async_trait;
 use serde::Deserialize;
-use storekeeper_client_hoyolab::HoyolabClient;
+use storekeeper_client_hoyolab::{HoyolabClient, Method};
 use storekeeper_core::{
-    CooldownResource, ExpeditionResource, GameClient, GameId, Region, StaminaResource,
+    ClaimResult, CooldownResource, DailyReward, DailyRewardClient, DailyRewardInfo,
+    DailyRewardStatus, ExpeditionResource, GameClient, GameId, Region, StaminaResource,
 };
 
 use crate::error::{Error, Result};
@@ -15,6 +16,15 @@ const RESIN_REGEN_SECONDS: u32 = 480;
 
 /// Realm currency regeneration rate varies by trust rank, use approximate.
 const REALM_REGEN_SECONDS: u32 = 2400; // Approximate
+
+/// Daily reward base URL for Genshin Impact (overseas).
+const GENSHIN_REWARD_URL: &str = "https://sg-hk4e-api.hoyolab.com/event/sol";
+
+/// Act ID for Genshin Impact daily rewards.
+const GENSHIN_ACT_ID: &str = "e202102251931481";
+
+/// Sign game header value for Genshin Impact.
+const GENSHIN_SIGN_GAME: &str = "hk4e";
 
 /// API response structure for Genshin daily note.
 #[derive(Debug, Deserialize)]
@@ -53,6 +63,32 @@ struct TransformerRecoveryTime {
     #[serde(rename = "Second")]
     second: u32,
     reached: bool,
+}
+
+// ============================================================================
+// Daily Reward API Response Structures
+// ============================================================================
+
+/// API response for daily reward info (`/info` endpoint).
+#[derive(Debug, Deserialize)]
+struct RewardInfoResponse {
+    is_sign: bool,
+    total_sign_day: u32,
+}
+
+/// API response for monthly rewards list (`/home` endpoint).
+#[derive(Debug, Deserialize)]
+struct RewardHomeResponse {
+    awards: Vec<RewardItem>,
+}
+
+/// Individual reward item in the monthly rewards list.
+#[derive(Debug, Deserialize)]
+struct RewardItem {
+    name: String,
+    #[serde(alias = "cnt")]
+    count: u32,
+    icon: String,
 }
 
 /// Genshin Impact game client.
@@ -182,5 +218,135 @@ impl GameClient for GenshinClient {
 
     async fn is_authenticated(&self) -> Result<bool> {
         self.hoyolab.check_auth().await.map_err(Error::HoyolabApi)
+    }
+}
+
+// ============================================================================
+// Daily Reward Client Implementation
+// ============================================================================
+
+impl GenshinClient {
+    /// Builds a daily reward URL with the given endpoint.
+    fn reward_url(endpoint: &str) -> String {
+        format!("{GENSHIN_REWARD_URL}/{endpoint}?act_id={GENSHIN_ACT_ID}&lang=en-us")
+    }
+
+    /// Returns the headers required for daily reward requests.
+    fn reward_headers() -> [(&'static str, &'static str); 2] {
+        [
+            ("x-rpc-signgame", GENSHIN_SIGN_GAME),
+            ("referer", "https://act.hoyolab.com/"),
+        ]
+    }
+}
+
+#[async_trait]
+impl DailyRewardClient for GenshinClient {
+    type Error = Error;
+
+    fn game_id(&self) -> GameId {
+        GameId::GenshinImpact
+    }
+
+    async fn get_reward_info(&self) -> Result<DailyRewardInfo> {
+        tracing::debug!(game = "Genshin Impact", "Fetching daily reward info");
+
+        let url = Self::reward_url("info");
+        let headers = Self::reward_headers();
+
+        let response: RewardInfoResponse = self
+            .hoyolab
+            .request_with_headers::<RewardInfoResponse, ()>(Method::GET, &url, None, &headers)
+            .await
+            .map_err(Error::HoyolabApi)?;
+
+        Ok(DailyRewardInfo::new(
+            response.is_sign,
+            response.total_sign_day,
+        ))
+    }
+
+    async fn get_monthly_rewards(&self) -> Result<Vec<DailyReward>> {
+        tracing::debug!(game = "Genshin Impact", "Fetching monthly rewards");
+
+        let url = Self::reward_url("home");
+        let headers = Self::reward_headers();
+
+        let response: RewardHomeResponse = self
+            .hoyolab
+            .request_with_headers::<RewardHomeResponse, ()>(Method::GET, &url, None, &headers)
+            .await
+            .map_err(Error::HoyolabApi)?;
+
+        let rewards = response
+            .awards
+            .into_iter()
+            .map(|item| DailyReward::new(item.name, item.count, item.icon))
+            .collect();
+
+        Ok(rewards)
+    }
+
+    async fn get_reward_status(&self) -> Result<DailyRewardStatus> {
+        tracing::debug!(game = "Genshin Impact", "Fetching daily reward status");
+
+        // Fetch info and rewards concurrently
+        let (info, rewards) = tokio::try_join!(self.get_reward_info(), self.get_monthly_rewards())?;
+
+        // Determine today's reward index
+        // If already signed: total_sign_day - 1 (0-indexed, what was claimed)
+        // If not signed: total_sign_day (what will be claimed next)
+        let today_index = if info.is_signed {
+            info.total_sign_day.saturating_sub(1) as usize
+        } else {
+            info.total_sign_day as usize
+        };
+
+        let today_reward = rewards.get(today_index).cloned();
+
+        Ok(DailyRewardStatus::new(info, today_reward, rewards))
+    }
+
+    async fn claim_daily_reward(&self) -> Result<ClaimResult> {
+        tracing::info!(game = "Genshin Impact", "Claiming daily reward");
+
+        // Check current status first
+        let pre_info = self.get_reward_info().await?;
+        if pre_info.is_signed {
+            tracing::debug!(game = "Genshin Impact", "Daily reward already claimed");
+            let status = self.get_reward_status().await?;
+            return Ok(ClaimResult::already_claimed(
+                status.today_reward,
+                status.info,
+            ));
+        }
+
+        // Perform the claim
+        let url = Self::reward_url("sign");
+        let headers = Self::reward_headers();
+
+        let _: serde_json::Value = self
+            .hoyolab
+            .request_with_headers::<serde_json::Value, ()>(Method::POST, &url, None, &headers)
+            .await
+            .map_err(Error::HoyolabApi)?;
+
+        // Fetch updated status to get reward details
+        let status = self.get_reward_status().await?;
+
+        tracing::info!(
+            game = "Genshin Impact",
+            reward_name = ?status.today_reward.as_ref().map_or("Unknown", |r| r.name.as_str()),
+            "Daily reward claimed successfully"
+        );
+
+        // The today_reward now points to what was just claimed
+        match status.today_reward {
+            Some(reward) => Ok(ClaimResult::success(reward, status.info)),
+            None => Ok(ClaimResult::error(
+                "Claim succeeded but reward details unavailable",
+                status.info,
+            )),
+        }
     }
 }

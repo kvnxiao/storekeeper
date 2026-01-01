@@ -17,6 +17,7 @@ tauri-plugin-notification.workspace = true
 
 # Workspace crates
 storekeeper-core.workspace = true
+storekeeper-client-core.workspace = true
 storekeeper-client-hoyolab.workspace = true
 storekeeper-client-kuro.workspace = true
 storekeeper-game-genshin.workspace = true

@@ -37,6 +37,10 @@ cooldown_minutes = 30
 # 1. enabled = true
 # 2. Your UID/Player ID
 # 3. Credentials in secrets.toml (see secrets.example.toml)
+#
+# HoYoLab games (Genshin, HSR, ZZZ) support auto-claiming daily rewards:
+#   auto_claim_daily_rewards = true/false
+#   auto_claim_time = "HH:MM"  # Optional, in UTC+8. Defaults to "00:00" (midnight)
 
 # Genshin Impact
 [games.genshin_impact]
@@ -44,6 +48,8 @@ enabled = false
 uid = "YOUR_UID_HERE"
 # region = "os_usa"  # Optional: auto-detected from UID
 # tracked_resources = ["resin", "parametric_transformer", "realm_currency", "expeditions"]
+# auto_claim_daily_rewards = false
+# auto_claim_time = "00:00"  # Optional: HH:MM in UTC+8 (China Standard Time)
 
 # Honkai: Star Rail
 [games.honkai_star_rail]
@@ -51,6 +57,8 @@ enabled = false
 uid = "YOUR_UID_HERE"
 # region = "prod_official_usa"  # Optional: auto-detected from UID
 # tracked_resources = ["trailblaze_power"]
+# auto_claim_daily_rewards = false
+# auto_claim_time = "00:00"  # Optional: HH:MM in UTC+8 (China Standard Time)
 
 # Zenless Zone Zero
 [games.zenless_zone_zero]
@@ -58,6 +66,8 @@ enabled = false
 uid = "YOUR_UID_HERE"
 # region = "prod_gf_us"  # Optional: auto-detected from UID
 # tracked_resources = ["battery"]
+# auto_claim_daily_rewards = false
+# auto_claim_time = "00:00"  # Optional: HH:MM in UTC+8 (China Standard Time)
 
 # Wuthering Waves
 [games.wuthering_waves]

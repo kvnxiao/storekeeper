@@ -3905,6 +3905,7 @@ dependencies = [
  "futures",
  "serde",
  "serde_json",
+ "storekeeper-client-core",
  "storekeeper-client-hoyolab",
  "storekeeper-client-kuro",
  "storekeeper-core",
