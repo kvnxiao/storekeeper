@@ -60,8 +60,7 @@ mod tests {
     fn test_waveplates_serde_roundtrip() {
         let original = WuwaResource::Waveplates(StaminaResource::new(120, 240, Local::now(), 360));
         let json = serde_json::to_string(&original).expect("should serialize");
-        let deserialized: WuwaResource =
-            serde_json::from_str(&json).expect("should deserialize");
+        let deserialized: WuwaResource = serde_json::from_str(&json).expect("should deserialize");
 
         let WuwaResource::Waveplates(resource) = deserialized;
         assert_eq!(resource.current, 120);
