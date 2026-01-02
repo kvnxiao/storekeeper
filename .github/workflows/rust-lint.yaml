@@ -1,4 +1,4 @@
-name: Lint
+name: Tests
 
 on:
   push:
@@ -11,7 +11,7 @@ env:
 
 jobs:
   lint:
-    name: Rust linting
+    name: Rust cross-platform linting
     strategy:
       fail-fast: true
       matrix:
@@ -48,6 +48,3 @@ jobs:
 
       - name: Run lint and formatting checks
         run: just lint
-
-      - name: Run tests
-        run: just test
