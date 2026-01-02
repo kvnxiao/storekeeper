@@ -108,3 +108,309 @@ impl<T: DeserializeOwned> ApiResponse for KuroApiResponse<T> {
         self.code == 0 || self.code == 200
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde::Deserialize;
+
+    // Test data structure for responses
+    #[derive(Debug, Clone, PartialEq, Deserialize)]
+    struct TestData {
+        id: u32,
+        name: String,
+    }
+
+    // =========================================================================
+    // HoyolabApiResponse tests
+    // =========================================================================
+
+    #[test]
+    fn test_hoyolab_response_success() {
+        let json = r#"{
+            "retcode": 0,
+            "message": "OK",
+            "data": {"id": 1, "name": "test"}
+        }"#;
+
+        let response: HoyolabApiResponse<TestData> =
+            serde_json::from_str(json).expect("should deserialize");
+
+        assert_eq!(response.code(), 0);
+        assert_eq!(response.message(), "OK");
+        assert!(response.is_success());
+
+        let data = response.into_data().expect("should have data");
+        assert_eq!(data.id, 1);
+        assert_eq!(data.name, "test");
+    }
+
+    #[test]
+    fn test_hoyolab_response_error() {
+        let json = r#"{
+            "retcode": -1,
+            "message": "Invalid token",
+            "data": null
+        }"#;
+
+        let response: HoyolabApiResponse<TestData> =
+            serde_json::from_str(json).expect("should deserialize");
+
+        assert_eq!(response.code(), -1);
+        assert_eq!(response.message(), "Invalid token");
+        assert!(!response.is_success());
+        assert!(response.into_data().is_none());
+    }
+
+    #[test]
+    fn test_hoyolab_response_into_result_success() {
+        let json = r#"{
+            "retcode": 0,
+            "message": "OK",
+            "data": {"id": 42, "name": "success"}
+        }"#;
+
+        let response: HoyolabApiResponse<TestData> =
+            serde_json::from_str(json).expect("should deserialize");
+        let result = response.into_result();
+
+        assert!(result.is_ok());
+        let data = result.expect("should be ok");
+        assert_eq!(data.id, 42);
+        assert_eq!(data.name, "success");
+    }
+
+    #[test]
+    fn test_hoyolab_response_into_result_api_error() {
+        let json = r#"{
+            "retcode": 10001,
+            "message": "Rate limited",
+            "data": null
+        }"#;
+
+        let response: HoyolabApiResponse<TestData> =
+            serde_json::from_str(json).expect("should deserialize");
+        let result = response.into_result();
+
+        assert!(result.is_err());
+        let err = result.expect_err("should be error");
+        assert!(matches!(err, ClientError::ApiError { code: 10001, .. }));
+        assert_eq!(err.api_error_code(), Some(10001));
+    }
+
+    #[test]
+    fn test_hoyolab_response_into_result_null_data() {
+        // Success code but null data should be an error
+        let json = r#"{
+            "retcode": 0,
+            "message": "OK",
+            "data": null
+        }"#;
+
+        let response: HoyolabApiResponse<TestData> =
+            serde_json::from_str(json).expect("should deserialize");
+        let result = response.into_result();
+
+        assert!(result.is_err());
+        let err = result.expect_err("should be error due to null data");
+        assert!(matches!(err, ClientError::ApiError { code: 0, .. }));
+    }
+
+    // =========================================================================
+    // KuroApiResponse tests
+    // =========================================================================
+
+    #[test]
+    fn test_kuro_response_success_code_zero() {
+        let json = r#"{
+            "code": 0,
+            "message": "success",
+            "data": {"id": 1, "name": "test"}
+        }"#;
+
+        let response: KuroApiResponse<TestData> =
+            serde_json::from_str(json).expect("should deserialize");
+
+        assert_eq!(response.code(), 0);
+        assert!(response.is_success(), "code 0 should be success");
+    }
+
+    #[test]
+    fn test_kuro_response_success_code_200() {
+        let json = r#"{
+            "code": 200,
+            "message": "OK",
+            "data": {"id": 1, "name": "test"}
+        }"#;
+
+        let response: KuroApiResponse<TestData> =
+            serde_json::from_str(json).expect("should deserialize");
+
+        assert_eq!(response.code(), 200);
+        assert!(response.is_success(), "code 200 should be success");
+    }
+
+    #[test]
+    fn test_kuro_response_error() {
+        let json = r#"{
+            "code": 1005,
+            "message": "Retry requested",
+            "data": null
+        }"#;
+
+        let response: KuroApiResponse<TestData> =
+            serde_json::from_str(json).expect("should deserialize");
+
+        assert_eq!(response.code(), 1005);
+        assert!(!response.is_success(), "code 1005 should not be success");
+        assert_eq!(response.message(), "Retry requested");
+    }
+
+    #[test]
+    fn test_kuro_response_into_result_success() {
+        let json = r#"{
+            "code": 200,
+            "message": "OK",
+            "data": {"id": 123, "name": "kuro_data"}
+        }"#;
+
+        let response: KuroApiResponse<TestData> =
+            serde_json::from_str(json).expect("should deserialize");
+        let result = response.into_result();
+
+        assert!(result.is_ok());
+        let data = result.expect("should be ok");
+        assert_eq!(data.id, 123);
+        assert_eq!(data.name, "kuro_data");
+    }
+
+    #[test]
+    fn test_kuro_response_into_result_error() {
+        let json = r#"{
+            "code": 500,
+            "message": "Internal error",
+            "data": null
+        }"#;
+
+        let response: KuroApiResponse<TestData> =
+            serde_json::from_str(json).expect("should deserialize");
+        let result = response.into_result();
+
+        assert!(result.is_err());
+        let err = result.expect_err("should be error");
+        assert!(matches!(err, ClientError::ApiError { code: 500, .. }));
+    }
+
+    // =========================================================================
+    // Default is_success behavior tests
+    // =========================================================================
+
+    #[test]
+    fn test_default_is_success_checks_code_zero() {
+        // HoyolabApiResponse uses default is_success (code == 0)
+        let response = HoyolabApiResponse {
+            retcode: 0,
+            message: "OK".to_string(),
+            data: Some(TestData {
+                id: 1,
+                name: "test".to_string(),
+            }),
+        };
+        assert!(response.is_success());
+
+        let response = HoyolabApiResponse {
+            retcode: 1,
+            message: "Error".to_string(),
+            data: None::<TestData>,
+        };
+        assert!(!response.is_success());
+    }
+
+    // =========================================================================
+    // Edge case tests
+    // =========================================================================
+
+    #[test]
+    fn test_response_with_empty_message() {
+        let json = r#"{
+            "retcode": 0,
+            "message": "",
+            "data": {"id": 1, "name": "test"}
+        }"#;
+
+        let response: HoyolabApiResponse<TestData> =
+            serde_json::from_str(json).expect("should deserialize");
+
+        assert_eq!(response.message(), "");
+        assert!(response.is_success());
+    }
+
+    #[test]
+    fn test_response_with_negative_code() {
+        let json = r#"{
+            "retcode": -10,
+            "message": "Negative error",
+            "data": null
+        }"#;
+
+        let response: HoyolabApiResponse<TestData> =
+            serde_json::from_str(json).expect("should deserialize");
+
+        assert_eq!(response.code(), -10);
+        assert!(!response.is_success());
+    }
+
+    #[test]
+    fn test_kuro_code_1_is_not_success() {
+        // Kuro only accepts 0 and 200 as success
+        let json = r#"{
+            "code": 1,
+            "message": "Unknown",
+            "data": null
+        }"#;
+
+        let response: KuroApiResponse<TestData> =
+            serde_json::from_str(json).expect("should deserialize");
+
+        assert!(
+            !response.is_success(),
+            "code 1 should not be success for Kuro"
+        );
+    }
+
+    // =========================================================================
+    // Debug trait tests
+    // =========================================================================
+
+    #[test]
+    fn test_hoyolab_response_debug() {
+        let response = HoyolabApiResponse {
+            retcode: 0,
+            message: "OK".to_string(),
+            data: Some(TestData {
+                id: 1,
+                name: "test".to_string(),
+            }),
+        };
+
+        let debug_str = format!("{response:?}");
+        assert!(debug_str.contains("HoyolabApiResponse"));
+        assert!(debug_str.contains("retcode"));
+    }
+
+    #[test]
+    fn test_kuro_response_debug() {
+        let response = KuroApiResponse {
+            code: 200,
+            message: "OK".to_string(),
+            data: Some(TestData {
+                id: 1,
+                name: "test".to_string(),
+            }),
+        };
+
+        let debug_str = format!("{response:?}");
+        assert!(debug_str.contains("KuroApiResponse"));
+        assert!(debug_str.contains("code"));
+    }
+}

@@ -15,7 +15,8 @@
       "Bash(beans prime:*)",
       "Bash(beans query:*)",
       "Bash(xargs ls:*)",
-      "Bash(beans create:*)"
+      "Bash(beans create:*)",
+      "Bash(beans update:*)"
     ]
   },
   "hooks": {
