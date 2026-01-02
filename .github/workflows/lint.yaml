@@ -43,11 +43,11 @@ jobs:
           toolchain: stable
           cache: true
 
-      - name: Run clippy
-        run: cargo clippy --workspace --all-targets --all-features
+      - name: Install just command runner
+        uses: extractions/setup-just@v3
 
-      - name: Run rustfmt
-        run: cargo fmt --check
+      - name: Run lint and formatting checks
+        run: just lint
 
       - name: Run tests
-        run: cargo test --workspace
+        run: just test
