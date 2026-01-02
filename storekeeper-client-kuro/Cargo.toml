@@ -1,0 +1,25 @@
+[package]
+name = "storekeeper-client-kuro"
+version = "0.1.0"
+description = "Kuro Games API client for Storekeeper"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+storekeeper-core.workspace = true
+storekeeper-client-core.workspace = true
+reqwest.workspace = true
+reqwest-middleware.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+chrono.workspace = true
+governor.workspace = true
+dirs.workspace = true
+tracing.workspace = true
+
+[lints]
+workspace = true

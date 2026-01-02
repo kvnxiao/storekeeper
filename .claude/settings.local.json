@@ -1,0 +1,45 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo check:*)",
+      "Bash(pnpm install:*)",
+      "Bash(cargo clippy:*)",
+      "Bash(cargo tauri build:*)",
+      "Bash(cargo fmt:*)",
+      "Bash(dir:*)",
+      "Bash(ls:*)",
+      "Bash(cargo test:*)",
+      "Bash(cargo build:*)",
+      "WebFetch",
+      "WebSearch",
+      "Bash(beans prime:*)",
+      "Bash(beans query:*)",
+      "Bash(xargs ls:*)",
+      "Bash(beans create:*)",
+      "Bash(beans update:*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "beans prime"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "beans prime"
+          }
+        ]
+      }
+    ]
+  },
+  "spinnerTipsEnabled": false
+}

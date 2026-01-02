@@ -1,0 +1,5 @@
+# Clippy configuration
+# See: https://doc.rust-lang.org/clippy/configuration.html
+
+# Allow expect in test code
+allow-expect-in-tests = true
