@@ -4,6 +4,7 @@ use reqwest::Method;
 use reqwest::header::{ACCEPT, CONTENT_TYPE, ORIGIN};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
+use storekeeper_client_core::retry::{DEFAULT_MAX_DELAY_MS, DEFAULT_MAX_RETRIES};
 use storekeeper_client_core::{
     ApiResponse, ClientError, ClientWithMiddleware, HttpClientBuilder, KuroApiResponse, RetryConfig,
 };
@@ -37,6 +38,8 @@ pub struct KuroClient {
     client: ClientWithMiddleware,
     oauth_code: String,
 }
+
+const KURO_API_DEFAULT_BASE_DELAY_MS: u64 = 1500;
 
 impl KuroClient {
     /// Creates a new Kuro Games client with the given OAuth code.
@@ -183,7 +186,11 @@ impl KuroClient {
         player_id: &str,
         region: &str,
     ) -> Result<T> {
-        let retry_config = retry_config();
+        let retry_config = RetryConfig::new(
+            DEFAULT_MAX_RETRIES,
+            KURO_API_DEFAULT_BASE_DELAY_MS,
+            DEFAULT_MAX_DELAY_MS,
+        );
         let mut last_error = None;
 
         for attempt in 0..=retry_config.max_retries {

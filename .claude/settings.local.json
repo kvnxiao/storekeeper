@@ -11,10 +11,13 @@
       "Bash(cargo test:*)",
       "Bash(cargo build:*)",
       "WebFetch",
-      "WebSearch"
+      "WebSearch",
+      "Bash(beans prime:*)",
+      "Bash(beans query:*)",
+      "Bash(xargs ls:*)",
+      "Bash(beans create:*)"
     ]
   },
-  "spinnerTipsEnabled": false,
   "hooks": {
     "SessionStart": [
       {
@@ -36,5 +39,6 @@
         ]
       }
     ]
-  }
+  },
+  "spinnerTipsEnabled": false
 }
