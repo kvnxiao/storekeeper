@@ -1,7 +1,5 @@
 # Critical Instructions
 
-**IMPORTANT**: Before starting any work, run `beans prime` and follow its instructions.
-
 **IMPORTANT**: before completing any task, you MUST run the following commands and address any issues:
 
 ```bash
