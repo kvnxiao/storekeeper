@@ -19,6 +19,7 @@ pub trait DisplayableResource {
 /// All stamina resources (Resin, Trailblaze Power, Battery, Waveplates)
 /// share these common fields.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StaminaResource {
     /// Current amount of the resource.
     pub current: u32,
@@ -60,6 +61,7 @@ impl StaminaResource {
 
 /// Shared cooldown data for items like Parametric Transformer.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CooldownResource {
     /// Whether the item is ready to use.
     pub is_ready: bool,
@@ -95,6 +97,7 @@ impl CooldownResource {
 
 /// Expedition tracking data.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ExpeditionResource {
     /// Number of currently active expeditions.
     pub current_expeditions: u32,

@@ -18,6 +18,7 @@ use crate::registry::GameClientRegistry;
 /// Resources are stored as a map from game ID to JSON value, allowing
 /// for dynamic game support without explicit per-game fields.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AllResources {
     /// Resources keyed by game ID.
     ///
@@ -31,6 +32,7 @@ pub struct AllResources {
 
 /// All daily reward status from all games.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AllDailyRewardStatus {
     /// Reward status keyed by game ID.
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
