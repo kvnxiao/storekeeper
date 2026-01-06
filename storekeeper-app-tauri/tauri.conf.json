@@ -12,8 +12,8 @@
       "script": "pnpm run build",
       "cwd": "../frontend"
     },
-    "devUrl": "http://localhost:5173",
-    "frontendDist": "../frontend/dist"
+    "devUrl": "http://localhost:3000",
+    "frontendDist": "../frontend/.output/public"
   },
   "app": {
     "withGlobalTauri": true,

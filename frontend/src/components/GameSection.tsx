@@ -1,47 +1,55 @@
-import { createSignal, For, Show } from "solid-js";
-import ResourceCard from "./ResourceCard";
+import { useState } from "react";
+import { Disclosure, DisclosurePanel } from "react-aria-components";
+
+import { ResourceCard } from "@/components/ResourceCard";
+import type { GameId, GameResource } from "@/types";
 
 interface Props {
   title: string;
-  gameId: string;
-  resources: Array<{ type: string; data: unknown }>;
+  gameId: GameId;
+  resources: GameResource[];
 }
 
-function GameSection(props: Props) {
-  const [expanded, setExpanded] = createSignal(true);
+export const GameSection: React.FC<Props> = ({ title, gameId, resources }) => {
+  const [isExpanded, setIsExpanded] = useState(true);
 
   return (
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
-      <button
-        onClick={() => setExpanded(!expanded())}
-        class="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-      >
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
-          {props.title}
-        </h2>
-        <span
-          class="text-gray-400 transform transition-transform"
-          classList={{ "rotate-180": !expanded() }}
+    <Disclosure
+      isExpanded={isExpanded}
+      onExpandedChange={setIsExpanded}
+      className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden"
+    >
+      <h2>
+        <button
+          type="button"
+          slot="trigger"
+          className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+          onClick={() => setIsExpanded((prev) => !prev)}
         >
-          ▼
-        </span>
-      </button>
-
-      <Show when={expanded()}>
-        <div class="px-4 pb-4 grid grid-cols-2 gap-3">
-          <For each={props.resources}>
-            {(resource) => (
-              <ResourceCard
-                gameId={props.gameId}
-                type={resource.type}
-                data={resource.data}
-              />
-            )}
-          </For>
+          <span className="text-lg font-semibold text-gray-900 dark:text-white">
+            {title}
+          </span>
+          <span
+            className={`text-gray-400 transform transition-transform duration-200 ${
+              isExpanded ? "" : "-rotate-90"
+            }`}
+          >
+            ▼
+          </span>
+        </button>
+      </h2>
+      <DisclosurePanel>
+        <div className="px-4 pb-4 grid grid-cols-2 gap-3">
+          {resources.map((resource, index) => (
+            <ResourceCard
+              key={`${gameId}-${resource.type}-${index}`}
+              gameId={gameId}
+              type={resource.type}
+              data={resource.data}
+            />
+          ))}
         </div>
-      </Show>
-    </div>
+      </DisclosurePanel>
+    </Disclosure>
   );
-}
-
-export default GameSection;
+};

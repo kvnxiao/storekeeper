@@ -13,3 +13,9 @@ test:
 
 bundle:
     cargo tauri build
+
+lint-web:
+    cd frontend && pnpm lint
+
+fix-web:
+    cd frontend && pnpm fix
