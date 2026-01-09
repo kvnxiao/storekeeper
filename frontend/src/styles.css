@@ -1,30 +1,114 @@
 @import "tailwindcss";
-@import "@fontsource-variable/geist";
+@import "@fontsource-variable/inter";
 @import "@fontsource-variable/geist-mono";
 
-@theme {
-  --font-sans: "Geist Variable", sans-serif;
-  --font-mono: "Geist Mono Variable", monospace;
-}
-
+/* Semantic color tokens (light mode) - shadcn-style with OKLCH */
 :root {
-  --background: #f6f6f6;
-  --foreground: #0f0f0f;
-  --font-geist-sans: "Geist Variable", sans-serif;
-  --font-geist-mono: "Geist Mono Variable", monospace;
+  --background: oklch(0.99 0 0);
+  --foreground: oklch(0.14 0.005 286);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.14 0.005 286);
+
+  --primary: oklch(0.21 0.006 286);
+  --primary-foreground: oklch(0.98 0 0);
+
+  --secondary: oklch(0.97 0.001 286);
+  --secondary-foreground: oklch(0.21 0.006 286);
+
+  --muted: oklch(0.97 0.001 286);
+  --muted-foreground: oklch(0.55 0.014 286);
+
+  --accent: oklch(0.97 0.001 286);
+  --accent-foreground: oklch(0.21 0.006 286);
+
+  --destructive: oklch(0.58 0.22 27);
+  --destructive-foreground: oklch(0.98 0 0);
+
+  --border: oklch(0.92 0.004 286);
+  --input: oklch(0.92 0.004 286);
+  --ring: oklch(0.71 0.007 286);
+
+  --radius: 0.5rem;
 }
 
+/* Dark mode */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #1a1a1a;
-    --foreground: #f6f6f6;
+    --background: oklch(0.14 0.005 286);
+    --foreground: oklch(0.98 0 0);
+
+    --card: oklch(0.14 0.005 286);
+    --card-foreground: oklch(0.98 0 0);
+
+    --primary: oklch(0.98 0 0);
+    --primary-foreground: oklch(0.21 0.006 286);
+
+    --secondary: oklch(0.27 0.006 286);
+    --secondary-foreground: oklch(0.98 0 0);
+
+    --muted: oklch(0.27 0.006 286);
+    --muted-foreground: oklch(0.71 0.007 286);
+
+    --accent: oklch(0.27 0.006 286);
+    --accent-foreground: oklch(0.98 0 0);
+
+    --destructive: oklch(0.45 0.18 27);
+    --destructive-foreground: oklch(0.98 0 0);
+
+    --border: oklch(0.27 0.006 286);
+    --input: oklch(0.27 0.006 286);
+    --ring: oklch(0.84 0.003 286);
+  }
+}
+
+/* Register colors with Tailwind */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --font-sans: "Inter Variable", system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", monospace;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* React Aria Components plugin for state variants */
+@plugin "tailwindcss-react-aria-components";
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: var(--font-geist-sans);
+  font-family: var(--font-sans);
   font-size: 14px;
   margin: 0;
   min-height: 100vh;
@@ -33,7 +117,7 @@ body {
 }
 
 code {
-  font-family: var(--font-geist-mono);
+  font-family: var(--font-mono);
 }
 
 #root {

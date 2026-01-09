@@ -85,6 +85,16 @@
         }
       },
       "includes": ["src/routes/__root.tsx"]
+    },
+    {
+      "linter": {
+        "rules": {
+          "style": {
+            "useComponentExportOnlyModules": "off"
+          }
+        }
+      },
+      "includes": ["src/routes/**/*.tsx"]
     }
   ]
 }

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { listen } from "@tauri-apps/api/event";
-import { useAtomValue, useSetAtom } from "jotai";
+import { useAtomValue } from "jotai";
 import { useCallback, useEffect, useMemo } from "react";
 import { Button } from "react-aria-components";
 
@@ -11,13 +11,9 @@ import type { AllResources, GameId } from "@/types";
 import { GAME_METADATA, GAME_ORDER } from "@/types";
 
 const HomePage: React.FC = () => {
-  const {
-    data: resources,
-    isPending,
-    error,
-    refetch,
-  } = useAtomValue(resourcesAtom);
-  const refreshMutation = useSetAtom(refreshResourcesAtom);
+  const { data: resources, error, refetch } = useAtomValue(resourcesAtom);
+  const { mutateAsync: refreshResources, isPending: isRefreshing } =
+    useAtomValue(refreshResourcesAtom);
 
   // Listen for backend resource updates
   useEffect(() => {
@@ -32,13 +28,13 @@ const HomePage: React.FC = () => {
 
   const handleRefresh = useCallback(async () => {
     try {
-      const result = await refreshMutation();
+      const result = await refreshResources();
       queryClient.setQueryData(["resources"], result);
     } catch (e) {
       console.error("Failed to refresh:", e);
       refetch();
     }
-  }, [refetch, refreshMutation]);
+  }, [refetch, refreshResources]);
 
   const activeGames = useMemo((): GameId[] => {
     if (!resources?.games) return [];
@@ -110,10 +106,10 @@ const HomePage: React.FC = () => {
         </span>
         <Button
           onPress={handleRefresh}
-          isDisabled={isPending}
+          isDisabled={isRefreshing}
           className="px-4 py-2 bg-blue-600 hover:bg-blue-700 pressed:bg-blue-800 disabled:bg-blue-400 text-white rounded-lg text-sm font-medium transition-colors cursor-pointer"
         >
-          {isPending ? "Refreshing..." : "Refresh"}
+          {isRefreshing ? "Refreshing..." : "Refresh"}
         </Button>
       </footer>
     </div>

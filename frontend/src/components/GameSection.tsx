@@ -1,55 +1,88 @@
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
 import { Disclosure, DisclosurePanel } from "react-aria-components";
 
 import { ResourceCard } from "@/components/ResourceCard";
+import {
+  cardContainerVariants,
+  panelVariants,
+  panelVariantsReduced,
+  springTransition,
+} from "@/components/ui/animations";
 import type { GameId, GameResource } from "@/types";
 
-interface Props {
+interface GameSectionProps {
   title: string;
   gameId: GameId;
   resources: GameResource[];
 }
 
-export const GameSection: React.FC<Props> = ({ title, gameId, resources }) => {
+export const GameSection: React.FC<GameSectionProps> = ({
+  title,
+  gameId,
+  resources,
+}) => {
   const [isExpanded, setIsExpanded] = useState(true);
+  const shouldReduceMotion = useReducedMotion();
+  const variants = shouldReduceMotion ? panelVariantsReduced : panelVariants;
 
   return (
     <Disclosure
       isExpanded={isExpanded}
       onExpandedChange={setIsExpanded}
-      className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden"
+      className="overflow-hidden rounded-lg bg-white shadow-sm dark:bg-gray-800"
     >
       <h2>
         <button
           type="button"
           slot="trigger"
-          className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+          className="flex w-full cursor-pointer items-center justify-between px-4 py-3 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
           onClick={() => setIsExpanded((prev) => !prev)}
         >
           <span className="text-lg font-semibold text-gray-900 dark:text-white">
             {title}
           </span>
-          <span
-            className={`text-gray-400 transform transition-transform duration-200 ${
-              isExpanded ? "" : "-rotate-90"
-            }`}
+          <motion.span
+            className="text-gray-400"
+            animate={{ rotate: isExpanded ? 0 : -90 }}
+            transition={shouldReduceMotion ? { duration: 0 } : springTransition}
           >
             ▼
-          </span>
+          </motion.span>
         </button>
       </h2>
-      <DisclosurePanel>
-        <div className="px-4 pb-4 grid grid-cols-2 gap-3">
-          {resources.map((resource, index) => (
-            <ResourceCard
-              key={`${gameId}-${resource.type}-${index}`}
-              gameId={gameId}
-              type={resource.type}
-              data={resource.data}
-            />
-          ))}
-        </div>
-      </DisclosurePanel>
+      <AnimatePresence initial={false}>
+        {isExpanded && (
+          <DisclosurePanel>
+            <motion.div
+              initial="collapsed"
+              animate="expanded"
+              exit="collapsed"
+              variants={variants}
+              transition={
+                shouldReduceMotion ? { duration: 0.15 } : springTransition
+              }
+              style={{ overflow: "hidden" }}
+            >
+              <motion.div
+                className="grid grid-cols-2 gap-3 px-4 pb-4"
+                variants={cardContainerVariants}
+                initial="hidden"
+                animate="visible"
+              >
+                {resources.map((resource, index) => (
+                  <ResourceCard
+                    key={`${gameId}-${resource.type}-${index}`}
+                    gameId={gameId}
+                    type={resource.type}
+                    data={resource.data}
+                  />
+                ))}
+              </motion.div>
+            </motion.div>
+          </DisclosurePanel>
+        )}
+      </AnimatePresence>
     </Disclosure>
   );
 };
