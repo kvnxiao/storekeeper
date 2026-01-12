@@ -60,13 +60,15 @@ export const Switch: React.FC<SwitchProps> = ({
   return (
     <AriaSwitch
       {...props}
-      className={composeRenderProps(className, (userClassName) =>
-        cn(
-          "group relative flex items-center gap-2 text-sm font-medium transition",
-          "text-zinc-950 dark:text-white",
-          "disabled:text-zinc-400 dark:disabled:text-zinc-500",
-          userClassName,
-        ),
+      className={composeRenderProps(
+        className,
+        (userClassName) =>
+          cn(
+            "group relative flex items-center gap-2 text-sm font-medium transition",
+            "text-zinc-950 dark:text-white",
+            "disabled:text-zinc-400 dark:disabled:text-zinc-500",
+            userClassName,
+          ) ?? "",
       )}
     >
       {(renderProps) => (

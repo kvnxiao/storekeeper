@@ -15,11 +15,11 @@ import type { AllResources } from "@/modules/resources/resources.types";
 // =============================================================================
 
 /** Fetch all resources from Tauri backend */
-export const resourcesQueryAtom = atomWithQuery(() => resourcesQueryOptions);
+export const resourcesQueryAtom = atomWithQuery(() => resourcesQueryOptions());
 
 /** Refresh resources mutation */
-export const refreshResourcesMutationAtom = atomWithMutation(
-  () => refreshResourcesMutationOptions,
+export const refreshResourcesMutationAtom = atomWithMutation(() =>
+  refreshResourcesMutationOptions(),
 );
 
 // =============================================================================

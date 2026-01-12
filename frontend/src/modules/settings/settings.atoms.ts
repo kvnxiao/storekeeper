@@ -20,10 +20,10 @@ import type {
 // =============================================================================
 
 /** Fetch config from backend */
-export const configQueryAtom = atomWithQuery(() => configQueryOptions);
+export const configQueryAtom = atomWithQuery(() => configQueryOptions());
 
 /** Fetch secrets from backend */
-export const secretsQueryAtom = atomWithQuery(() => secretsQueryOptions);
+export const secretsQueryAtom = atomWithQuery(() => secretsQueryOptions());
 
 // =============================================================================
 // Edited State (local form state)
@@ -82,18 +82,18 @@ export const formInitAtom = atom((get) => {
 // =============================================================================
 
 /** Save config to backend */
-export const saveConfigMutationAtom = atomWithMutation(
-  () => saveConfigMutationOptions,
+export const saveConfigMutationAtom = atomWithMutation(() =>
+  saveConfigMutationOptions(),
 );
 
 /** Save secrets to backend */
-export const saveSecretsMutationAtom = atomWithMutation(
-  () => saveSecretsMutationOptions,
+export const saveSecretsMutationAtom = atomWithMutation(() =>
+  saveSecretsMutationOptions(),
 );
 
 /** Reload config in backend (applies changes) */
-export const reloadConfigMutationAtom = atomWithMutation(
-  () => reloadConfigMutationOptions,
+export const reloadConfigMutationAtom = atomWithMutation(() =>
+  reloadConfigMutationOptions(),
 );
 
 // =============================================================================

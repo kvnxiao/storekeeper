@@ -16,7 +16,7 @@ bundle:
     cargo tauri build
 
 lint-web:
-    cd frontend && pnpm lint
+    cd frontend && pnpm lint && pnpm tsc --noEmit
 
 fix-web:
     cd frontend && pnpm fix
