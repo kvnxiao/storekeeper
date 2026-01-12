@@ -25,7 +25,8 @@
         "resizable": true,
         "visible": false,
         "center": true,
-        "decorations": true
+        "decorations": true,
+        "scrollBarStyle": "fluentOverlay"
       }
     ],
     "trayIcon": {

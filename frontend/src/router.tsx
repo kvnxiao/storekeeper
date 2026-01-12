@@ -1,16 +1,7 @@
-import { QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 
+import { queryClient } from "@/modules/core/core.queryClient";
 import { routeTree } from "./routeTree.gen";
-
-export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: false,
-      refetchOnWindowFocus: true,
-    },
-  },
-});
 
 export const getRouter = () => {
   const router = createRouter({
@@ -20,6 +11,7 @@ export const getRouter = () => {
     },
     scrollRestoration: true,
     defaultPreloadStaleTime: 0,
+    defaultViewTransition: true,
   });
 
   return router;

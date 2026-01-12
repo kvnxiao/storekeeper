@@ -1,4 +1,4 @@
-import { QueryClientProvider } from "@tanstack/react-query";
+import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   createRootRouteWithContext,
   HeadContent,
@@ -9,15 +9,15 @@ import { Provider as JotaiProvider } from "jotai";
 import { useHydrateAtoms } from "jotai/utils";
 import { queryClientAtom } from "jotai-tanstack-query";
 
-import { queryClient } from "@/router";
+import { queryClient } from "@/modules/core/core.queryClient";
 import appCss from "@/styles.css?url";
 
 interface RouterContext {
-  queryClient: typeof queryClient;
+  queryClient: QueryClient;
 }
 
 /** Hydrates the shared QueryClient into jotai-tanstack-query synchronously */
-const HydrateQueryClient: React.FC<{ children: React.ReactNode }> = ({
+const HydrateQueryClient: React.FC<React.PropsWithChildren> = ({
   children,
 }) => {
   useHydrateAtoms([[queryClientAtom, queryClient]]);
@@ -30,7 +30,7 @@ const RootComponent: React.FC = () => {
       <head>
         <HeadContent />
       </head>
-      <body className="antialiased">
+      <body className="min-h-screen overflow-y-scroll bg-background font-sans text-foreground antialiased">
         <QueryClientProvider client={queryClient}>
           <JotaiProvider>
             <HydrateQueryClient>

@@ -1,9 +1,10 @@
-fmt:
-    cargo fmt
-
 lint:
     cargo clippy --workspace --all-targets --all-features
     cargo fmt --check
+
+fix:
+    cargo clippy --workspace --all-targets --all-features --fix --allow-dirty
+    cargo fmt --all
 
 dev:
     cargo tauri dev

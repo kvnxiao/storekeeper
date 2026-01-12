@@ -2,8 +2,8 @@
 
 use std::collections::HashMap;
 
-use storekeeper_core::{AppConfig, GameId};
-use tauri::{AppHandle, State};
+use storekeeper_core::{AppConfig, GameId, SecretsConfig};
+use tauri::{AppHandle, Manager, State};
 
 use crate::polling;
 use crate::state::{AllDailyRewardStatus, AllResources, AppState};
@@ -24,6 +24,44 @@ pub async fn refresh_resources(app_handle: AppHandle) -> Result<AllResources, St
 #[tauri::command]
 pub async fn get_config() -> Result<AppConfig, String> {
     AppConfig::load().map_err(|e| e.to_string())
+}
+
+/// Saves the application configuration.
+#[tauri::command]
+pub async fn save_config(config: AppConfig) -> Result<(), String> {
+    config.save().map_err(|e| e.to_string())?;
+    tracing::info!("Configuration saved successfully");
+    Ok(())
+}
+
+/// Gets the current secrets configuration.
+#[tauri::command]
+pub async fn get_secrets() -> Result<SecretsConfig, String> {
+    SecretsConfig::load().map_err(|e| e.to_string())
+}
+
+/// Saves the secrets configuration.
+#[tauri::command]
+pub async fn save_secrets(secrets: SecretsConfig) -> Result<(), String> {
+    secrets.save().map_err(|e| e.to_string())?;
+    tracing::info!("Secrets saved successfully");
+    Ok(())
+}
+
+/// Reloads configuration and restarts the polling loop with new settings.
+///
+/// This should be called after saving config/secrets to apply the changes.
+#[tauri::command]
+pub async fn reload_config(app_handle: AppHandle) -> Result<(), String> {
+    let state = app_handle.state::<AppState>();
+
+    // Reload config and reinitialize game clients
+    state.reload_config().await;
+
+    // Trigger an immediate refresh to fetch resources with new config
+    let _ = polling::refresh_now(&app_handle).await;
+
+    Ok(())
 }
 
 /// Opens the configuration folder in the system file manager.

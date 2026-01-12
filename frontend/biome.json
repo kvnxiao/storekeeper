@@ -15,8 +15,8 @@
       "**/*.tsx",
       "**/*.mts",
       "**/*.mjs",
-      "!!dist",
-      "!!node_modules",
+      "!!**/dist",
+      "!!**/node_modules",
       "!!.output",
       "!!.tanstack",
       "!src/routeTree.gen.ts"
@@ -36,12 +36,28 @@
   },
   "linter": {
     "enabled": true,
+    "domains": {
+      "project": "all",
+      "react": "all"
+    },
     "rules": {
       "recommended": true,
       "correctness": {
-        "useHookAtTopLevel": "error"
+        "useHookAtTopLevel": "error",
+        "useImportExtensions": "off"
       },
-      "nursery": {},
+      "nursery": {
+        "noDeprecatedImports": "error",
+        "noFloatingPromises": "error",
+        "noImportCycles": "error",
+        "noMisusedPromises": "error",
+        "useArraySortCompare": "error",
+        "useAwaitThenable": "error",
+        "noUnnecessaryConditions": "error",
+        "useExhaustiveSwitchCases": "error",
+        "useFind": "error",
+        "useRegexpExec": "error"
+      },
       "suspicious": {
         "useGoogleFontDisplay": "error",
         "noDocumentImportInPage": "error",
@@ -49,12 +65,7 @@
       },
       "style": {
         "noHeadElement": "error",
-        "useComponentExportOnlyModules": {
-          "level": "error",
-          "options": {
-            "allowExportNames": ["Route"]
-          }
-        }
+        "useComponentExportOnlyModules": "off"
       },
       "performance": {
         "noImgElement": "off"
@@ -85,16 +96,6 @@
         }
       },
       "includes": ["src/routes/__root.tsx"]
-    },
-    {
-      "linter": {
-        "rules": {
-          "style": {
-            "useComponentExportOnlyModules": "off"
-          }
-        }
-      },
-      "includes": ["src/routes/**/*.tsx"]
     }
   ]
 }
