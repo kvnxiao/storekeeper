@@ -18,6 +18,7 @@ use crate::registry::GameClientRegistry;
 /// Resources are stored as a map from game ID to JSON value, allowing
 /// for dynamic game support without explicit per-game fields.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AllResources {
     /// Resources keyed by game ID.
     ///
@@ -31,6 +32,7 @@ pub struct AllResources {
 
 /// All daily reward status from all games.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AllDailyRewardStatus {
     /// Reward status keyed by game ID.
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
@@ -277,6 +279,25 @@ impl AppState {
 
         // Check if the game is registered in the daily reward registry
         state.daily_reward_registry.has_game(game_id)
+    }
+
+    /// Reloads configuration and reinitializes game clients.
+    ///
+    /// This reloads config.toml and secrets.toml, then recreates the game
+    /// client registries with the new settings.
+    pub async fn reload_config(&self) {
+        let config = AppConfig::load().unwrap_or_default();
+        let secrets = SecretsConfig::load().unwrap_or_default();
+
+        let registry = create_registry(&config, &secrets);
+        let daily_reward_registry = create_daily_reward_registry(&config, &secrets);
+
+        let mut state = self.inner.write().await;
+        state.config = config;
+        state.registry = registry;
+        state.daily_reward_registry = daily_reward_registry;
+
+        tracing::info!("Configuration reloaded successfully");
     }
 }
 

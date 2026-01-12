@@ -1,0 +1,101 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": {
+    "enabled": false,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "ignoreUnknown": false,
+    "includes": [
+      "**/*.json",
+      "**/*.js",
+      "**/*.ts",
+      "**/*.jsx",
+      "**/*.tsx",
+      "**/*.mts",
+      "**/*.mjs",
+      "!!**/dist",
+      "!!**/node_modules",
+      "!!.output",
+      "!!.tanstack",
+      "!src/routeTree.gen.ts"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2
+  },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "domains": {
+      "project": "all",
+      "react": "all"
+    },
+    "rules": {
+      "recommended": true,
+      "correctness": {
+        "useHookAtTopLevel": "error",
+        "useImportExtensions": "off"
+      },
+      "nursery": {
+        "noDeprecatedImports": "error",
+        "noFloatingPromises": "error",
+        "noImportCycles": "error",
+        "noMisusedPromises": "error",
+        "useArraySortCompare": "error",
+        "useAwaitThenable": "error",
+        "noUnnecessaryConditions": "error",
+        "useExhaustiveSwitchCases": "error",
+        "useFind": "error",
+        "useRegexpExec": "error"
+      },
+      "suspicious": {
+        "useGoogleFontDisplay": "error",
+        "noDocumentImportInPage": "error",
+        "noHeadImportInDocument": "error"
+      },
+      "style": {
+        "noHeadElement": "error",
+        "useComponentExportOnlyModules": "off"
+      },
+      "performance": {
+        "noImgElement": "off"
+      }
+    }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    },
+    "formatter": {
+      "quoteStyle": "double"
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double"
+    },
+    "globals": []
+  },
+  "overrides": [
+    {
+      "linter": {
+        "rules": {
+          "style": {
+            "noHeadElement": "off"
+          }
+        }
+      },
+      "includes": ["src/routes/__root.tsx"]
+    }
+  ]
+}

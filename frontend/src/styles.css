@@ -1,0 +1,226 @@
+@import "tailwindcss";
+@plugin "tailwindcss-react-aria-components";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/geist-mono";
+
+/* Semantic color tokens (light mode) - zinc scale */
+:root {
+  --background: oklch(1 0 0); /* white */
+  --foreground: oklch(0.141 0.005 285.75); /* zinc-950 */
+
+  --card: oklch(1 0 0); /* white */
+  --card-foreground: oklch(0.141 0.005 285.75); /* zinc-950 */
+
+  --primary: oklch(0.21 0.006 285.75); /* zinc-900 */
+  --primary-foreground: oklch(1 0 0); /* white */
+
+  --secondary: oklch(0.967 0.001 286.38); /* zinc-100 */
+  --secondary-foreground: oklch(0.21 0.006 285.75); /* zinc-900 */
+
+  --muted: oklch(0.967 0.001 286.38); /* zinc-100 */
+  --muted-foreground: oklch(0.553 0.014 285.94); /* zinc-500 */
+
+  --accent: oklch(0.967 0.001 286.38); /* zinc-100 */
+  --accent-foreground: oklch(0.21 0.006 285.75); /* zinc-900 */
+
+  --destructive: oklch(0.577 0.245 27.33); /* red-600 */
+  --destructive-foreground: oklch(0.985 0 0); /* zinc-50 */
+
+  --border: oklch(0.92 0.004 286.32); /* zinc-200 */
+  --input: oklch(0.92 0.004 286.32); /* zinc-200 */
+  --ring: oklch(0.141 0.005 285.75); /* zinc-950 */
+
+  --radius: 0.5rem;
+}
+
+/* Dark mode - zinc scale */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: oklch(0.141 0.005 285.75); /* zinc-950 */
+    --foreground: oklch(0.985 0 0); /* zinc-50 */
+
+    --card: oklch(0.21 0.006 285.75); /* zinc-900 */
+    --card-foreground: oklch(0.985 0 0); /* zinc-50 */
+
+    --primary: oklch(0.985 0 0); /* zinc-50 */
+    --primary-foreground: oklch(0.21 0.006 285.75); /* zinc-900 */
+
+    --secondary: oklch(0.274 0.006 286.03); /* zinc-800 */
+    --secondary-foreground: oklch(0.985 0 0); /* zinc-50 */
+
+    --muted: oklch(0.274 0.006 286.03); /* zinc-800 */
+    --muted-foreground: oklch(0.705 0.015 286.07); /* zinc-400 */
+
+    --accent: oklch(0.274 0.006 286.03); /* zinc-800 */
+    --accent-foreground: oklch(0.985 0 0); /* zinc-50 */
+
+    --destructive: oklch(0.577 0.245 27.33); /* red-600 */
+    --destructive-foreground: oklch(0.985 0 0); /* zinc-50 */
+
+    --border: oklch(0.274 0.006 286.03); /* zinc-800 */
+    --input: oklch(0.274 0.006 286.03); /* zinc-800 */
+    --ring: oklch(0.871 0.006 286.29); /* zinc-300 */
+  }
+}
+
+/* Register colors with Tailwind */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --font-sans: "Inter Variable", system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", monospace;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --scrollbar-width: 8px;
+}
+
+/* Touch target utility - expands hit area to 44x44px on touch devices */
+@utility touch-target {
+  position: relative;
+  &::before {
+    content: "";
+    position: absolute;
+    display: block;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    height: 100%;
+    min-height: 44px;
+    min-width: 44px;
+    z-index: 9999;
+    @media (pointer: fine) {
+      display: none;
+    }
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+code {
+  font-family: var(--font-mono);
+}
+
+/* Prevent horizontal scrollbar during page transitions */
+body {
+  overflow-x: hidden;
+}
+
+/* =============================================================================
+   View Transitions - iOS-style Push/Pop Navigation
+   ============================================================================= */
+
+/* Forward: old shifts left (background), new slides in from right (foreground) */
+:root[data-view-transition-direction="forward"]::view-transition-old(root) {
+  animation: shift-back 0.25s cubic-bezier(0.3, 0, 0.8, 0.15) both;
+  z-index: 0;
+}
+
+:root[data-view-transition-direction="forward"]::view-transition-new(root) {
+  animation: slide-in-right 0.25s cubic-bezier(0.05, 0.7, 0.1, 1) both;
+  z-index: 1;
+}
+
+/* Back: old slides out to right, new shifts back into place */
+:root[data-view-transition-direction="back"]::view-transition-old(root) {
+  animation: slide-out-right 0.25s cubic-bezier(0.3, 0, 0.8, 0.15) both;
+  z-index: 1;
+}
+
+:root[data-view-transition-direction="back"]::view-transition-new(root) {
+  animation: shift-forward 0.25s cubic-bezier(0.05, 0.7, 0.1, 1) both;
+  z-index: 0;
+}
+
+/* Fallback if no direction set */
+::view-transition-old(root) {
+  animation: fade-out 0.15s ease-out both;
+}
+
+::view-transition-new(root) {
+  animation: fade-in 0.15s ease-out both;
+}
+
+/* Background page shifts slightly left */
+@keyframes shift-back {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-33%);
+    opacity: 0;
+  }
+}
+
+/* Background page shifts back to center */
+@keyframes shift-forward {
+  from {
+    transform: translateX(-33%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Foreground page slides in from right */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* Foreground page slides out to right */
+@keyframes slide-out-right {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* Simple fade fallbacks */
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

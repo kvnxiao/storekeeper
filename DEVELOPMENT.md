@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Storekeeper is a cross-platform desktop application built with [Tauri](https://tauri.app/) that tracks stamina resources for gacha games. The backend is written in Rust as a multi-crate workspace, and the frontend uses SolidJS with TypeScript.
+Storekeeper is a cross-platform desktop application built with [Tauri](https://tauri.app/) that tracks stamina resources for gacha games. The backend is written in Rust as a multi-crate workspace, and the frontend uses React 19 with TanStack Start, TypeScript, and Tailwind CSS.
 
 ## Architecture
 
@@ -17,7 +17,7 @@ storekeeper/
 ├── storekeeper-game-zzz/       # Zenless Zone Zero GameClient implementation
 ├── storekeeper-game-wuwa/      # Wuthering Waves GameClient implementation
 ├── storekeeper-app-tauri/      # Tauri app: UI, tray, notifications, polling
-└── frontend/                   # SolidJS + TypeScript + Tailwind + Vite
+└── frontend/                   # React + TanStack Start + TypeScript + Tailwind + Vite
 ```
 
 ### Crate Responsibilities
@@ -44,7 +44,9 @@ storekeeper/
 ```bash
 just dev      # Run tauri desktop app in dev mode
 just lint     # Run clippy and check formatting
-just fmt      # Format code
+just fix      # Lint and apply fixes + formatting
+just lint-web # Lint frontend code
+just fix-web   # Lint and apply fixes + formatting for frontend code
 just test     # Run tests
 just bundle   # Create tauri release bundle
 ```
@@ -78,18 +80,9 @@ Copy the example files to the appropriate config directory to get started:
 
 ## Conventions
 
-### Code Quality
-
-All code changes must pass:
-
-```bash
-cargo clippy --workspace --all-targets --all-features
-cargo fmt --check
-```
-
-### Error Handling
-
-Each crate defines its own error type in `error.rs` using `thiserror`. Cross-crate errors use `#[from]` for conversion. The application layer `storekeeper-app-tauri` uses `anyhow` to ergonomically handle different error types from the various crates.
+For detailed coding standards, see [docs/standards/](docs/standards/):
+- [Rust standards](docs/standards/rust/) — Linting, error handling, testing, performance
+- [Frontend standards](docs/standards/frontend/) — Components, state management, styling
 
 ### Async Runtime
 
@@ -144,6 +137,16 @@ pub struct AppState {
 **Frontend communication**: Use `app_handle.emit(EVENT_NAME, &data)` to send events to the frontend.
 
 **Rate limiting**: When fetching from multiple game clients, requests are executed sequentially within each API provider (to avoid rate limits) but in parallel across different providers.
+
+### Tauri-Frontend Bridge
+
+Data exchange between Rust and TypeScript uses specific naming conventions:
+
+- **Config/Secrets (Tauri ↔ Frontend)**: snake_case (`poll_interval_secs`)
+- **Resource types**: camelCase (`fullAt`, `regenRateSeconds`)
+- **GameId enum**: SCREAMING_SNAKE_CASE (`GENSHIN_IMPACT`)
+
+Config/secrets types flow directly without DTO conversion. See [`frontend-tauri-bridge.md`](/docs/standards/frontend/frontend-tauri-bridge.md) for details.
 
 ### Adding a New Game
 

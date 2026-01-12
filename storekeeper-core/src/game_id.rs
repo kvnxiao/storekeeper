@@ -19,7 +19,7 @@ pub enum ApiProvider {
 /// This enum provides a type-safe way to identify games throughout the application,
 /// replacing string-based identification with compile-time checked values.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum GameId {
     /// Genshin Impact
     GenshinImpact,
@@ -51,10 +51,10 @@ impl GameId {
     #[must_use]
     pub const fn as_str(&self) -> &'static str {
         match self {
-            Self::GenshinImpact => "genshin_impact",
-            Self::HonkaiStarRail => "honkai_star_rail",
-            Self::ZenlessZoneZero => "zenless_zone_zero",
-            Self::WutheringWaves => "wuthering_waves",
+            Self::GenshinImpact => "GENSHIN_IMPACT",
+            Self::HonkaiStarRail => "HONKAI_STAR_RAIL",
+            Self::ZenlessZoneZero => "ZENLESS_ZONE_ZERO",
+            Self::WutheringWaves => "WUTHERING_WAVES",
         }
     }
 
@@ -129,10 +129,10 @@ mod tests {
 
     #[test]
     fn test_as_str_matches_serde_format() {
-        assert_eq!(GameId::GenshinImpact.as_str(), "genshin_impact");
-        assert_eq!(GameId::HonkaiStarRail.as_str(), "honkai_star_rail");
-        assert_eq!(GameId::ZenlessZoneZero.as_str(), "zenless_zone_zero");
-        assert_eq!(GameId::WutheringWaves.as_str(), "wuthering_waves");
+        assert_eq!(GameId::GenshinImpact.as_str(), "GENSHIN_IMPACT");
+        assert_eq!(GameId::HonkaiStarRail.as_str(), "HONKAI_STAR_RAIL");
+        assert_eq!(GameId::ZenlessZoneZero.as_str(), "ZENLESS_ZONE_ZERO");
+        assert_eq!(GameId::WutheringWaves.as_str(), "WUTHERING_WAVES");
     }
 
     // =========================================================================
@@ -207,37 +207,37 @@ mod tests {
     fn test_serde_serialization() {
         let json =
             serde_json::to_string(&GameId::GenshinImpact).expect("should serialize Genshin Impact");
-        assert_eq!(json, "\"genshin_impact\"");
+        assert_eq!(json, "\"GENSHIN_IMPACT\"");
 
         let json = serde_json::to_string(&GameId::HonkaiStarRail)
             .expect("should serialize Honkai: Star Rail");
-        assert_eq!(json, "\"honkai_star_rail\"");
+        assert_eq!(json, "\"HONKAI_STAR_RAIL\"");
 
         let json = serde_json::to_string(&GameId::ZenlessZoneZero)
             .expect("should serialize Zenless Zone Zero");
-        assert_eq!(json, "\"zenless_zone_zero\"");
+        assert_eq!(json, "\"ZENLESS_ZONE_ZERO\"");
 
         let json = serde_json::to_string(&GameId::WutheringWaves)
             .expect("should serialize Wuthering Waves");
-        assert_eq!(json, "\"wuthering_waves\"");
+        assert_eq!(json, "\"WUTHERING_WAVES\"");
     }
 
     #[test]
     fn test_serde_deserialization() {
         let game: GameId =
-            serde_json::from_str("\"genshin_impact\"").expect("should deserialize genshin_impact");
+            serde_json::from_str("\"GENSHIN_IMPACT\"").expect("should deserialize GENSHIN_IMPACT");
         assert_eq!(game, GameId::GenshinImpact);
 
-        let game: GameId = serde_json::from_str("\"honkai_star_rail\"")
-            .expect("should deserialize honkai_star_rail");
+        let game: GameId = serde_json::from_str("\"HONKAI_STAR_RAIL\"")
+            .expect("should deserialize HONKAI_STAR_RAIL");
         assert_eq!(game, GameId::HonkaiStarRail);
 
-        let game: GameId = serde_json::from_str("\"zenless_zone_zero\"")
-            .expect("should deserialize zenless_zone_zero");
+        let game: GameId = serde_json::from_str("\"ZENLESS_ZONE_ZERO\"")
+            .expect("should deserialize ZENLESS_ZONE_ZERO");
         assert_eq!(game, GameId::ZenlessZoneZero);
 
-        let game: GameId = serde_json::from_str("\"wuthering_waves\"")
-            .expect("should deserialize wuthering_waves");
+        let game: GameId = serde_json::from_str("\"WUTHERING_WAVES\"")
+            .expect("should deserialize WUTHERING_WAVES");
         assert_eq!(game, GameId::WutheringWaves);
     }
 

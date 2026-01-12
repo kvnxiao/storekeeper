@@ -241,6 +241,34 @@ impl AppConfig {
         Ok(config_dir.join("storekeeper"))
     }
 
+    /// Saves the configuration to the default config file location.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the config file cannot be written.
+    pub fn save(&self) -> Result<()> {
+        let path = Self::config_path()?;
+        self.save_to_path(&path)
+    }
+
+    /// Saves the configuration to a specific path.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the config file cannot be written.
+    pub fn save_to_path(&self, path: &PathBuf) -> Result<()> {
+        // Ensure the directory exists
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+
+        let content = toml::to_string_pretty(self).map_err(|e| Error::ConfigParseFailed {
+            message: format!("Failed to serialize config: {e}"),
+        })?;
+        std::fs::write(path, content)?;
+        Ok(())
+    }
+
     /// Creates a default configuration file if it doesn't exist.
     ///
     /// Returns `true` if a new file was created, `false` if it already existed.
@@ -669,6 +697,34 @@ impl SecretsConfig {
             path: "config directory".to_string(),
         })?;
         Ok(config_dir.join("storekeeper").join("secrets.toml"))
+    }
+
+    /// Saves the secrets to the default secrets file location.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the secrets file cannot be written.
+    pub fn save(&self) -> Result<()> {
+        let path = Self::secrets_path()?;
+        self.save_to_path(&path)
+    }
+
+    /// Saves the secrets to a specific path.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the secrets file cannot be written.
+    pub fn save_to_path(&self, path: &PathBuf) -> Result<()> {
+        // Ensure the directory exists
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+
+        let content = toml::to_string_pretty(self).map_err(|e| Error::ConfigParseFailed {
+            message: format!("Failed to serialize secrets: {e}"),
+        })?;
+        std::fs::write(path, content)?;
+        Ok(())
     }
 
     /// Creates an empty secrets file if it doesn't exist.
