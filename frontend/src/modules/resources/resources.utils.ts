@@ -64,7 +64,7 @@ export function isPastDateTime(
 export function getResourceDisplayName(type: string): string {
   const names: Record<string, string> = {
     resin: "Original Resin",
-    parametric_transformer: "Transformer",
+    parametric_transformer: "Parametric Transformer",
     realm_currency: "Realm Currency",
     expeditions: "Expeditions",
     trailblaze_power: "Trailblaze Power",

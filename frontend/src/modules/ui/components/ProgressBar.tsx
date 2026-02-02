@@ -23,7 +23,8 @@ const progressBarStyle = tv({
       info: { fill: "bg-blue-500" },
     },
     size: {
-      sm: { track: "h-1" },
+      xs: { track: "h-1" },
+      sm: { track: "h-1.5" },
       md: { track: "h-2" },
       lg: { track: "h-3" },
     },
