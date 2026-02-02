@@ -2,7 +2,7 @@ import { useAtomValue } from "jotai";
 import { motion, useReducedMotion } from "motion/react";
 
 import { atoms } from "@/modules/atoms";
-import { ExpeditionCard } from "@/modules/resources/components/ExpeditionCard";
+import { CooldownCard } from "@/modules/resources/components/CooldownCard";
 import { isExpeditionResource } from "@/modules/resources/resources.types";
 import {
   cardItemVariants,
@@ -22,10 +22,12 @@ export const ExpeditionsCard: React.FC = () => {
 
   return (
     <motion.div variants={variants}>
-      <ExpeditionCard
+      <CooldownCard
         type={resource.type}
-        data={resource.data}
-        allDone={allDone}
+        data={{
+          isReady: allDone,
+          readyAt: resource.data.earliestFinishAt,
+        }}
       />
     </motion.div>
   );

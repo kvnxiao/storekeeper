@@ -1,14 +1,8 @@
-import { useAtomValue } from "jotai";
-import { useMemo } from "react";
-
-import { atoms } from "@/modules/atoms";
 import { ResourceIcon } from "@/modules/resources/components/ResourceIcon";
+import { TimeRemaining } from "@/modules/resources/components/TimeRemaining";
+import { useFormattedTime } from "@/modules/resources/resources.hooks";
 import type { StaminaResource } from "@/modules/resources/resources.types";
-import {
-  formatTimeRemaining,
-  getProgressColor,
-  getResourceDisplayName,
-} from "@/modules/resources/resources.utils";
+import { getResourceDisplayName } from "@/modules/resources/resources.utils";
 import { ProgressBar } from "@/modules/ui/components/ProgressBar";
 
 interface StaminaCardProps {
@@ -17,17 +11,10 @@ interface StaminaCardProps {
 }
 
 export const StaminaCard: React.FC<StaminaCardProps> = ({ type, data }) => {
-  const tick = useAtomValue(atoms.core.tick);
-
   const name = getResourceDisplayName(type);
   const percentage = (data.current / data.max) * 100;
   const isFull = data.current >= data.max;
-  const progressColor = getProgressColor(percentage, isFull);
-
-  const timeRemaining = useMemo(
-    () => formatTimeRemaining(data.fullAt, tick),
-    [data.fullAt, tick],
-  );
+  const { relativeTime, absoluteTime } = useFormattedTime(data.fullAt);
 
   return (
     <div className="rounded-lg bg-zinc-50 p-2 dark:bg-zinc-700">
@@ -49,13 +36,23 @@ export const StaminaCard: React.FC<StaminaCardProps> = ({ type, data }) => {
         value={Math.min(percentage, 100)}
         minValue={0}
         maxValue={100}
-        color={progressColor}
+        fillColor="linear-gradient(to right, #3b82f6, #f59e0b, #ef4444)"
         size="xs"
         className="mt-1.5"
-        aria-label={`${name} progress`}
+        aria-label={`${name}: ${data.current} of ${data.max}`}
       />
       <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-        {isFull ? "Full!" : `Full in ${timeRemaining}`}
+        {isFull ? (
+          "Full!"
+        ) : (
+          <>
+            Full in{" "}
+            <TimeRemaining
+              relativeTime={relativeTime}
+              absoluteTime={absoluteTime}
+            />
+          </>
+        )}
       </div>
     </div>
   );

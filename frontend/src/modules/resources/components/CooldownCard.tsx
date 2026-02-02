@@ -1,13 +1,8 @@
-import { useAtomValue } from "jotai";
-import { useMemo } from "react";
-
-import { atoms } from "@/modules/atoms";
 import { ResourceIcon } from "@/modules/resources/components/ResourceIcon";
+import { TimeRemaining } from "@/modules/resources/components/TimeRemaining";
+import { useFormattedTime } from "@/modules/resources/resources.hooks";
 import type { CooldownResource } from "@/modules/resources/resources.types";
-import {
-  formatTimeRemaining,
-  getResourceDisplayName,
-} from "@/modules/resources/resources.utils";
+import { getResourceDisplayName } from "@/modules/resources/resources.utils";
 import { Badge } from "@/modules/ui/components/Badge";
 
 interface CooldownCardProps {
@@ -16,13 +11,8 @@ interface CooldownCardProps {
 }
 
 export const CooldownCard: React.FC<CooldownCardProps> = ({ type, data }) => {
-  const tick = useAtomValue(atoms.core.tick);
   const name = getResourceDisplayName(type);
-
-  const timeRemaining = useMemo(
-    () => formatTimeRemaining(data.readyAt, tick),
-    [data.readyAt, tick],
-  );
+  const { relativeTime, absoluteTime } = useFormattedTime(data.readyAt);
 
   return (
     <div className="rounded-lg bg-zinc-50 p-2 dark:bg-zinc-700">
@@ -34,12 +24,22 @@ export const CooldownCard: React.FC<CooldownCardProps> = ({ type, data }) => {
         {data.isReady ? (
           <Badge variant="success">Ready!</Badge>
         ) : (
-          <Badge variant="warning">{timeRemaining}</Badge>
+          <Badge variant="warning">
+            <TimeRemaining
+              relativeTime={relativeTime}
+              absoluteTime={absoluteTime}
+              plain
+            />
+          </Badge>
         )}
       </div>
       {!data.isReady && (
         <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-          Ready in {timeRemaining}
+          Ready in{" "}
+          <TimeRemaining
+            relativeTime={relativeTime}
+            absoluteTime={absoluteTime}
+          />
         </div>
       )}
     </div>
