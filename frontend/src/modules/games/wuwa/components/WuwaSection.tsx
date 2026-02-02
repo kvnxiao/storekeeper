@@ -1,8 +1,8 @@
 import { WaveplatesCard } from "@/modules/games/wuwa/components/WaveplatesCard";
-import { GameSectionWrapper } from "@/modules/ui/components/GameSectionWrapper";
+import { GameSection } from "@/modules/ui/components/GameSection";
 
 export const WuwaSection: React.FC = () => (
-  <GameSectionWrapper title="Wuthering Waves">
+  <GameSection title="Wuthering Waves">
     <WaveplatesCard />
-  </GameSectionWrapper>
+  </GameSection>
 );

@@ -2,13 +2,13 @@ import { ExpeditionsCard } from "@/modules/games/genshin/components/ExpeditionsC
 import { ParametricTransformerCard } from "@/modules/games/genshin/components/ParametricTransformerCard";
 import { RealmCurrencyCard } from "@/modules/games/genshin/components/RealmCurrencyCard";
 import { ResinCard } from "@/modules/games/genshin/components/ResinCard";
-import { GameSectionWrapper } from "@/modules/ui/components/GameSectionWrapper";
+import { GameSection } from "@/modules/ui/components/GameSection";
 
 export const GenshinSection: React.FC = () => (
-  <GameSectionWrapper title="Genshin Impact">
+  <GameSection title="Genshin Impact">
     <ResinCard />
     <ParametricTransformerCard />
     <RealmCurrencyCard />
     <ExpeditionsCard />
-  </GameSectionWrapper>
+  </GameSection>
 );

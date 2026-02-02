@@ -1,8 +1,8 @@
 import { BatteryCard } from "@/modules/games/zzz/components/BatteryCard";
-import { GameSectionWrapper } from "@/modules/ui/components/GameSectionWrapper";
+import { GameSection } from "@/modules/ui/components/GameSection";
 
 export const ZzzSection: React.FC = () => (
-  <GameSectionWrapper title="Zenless Zone Zero">
+  <GameSection title="Zenless Zone Zero">
     <BatteryCard />
-  </GameSectionWrapper>
+  </GameSection>
 );

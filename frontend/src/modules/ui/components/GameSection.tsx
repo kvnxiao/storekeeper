@@ -12,12 +12,12 @@ import {
   springTransition,
 } from "@/modules/ui/ui.animations";
 
-interface GameSectionWrapperProps {
+interface GameSectionProps {
   title: string;
   children: React.ReactNode;
 }
 
-export const GameSectionWrapper: React.FC<GameSectionWrapperProps> = ({
+export const GameSection: React.FC<GameSectionProps> = ({
   title,
   children,
 }) => {
