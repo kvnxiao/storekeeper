@@ -22,7 +22,7 @@ export const CooldownCard: React.FC<CooldownCardProps> = ({
   // Loading state - show icon + name with shimmer badge placeholder
   if (!data) {
     return (
-      <div className="mask-shimmer rounded-lg bg-zinc-50 p-2 dark:bg-zinc-700">
+      <div className="mask-shimmer rounded-lg bg-zinc-50 p-2 transition-transform hover:translate-x-0.5 dark:bg-zinc-700">
         <div className="flex items-center gap-2">
           <ResourceIcon src={iconPath} size="md" />
           <span className="min-w-0 flex-1 truncate text-sm font-medium text-zinc-700 dark:text-zinc-300">
@@ -38,7 +38,7 @@ export const CooldownCard: React.FC<CooldownCardProps> = ({
 
   return (
     <div
-      className={`rounded-lg bg-zinc-50 p-2 dark:bg-zinc-700 ${isRefreshing ? "mask-shimmer" : ""}`}
+      className={`rounded-lg bg-zinc-50 p-2 transition-transform hover:translate-x-0.5 dark:bg-zinc-700 ${isRefreshing ? "mask-shimmer" : ""}`}
     >
       <div className="flex items-center gap-2">
         <ResourceIcon src={iconPath} size="md" />

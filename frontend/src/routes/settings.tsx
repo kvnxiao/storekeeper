@@ -1,26 +1,19 @@
-import { ArrowLeftIcon } from "@heroicons/react/24/outline";
+import {
+  ArrowLeftIcon,
+  ExclamationCircleIcon,
+} from "@heroicons/react/24/outline";
 import { createFileRoute } from "@tanstack/react-router";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { AnimatePresence, motion } from "motion/react";
 import { useCallback } from "react";
-
+import { Focusable, TooltipTrigger } from "react-aria-components";
+import { atoms } from "@/modules/atoms";
 import { GeneralSection } from "@/modules/settings/components/GeneralSection";
 import { HoyolabGameSection } from "@/modules/settings/components/HoyolabGameSection";
 import { HoyolabSecretsSection } from "@/modules/settings/components/HoyolabSecretsSection";
 import { KuroSecretsSection } from "@/modules/settings/components/KuroSecretsSection";
 import { NotificationSection } from "@/modules/settings/components/NotificationSection";
 import { WuwaSection } from "@/modules/settings/components/WuwaSection";
-import {
-  configQueryAtom,
-  editedConfigAtom,
-  editedSecretsAtom,
-  formInitAtom,
-  isDirtyAtom,
-  saveAtom,
-  saveConfigMutationAtom,
-  saveErrorAtom,
-  saveSecretsMutationAtom,
-  secretsQueryAtom,
-} from "@/modules/settings/settings.atoms";
 import type {
   AppConfig,
   GenshinConfig,
@@ -31,6 +24,7 @@ import type {
 } from "@/modules/settings/settings.types";
 import { Button } from "@/modules/ui/components/Button";
 import { ButtonLink } from "@/modules/ui/components/ButtonLink";
+import { Tooltip } from "@/modules/ui/components/Tooltip";
 
 // =============================================================================
 // Settings Page Component
@@ -38,26 +32,21 @@ import { ButtonLink } from "@/modules/ui/components/ButtonLink";
 
 const SettingsPage: React.FC = () => {
   // Subscribe to form initialization effect (runs once when queries complete)
-  useAtomValue(formInitAtom);
+  useAtomValue(atoms.settings.formInit);
 
   // Query error state (for loading UI)
-  const { error: configError } = useAtomValue(configQueryAtom);
-  const { error: secretsError } = useAtomValue(secretsQueryAtom);
+  const { error: configError } = useAtomValue(atoms.settings.configQuery);
+  const { error: secretsError } = useAtomValue(atoms.settings.secretsQuery);
 
   // Edited state atoms
-  const [config, setConfig] = useAtom(editedConfigAtom);
-  const [secrets, setSecrets] = useAtom(editedSecretsAtom);
-  const isDirty = useAtomValue(isDirtyAtom);
+  const [config, setConfig] = useAtom(atoms.settings.editedConfig);
+  const [secrets, setSecrets] = useAtom(atoms.settings.editedSecrets);
+  const isDirty = useAtomValue(atoms.settings.isDirty);
 
-  // Save action and error state
-  const saveSettings = useSetAtom(saveAtom);
-  const saveError = useAtomValue(saveErrorAtom);
-
-  // Mutations (for isPending state only)
-  const { isPending: isSavingConfig } = useAtomValue(saveConfigMutationAtom);
-  const { isPending: isSavingSecrets } = useAtomValue(saveSecretsMutationAtom);
-
-  const isSaving = isSavingConfig || isSavingSecrets;
+  // Save action and state
+  const saveSettings = useSetAtom(atoms.settings.save);
+  const saveError = useAtomValue(atoms.settings.saveError);
+  const isSaving = useAtomValue(atoms.settings.isSaving);
 
   // Helper to update nested config values
   const updateConfig = useCallback(
@@ -109,26 +98,56 @@ const SettingsPage: React.FC = () => {
             Settings
           </h1>
         </div>
-        <Button
-          onPress={() => void saveSettings()}
-          isDisabled={!isDirty || isSaving}
-          color="blue"
-        >
-          {isSaving ? "Saving..." : "Save Changes"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <AnimatePresence>
+            {isDirty && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.15 }}
+              >
+                <TooltipTrigger delay={300}>
+                  <Focusable>
+                    <motion.div
+                      animate={{ scale: [1, 1.1, 1] }}
+                      transition={{
+                        duration: 2,
+                        repeat: Number.POSITIVE_INFINITY,
+                        ease: "easeInOut",
+                      }}
+                    >
+                      <ExclamationCircleIcon className="h-5 w-5 text-amber-500" />
+                    </motion.div>
+                  </Focusable>
+                  <Tooltip placement="bottom">
+                    You have unsaved changes. Click "Save Changes" to apply
+                    them.
+                  </Tooltip>
+                </TooltipTrigger>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <motion.div
+            animate={{ opacity: isDirty ? 1 : 0.5 }}
+            transition={{ duration: 0.15 }}
+          >
+            <Button
+              onPress={() => void saveSettings()}
+              isDisabled={!isDirty || isSaving}
+              isPending={isSaving}
+              color="blue"
+            >
+              Save Changes
+            </Button>
+          </motion.div>
+        </div>
       </header>
 
       {/* Error display */}
       {saveError && (
         <div className="mb-4 rounded-lg bg-red-500/15 p-3 text-red-700 ring-1 ring-red-500/20 dark:text-red-400">
           {saveError}
-        </div>
-      )}
-
-      {/* Dirty indicator */}
-      {isDirty && (
-        <div className="mb-4 rounded-lg bg-amber-500/15 p-3 text-amber-700 ring-1 ring-amber-500/20 dark:text-amber-400">
-          You have unsaved changes. Click "Save Changes" to apply them.
         </div>
       )}
 

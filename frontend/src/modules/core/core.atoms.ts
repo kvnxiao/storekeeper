@@ -3,13 +3,13 @@ import { atom } from "jotai";
 import { atomEffect } from "jotai-effect";
 import { atomWithMutation, atomWithQuery } from "jotai-tanstack-query";
 
+import { configQueryAtom } from "@/modules/core/core.config";
 import { queryClient } from "@/modules/core/core.queryClient";
 import {
   refreshResourcesMutationOptions,
   resourcesQueryOptions,
 } from "@/modules/resources/resources.query";
 import type { AllResources } from "@/modules/resources/resources.types";
-import { configQueryAtom } from "@/modules/settings/settings.atoms";
 
 // =============================================================================
 // CoreAtoms Class

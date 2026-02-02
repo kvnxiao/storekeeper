@@ -1,3 +1,4 @@
+import { ArrowPathIcon } from "@heroicons/react/20/solid";
 import type React from "react";
 import {
   Button as AriaButton,
@@ -100,6 +101,7 @@ export type ButtonStyleProps = VariantProps<typeof buttonStyle>;
 
 export interface ButtonProps extends AriaButtonProps, ButtonStyleProps {
   className?: string;
+  isPending?: boolean;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -108,6 +110,8 @@ export const Button: React.FC<ButtonProps> = ({
   size,
   className,
   children,
+  isPending,
+  isDisabled,
   ...props
 }) => {
   // Only apply color for solid variant
@@ -116,11 +120,17 @@ export const Button: React.FC<ButtonProps> = ({
   return (
     <AriaButton
       {...props}
+      isDisabled={isDisabled || isPending}
       className={composeRenderProps(className, (cn) =>
         buttonStyle({ variant, color: effectiveColor, size, className: cn }),
       )}
     >
-      {children}
+      {composeRenderProps(children, (children) => (
+        <>
+          {isPending && <ArrowPathIcon className="h-4 w-4 animate-spin" />}
+          {children}
+        </>
+      ))}
     </AriaButton>
   );
 };

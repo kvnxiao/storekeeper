@@ -49,7 +49,7 @@ export const GameSection: React.FC<GameSectionProps> = ({
       </Heading>
       <DisclosurePanel className="h-(--disclosure-panel-height) overflow-clip transition-[height] duration-250 ease-out motion-reduce:transition-none">
         <motion.div
-          className="flex flex-col gap-1.5 px-2 pb-2"
+          className="flex flex-col gap-1.5 px-2 pt-1.5 pb-2"
           variants={cardContainerVariants}
           initial={false}
           animate={isExpanded ? "visible" : "hidden"}

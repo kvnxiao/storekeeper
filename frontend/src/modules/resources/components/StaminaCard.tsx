@@ -22,7 +22,7 @@ export const StaminaCard: React.FC<StaminaCardProps> = ({
   // Loading state - show icon + name with shimmer placeholders
   if (!data) {
     return (
-      <div className="mask-shimmer rounded-lg bg-zinc-50 p-2 dark:bg-zinc-700">
+      <div className="mask-shimmer rounded-lg bg-zinc-50 p-2 transition-transform hover:translate-x-0.5 dark:bg-zinc-700">
         <div className="flex items-center gap-2">
           <ResourceIcon src={iconPath} size="md" />
           <div className="flex min-w-0 flex-1 items-baseline justify-between gap-2">
@@ -45,7 +45,7 @@ export const StaminaCard: React.FC<StaminaCardProps> = ({
 
   return (
     <div
-      className={`rounded-lg bg-zinc-50 p-2 dark:bg-zinc-700 ${isRefreshing ? "mask-shimmer" : ""}`}
+      className={`rounded-lg bg-zinc-50 p-2 transition-transform hover:translate-x-0.5 dark:bg-zinc-700 ${isRefreshing ? "mask-shimmer" : ""}`}
     >
       <div className="flex items-center gap-2">
         <ResourceIcon src={iconPath} size="md" />

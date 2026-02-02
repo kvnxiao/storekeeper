@@ -3,6 +3,7 @@ import { GenshinAtoms } from "@/modules/games/genshin/genshin.atoms";
 import { HsrAtoms } from "@/modules/games/hsr/hsr.atoms";
 import { WuwaAtoms } from "@/modules/games/wuwa/wuwa.atoms";
 import { ZzzAtoms } from "@/modules/games/zzz/zzz.atoms";
+import { SettingsAtoms } from "@/modules/settings/settings.atoms";
 
 // =============================================================================
 // Games Atoms Container
@@ -29,10 +30,12 @@ class GamesAtoms {
 class AtomsContainer {
   readonly core: CoreAtoms;
   readonly games: GamesAtoms;
+  readonly settings: SettingsAtoms;
 
   constructor() {
     this.core = new CoreAtoms();
     this.games = new GamesAtoms(this.core);
+    this.settings = new SettingsAtoms();
   }
 }
 
