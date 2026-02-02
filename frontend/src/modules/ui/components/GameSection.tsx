@@ -51,7 +51,7 @@ export const GameSection: React.FC<GameSectionProps> = ({
         <motion.div
           className="flex flex-col gap-1.5 px-2 pb-2"
           variants={cardContainerVariants}
-          initial="hidden"
+          initial={false}
           animate={isExpanded ? "visible" : "hidden"}
         >
           {children}

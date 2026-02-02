@@ -9,6 +9,9 @@ import {
   cardItemVariantsReduced,
 } from "@/modules/ui/ui.animations";
 
+const RESOURCE_NAME = "Parametric Transformer";
+const RESOURCE_ICON = "/icons/game/genshin/Item_Parametric_Transformer.webp";
+
 export const ParametricTransformerCard: React.FC = () => {
   const shouldReduceMotion = useReducedMotion();
   const variants = shouldReduceMotion
@@ -16,12 +19,19 @@ export const ParametricTransformerCard: React.FC = () => {
     : cardItemVariants;
 
   const resource = useAtomValue(atoms.games.genshin.parametricTransformer);
+  const isRefreshing = useAtomValue(atoms.core.isRefreshing);
 
-  if (!resource || !isCooldownResource(resource.data)) return null;
+  const data =
+    resource && isCooldownResource(resource.data) ? resource.data : undefined;
 
   return (
     <motion.div variants={variants}>
-      <CooldownCard type={resource.type} data={resource.data} />
+      <CooldownCard
+        iconPath={RESOURCE_ICON}
+        name={RESOURCE_NAME}
+        data={data}
+        isRefreshing={isRefreshing}
+      />
     </motion.div>
   );
 };

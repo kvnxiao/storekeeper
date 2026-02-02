@@ -2,24 +2,53 @@ import { ResourceIcon } from "@/modules/resources/components/ResourceIcon";
 import { TimeRemaining } from "@/modules/resources/components/TimeRemaining";
 import { useFormattedTime } from "@/modules/resources/resources.hooks";
 import type { StaminaResource } from "@/modules/resources/resources.types";
-import { getResourceDisplayName } from "@/modules/resources/resources.utils";
 import { ProgressBar } from "@/modules/ui/components/ProgressBar";
 
 interface StaminaCardProps {
-  type: string;
-  data: StaminaResource;
+  iconPath: string;
+  name: string;
+  data?: StaminaResource;
+  isRefreshing?: boolean;
 }
 
-export const StaminaCard: React.FC<StaminaCardProps> = ({ type, data }) => {
-  const name = getResourceDisplayName(type);
+export const StaminaCard: React.FC<StaminaCardProps> = ({
+  iconPath,
+  name,
+  data,
+  isRefreshing,
+}) => {
+  const { relativeTime, absoluteTime } = useFormattedTime(data?.fullAt);
+
+  // Loading state - show icon + name with shimmer placeholders
+  if (!data) {
+    return (
+      <div className="mask-shimmer rounded-lg bg-zinc-50 p-2 dark:bg-zinc-700">
+        <div className="flex items-center gap-2">
+          <ResourceIcon src={iconPath} size="md" />
+          <div className="flex min-w-0 flex-1 items-baseline justify-between gap-2">
+            <span className="truncate text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              {name}
+            </span>
+            {/* h-5 matches text-sm line-height (1.25rem = 20px) */}
+            <div className="h-5 w-12 rounded bg-zinc-200 dark:bg-zinc-600" />
+          </div>
+        </div>
+        <div className="mt-1.5 h-1 w-full rounded bg-zinc-200 dark:bg-zinc-600" />
+        {/* h-4 matches text-xs line-height (1rem = 16px) */}
+        <div className="mt-1 h-4 w-24 rounded bg-zinc-200 dark:bg-zinc-600" />
+      </div>
+    );
+  }
+
   const percentage = (data.current / data.max) * 100;
   const isFull = data.current >= data.max;
-  const { relativeTime, absoluteTime } = useFormattedTime(data.fullAt);
 
   return (
-    <div className="rounded-lg bg-zinc-50 p-2 dark:bg-zinc-700">
+    <div
+      className={`rounded-lg bg-zinc-50 p-2 dark:bg-zinc-700 ${isRefreshing ? "mask-shimmer" : ""}`}
+    >
       <div className="flex items-center gap-2">
-        <ResourceIcon type={type} size="md" />
+        <ResourceIcon src={iconPath} size="md" />
         <div className="flex min-w-0 flex-1 items-baseline justify-between gap-2">
           <span className="truncate text-sm font-medium text-zinc-700 dark:text-zinc-300">
             {name}

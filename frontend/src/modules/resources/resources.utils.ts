@@ -49,20 +49,6 @@ export function isPastDateTime(
   return targetMs <= nowMs;
 }
 
-/** Maps resource type to display name */
-export function getResourceDisplayName(type: string): string {
-  const names: Record<string, string> = {
-    resin: "Original Resin",
-    parametric_transformer: "Parametric Transformer",
-    realm_currency: "Realm Currency",
-    expeditions: "Expeditions",
-    trailblaze_power: "Trailblaze Power",
-    battery: "Battery",
-    waveplates: "Waveplates",
-  };
-  return names[type] ?? type;
-}
-
 const absoluteDateFormatter = new Intl.DateTimeFormat(undefined, {
   weekday: "long",
   hour: "numeric",

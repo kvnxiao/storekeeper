@@ -10,6 +10,9 @@ use crate::state::{AllResources, AppState};
 /// Event name for resource updates sent to the frontend.
 pub const RESOURCES_UPDATED_EVENT: &str = "resources-updated";
 
+/// Event name for refresh started sent to the frontend.
+pub const REFRESH_STARTED_EVENT: &str = "refresh-started";
+
 /// Starts the background polling task.
 ///
 /// This spawns a tokio task that periodically fetches resources from all
@@ -102,6 +105,9 @@ pub async fn refresh_now(app_handle: &AppHandle) -> Result<AllResources, String>
         resources.last_updated = Some(chrono::Utc::now());
         return Ok(resources);
     }
+
+    // Emit refresh started event to frontend
+    let _ = app_handle.emit(REFRESH_STARTED_EVENT, ());
 
     state.set_refreshing(true).await;
 

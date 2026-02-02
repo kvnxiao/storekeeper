@@ -9,6 +9,9 @@ import {
   cardItemVariantsReduced,
 } from "@/modules/ui/ui.animations";
 
+const RESOURCE_NAME = "Expeditions";
+const RESOURCE_ICON = "/icons/game/genshin/Expeditions.webp";
+
 export const ExpeditionsCard: React.FC = () => {
   const shouldReduceMotion = useReducedMotion();
   const variants = shouldReduceMotion
@@ -17,17 +20,20 @@ export const ExpeditionsCard: React.FC = () => {
 
   const resource = useAtomValue(atoms.games.genshin.expeditions);
   const allDone = useAtomValue(atoms.games.genshin.expeditionsReady);
+  const isRefreshing = useAtomValue(atoms.core.isRefreshing);
 
-  if (!resource || !isExpeditionResource(resource.data)) return null;
+  const data =
+    resource && isExpeditionResource(resource.data)
+      ? { isReady: allDone, readyAt: resource.data.earliestFinishAt }
+      : undefined;
 
   return (
     <motion.div variants={variants}>
       <CooldownCard
-        type={resource.type}
-        data={{
-          isReady: allDone,
-          readyAt: resource.data.earliestFinishAt,
-        }}
+        iconPath={RESOURCE_ICON}
+        name={RESOURCE_NAME}
+        data={data}
+        isRefreshing={isRefreshing}
       />
     </motion.div>
   );

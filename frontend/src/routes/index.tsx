@@ -1,6 +1,7 @@
 import { ArrowPathIcon, Cog6ToothIcon } from "@heroicons/react/24/outline";
 import { createFileRoute } from "@tanstack/react-router";
 import { useAtomValue } from "jotai";
+import { AnimatePresence, motion } from "motion/react";
 
 import { atoms } from "@/modules/atoms";
 import { GenshinSection } from "@/modules/games/genshin/components/GenshinSection";
@@ -11,19 +12,21 @@ import { Button } from "@/modules/ui/components/Button";
 import { ButtonLink } from "@/modules/ui/components/ButtonLink";
 
 const DashboardPage: React.FC = () => {
-  const { data: resources, error } = useAtomValue(atoms.core.resourcesQuery);
+  const { error } = useAtomValue(atoms.core.resourcesQuery);
   const { isPending, mutate: refresh } = useAtomValue(
     atoms.core.refreshResources,
   );
+  const isConfigLoading = useAtomValue(atoms.core.isConfigLoading);
+  const enabledGames = useAtomValue(atoms.core.enabledGames);
 
   // Subscribe to backend resource updates
   useAtomValue(atoms.core.resourcesEventListener);
 
-  const hasGenshin = resources?.games?.GENSHIN_IMPACT !== undefined;
-  const hasHsr = resources?.games?.HONKAI_STAR_RAIL !== undefined;
-  const hasZzz = resources?.games?.ZENLESS_ZONE_ZERO !== undefined;
-  const hasWuwa = resources?.games?.WUTHERING_WAVES !== undefined;
-  const hasAnyResources = hasGenshin || hasHsr || hasZzz || hasWuwa;
+  const hasGenshin = enabledGames.has("GENSHIN_IMPACT");
+  const hasHsr = enabledGames.has("HONKAI_STAR_RAIL");
+  const hasZzz = enabledGames.has("ZENLESS_ZONE_ZERO");
+  const hasWuwa = enabledGames.has("WUTHERING_WAVES");
+  const hasAnyGames = hasGenshin || hasHsr || hasZzz || hasWuwa;
 
   return (
     <div className="mx-auto min-h-screen max-w-sm p-3">
@@ -63,21 +66,36 @@ const DashboardPage: React.FC = () => {
       )}
 
       <main className="space-y-2">
-        {hasAnyResources ? (
-          <>
-            {hasGenshin && <GenshinSection />}
-            {hasHsr && <HsrSection />}
-            {hasZzz && <ZzzSection />}
-            {hasWuwa && <WuwaSection />}
-          </>
-        ) : (
-          <div className="py-8 text-center text-zinc-500 dark:text-zinc-400">
-            <p className="mb-2">No games configured</p>
-            <p className="text-sm">
-              Add your game credentials in the config file to get started.
-            </p>
-          </div>
-        )}
+        <AnimatePresence>
+          {!isConfigLoading &&
+            (hasAnyGames ? (
+              <motion.div
+                key="sections"
+                className="space-y-2"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.2 }}
+              >
+                {hasGenshin && <GenshinSection />}
+                {hasHsr && <HsrSection />}
+                {hasZzz && <ZzzSection />}
+                {hasWuwa && <WuwaSection />}
+              </motion.div>
+            ) : (
+              <motion.div
+                key="empty"
+                className="py-8 text-center text-zinc-500 dark:text-zinc-400"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.2 }}
+              >
+                <p className="mb-2">No games configured</p>
+                <p className="text-sm">
+                  Add your game credentials in the config file to get started.
+                </p>
+              </motion.div>
+            ))}
+        </AnimatePresence>
       </main>
     </div>
   );
