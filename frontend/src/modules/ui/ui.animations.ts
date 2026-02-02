@@ -24,14 +24,14 @@ export const cardContainerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { when: "beforeChildren", staggerChildren: 0.05 },
+    transition: { when: "beforeChildren", staggerChildren: 0.03 },
   },
 };
 
 /** Individual card item animation */
 export const cardItemVariants: Variants = {
-  hidden: { opacity: 0, y: 10 },
-  visible: { opacity: 1, y: 0 },
+  hidden: { opacity: 0, y: 6 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.15 } },
 };
 
 /** Reduced motion card variants (fade only) */

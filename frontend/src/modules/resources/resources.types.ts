@@ -29,7 +29,7 @@ export interface GameResource {
 
 /** All resources from all games (camelCase from Rust) */
 export interface AllResources {
-  games: Record<GameId, GameResource[]>;
+  games?: Partial<Record<GameId, GameResource[]>>;
   lastUpdated?: string; // ISO 8601 datetime
 }
 

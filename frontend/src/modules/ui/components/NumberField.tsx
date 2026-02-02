@@ -70,9 +70,16 @@ export interface NumberFieldProps
   className?: string;
 }
 
-function StepperButton(props: ButtonProps) {
-  return <Button {...props} className={stepperButtonStyle()} />;
-}
+const StepperButton: React.FC<ButtonProps> = ({ className, ...props }) => {
+  return (
+    <Button
+      {...props}
+      className={composeRenderProps(className, (cn) =>
+        stepperButtonStyle({ className: cn }),
+      )}
+    />
+  );
+};
 
 export const NumberField: React.FC<NumberFieldProps> = ({
   label,
@@ -92,11 +99,11 @@ export const NumberField: React.FC<NumberFieldProps> = ({
         <Input className={inputStyle()} />
         <div className={stepperDividerStyle()} />
         <div className="flex flex-col">
-          <StepperButton slot="increment">
+          <StepperButton slot="increment" className="rounded-tr-lg">
             <ChevronUpIcon aria-hidden className="h-4 w-4" />
           </StepperButton>
           <div className={stepperDividerStyle()} />
-          <StepperButton slot="decrement">
+          <StepperButton slot="decrement" className="rounded-br-lg">
             <ChevronDownIcon aria-hidden className="h-4 w-4" />
           </StepperButton>
         </div>

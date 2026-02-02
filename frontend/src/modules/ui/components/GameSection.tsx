@@ -7,9 +7,6 @@ import {
   Heading,
 } from "react-aria-components";
 
-import type { GameId } from "@/modules/games/games.types";
-import { ResourceCard } from "@/modules/resources/components/ResourceCard";
-import type { GameResource } from "@/modules/resources/resources.types";
 import {
   cardContainerVariants,
   springTransition,
@@ -17,14 +14,12 @@ import {
 
 interface GameSectionProps {
   title: string;
-  gameId: GameId;
-  resources: GameResource[];
+  children: React.ReactNode;
 }
 
 export const GameSection: React.FC<GameSectionProps> = ({
   title,
-  gameId,
-  resources,
+  children,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const shouldReduceMotion = useReducedMotion();
@@ -38,9 +33,9 @@ export const GameSection: React.FC<GameSectionProps> = ({
       <Heading>
         <Button
           slot="trigger"
-          className="flex w-full cursor-pointer items-center justify-between px-4 py-3 text-left transition-colors hover:bg-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-zinc-700"
+          className="flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left transition-colors hover:bg-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-zinc-700"
         >
-          <span className="text-lg font-semibold text-zinc-950 dark:text-white">
+          <span className="text-base font-semibold text-zinc-950 dark:text-white">
             {title}
           </span>
           <motion.span
@@ -54,18 +49,12 @@ export const GameSection: React.FC<GameSectionProps> = ({
       </Heading>
       <DisclosurePanel className="h-(--disclosure-panel-height) overflow-clip transition-[height] duration-250 ease-out motion-reduce:transition-none">
         <motion.div
-          className="grid grid-cols-2 gap-3 px-4 pb-4"
+          className="flex flex-col gap-1.5 px-2 pt-1.5 pb-2"
           variants={cardContainerVariants}
-          initial="hidden"
+          initial={false}
           animate={isExpanded ? "visible" : "hidden"}
         >
-          {resources.map((resource, index) => (
-            <ResourceCard
-              key={`${gameId}-${resource.type}-${index}`}
-              type={resource.type}
-              data={resource.data}
-            />
-          ))}
+          {children}
         </motion.div>
       </DisclosurePanel>
     </Disclosure>

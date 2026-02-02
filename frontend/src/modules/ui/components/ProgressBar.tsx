@@ -23,7 +23,8 @@ const progressBarStyle = tv({
       info: { fill: "bg-blue-500" },
     },
     size: {
-      sm: { track: "h-1" },
+      xs: { track: "h-1" },
+      sm: { track: "h-1.5" },
       md: { track: "h-2" },
       lg: { track: "h-3" },
     },
@@ -42,6 +43,8 @@ export interface ProgressBarProps
   className?: string;
   label?: string;
   showValue?: boolean;
+  /** Custom fill color (overrides color variant) */
+  fillColor?: string;
 }
 
 export const ProgressBar: React.FC<ProgressBarProps> = ({
@@ -50,9 +53,13 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   showValue = false,
   color,
   size,
+  fillColor,
   ...props
 }) => {
-  const styles = progressBarStyle({ color, size });
+  const styles = progressBarStyle({
+    color: fillColor ? undefined : color,
+    size,
+  });
 
   return (
     <AriaProgressBar
@@ -61,7 +68,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
         styles.root({ className: cn }),
       )}
     >
-      {({ percentage, valueText }) => (
+      {({ percentage = 0, valueText }) => (
         <>
           {(label || showValue) && (
             <div className="flex justify-between">
@@ -74,7 +81,14 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
           <div className={styles.track()}>
             <div
               className={styles.fill()}
-              style={{ width: `${percentage}%` }}
+              style={{
+                width: `${percentage}%`,
+                ...(fillColor && {
+                  background: fillColor,
+                  // Scale gradient to span full track width (clips based on fill %)
+                  backgroundSize: `${10000 / Math.max(percentage, 1)}% 100%`,
+                }),
+              }}
             />
           </div>
         </>

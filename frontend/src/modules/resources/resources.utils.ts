@@ -1,9 +1,5 @@
 import "@formatjs/intl-durationformat/polyfill.js";
 
-import type { ProgressBarProps } from "@/modules/ui/components/ProgressBar";
-
-type ProgressColor = NonNullable<ProgressBarProps["color"]>;
-
 const durationFormatter = new Intl.DurationFormat(undefined, {
   style: "narrow",
 });
@@ -39,13 +35,6 @@ export function formatTimeRemaining(
 }
 
 /**
- * @deprecated Use formatTimeRemaining with tick atom instead
- */
-export function formatTime(datetime: string | null | undefined): string {
-  return formatTimeRemaining(datetime, Date.now());
-}
-
-/**
  * Checks if a datetime is in the past.
  *
  * @param datetime - ISO 8601 datetime string
@@ -60,27 +49,21 @@ export function isPastDateTime(
   return targetMs <= nowMs;
 }
 
-/** Maps resource type to display name */
-export function getResourceDisplayName(type: string): string {
-  const names: Record<string, string> = {
-    resin: "Original Resin",
-    parametric_transformer: "Transformer",
-    realm_currency: "Realm Currency",
-    expeditions: "Expeditions",
-    trailblaze_power: "Trailblaze Power",
-    battery: "Battery",
-    waveplates: "Waveplates",
-  };
-  return names[type] ?? type;
-}
+const absoluteDateFormatter = new Intl.DateTimeFormat(undefined, {
+  weekday: "long",
+  hour: "numeric",
+  minute: "2-digit",
+});
 
-/** Get progress bar color variant based on percentage */
-export function getProgressColor(
-  percentage: number,
-  isFull: boolean,
-): ProgressColor {
-  if (isFull) return "success";
-  if (percentage >= 50) return "info";
-  if (percentage >= 25) return "warning";
-  return "danger";
+/**
+ * Formats a datetime string to absolute date/time.
+ *
+ * @param datetime - ISO 8601 datetime string
+ * @returns Formatted datetime like "Tuesday 12:43 pm" or null if no datetime
+ */
+export function formatAbsoluteDateTime(
+  datetime: string | null | undefined,
+): string | null {
+  if (!datetime) return null;
+  return absoluteDateFormatter.format(new Date(datetime));
 }

@@ -28,6 +28,7 @@
     "fast-equals": "^6.0.0",
     "jotai": "^2.12.3",
     "jotai-effect": "^2.2.3",
+    "jotai-family": "^1.0.1",
     "jotai-tanstack-query": "^0.9.2",
     "motion": "^12.24.12",
     "nitro": "npm:nitro-nightly@3.0.1-20251230-165713-6e801e22",

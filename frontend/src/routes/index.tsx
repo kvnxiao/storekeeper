@@ -1,83 +1,106 @@
-import { Cog6ToothIcon } from "@heroicons/react/24/outline";
+import { ArrowPathIcon, Cog6ToothIcon } from "@heroicons/react/24/outline";
 import { createFileRoute } from "@tanstack/react-router";
 import { useAtomValue } from "jotai";
-import { useMemo } from "react";
+import { AnimatePresence, motion } from "motion/react";
 
-import { GAME_METADATA, GAME_ORDER } from "@/modules/games/games.constants";
-import type { GameId } from "@/modules/games/games.types";
-import { GameSection } from "@/modules/resources/components/GameSection";
-import {
-  resourcesEventListenerAtom,
-  resourcesQueryAtom,
-} from "@/modules/resources/resources.atoms";
+import { atoms } from "@/modules/atoms";
+import { GenshinSection } from "@/modules/games/genshin/components/GenshinSection";
+import { HsrSection } from "@/modules/games/hsr/components/HsrSection";
+import { WuwaSection } from "@/modules/games/wuwa/components/WuwaSection";
+import { ZzzSection } from "@/modules/games/zzz/components/ZzzSection";
+import { Button } from "@/modules/ui/components/Button";
 import { ButtonLink } from "@/modules/ui/components/ButtonLink";
 
-const HomePage: React.FC = () => {
-  const { data: resources, error } = useAtomValue(resourcesQueryAtom);
+const DashboardPage: React.FC = () => {
+  const { error } = useAtomValue(atoms.core.resourcesQuery);
+  const { isPending, mutate: refresh } = useAtomValue(
+    atoms.core.refreshResources,
+  );
+  const isConfigLoading = useAtomValue(atoms.core.isConfigLoading);
+  const enabledGames = useAtomValue(atoms.core.enabledGames);
 
   // Subscribe to backend resource updates
-  useAtomValue(resourcesEventListenerAtom);
+  useAtomValue(atoms.core.resourcesEventListener);
 
-  const activeGames = useMemo((): GameId[] => {
-    if (!resources?.games) return [];
-    return GAME_ORDER.filter((gameId) => resources.games[gameId] !== undefined);
-  }, [resources]);
-
-  const hasAnyResources = activeGames.length > 0;
+  const hasGenshin = enabledGames.has("GENSHIN_IMPACT");
+  const hasHsr = enabledGames.has("HONKAI_STAR_RAIL");
+  const hasZzz = enabledGames.has("ZENLESS_ZONE_ZERO");
+  const hasWuwa = enabledGames.has("WUTHERING_WAVES");
+  const hasAnyGames = hasGenshin || hasHsr || hasZzz || hasWuwa;
 
   return (
-    <div className="min-h-screen p-4">
-      <header className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-zinc-950 dark:text-white">
+    <div className="mx-auto min-h-screen max-w-sm p-3">
+      <header className="mb-3 flex items-center justify-between">
+        <h1 className="text-lg font-bold text-zinc-950 dark:text-white">
           Storekeeper
         </h1>
-        <ButtonLink
-          to="/settings"
-          variant="plain"
-          aria-label="Settings"
-          onClick={() => {
-            document.documentElement.dataset.viewTransitionDirection =
-              "forward";
-          }}
-        >
-          <Cog6ToothIcon className="h-5 w-5" />
-        </ButtonLink>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="plain"
+            aria-label="Refresh resources"
+            isDisabled={isPending}
+            onPress={() => refresh()}
+          >
+            <ArrowPathIcon
+              className={`h-5 w-5 ${isPending ? "animate-spin" : ""}`}
+            />
+          </Button>
+          <ButtonLink
+            to="/settings"
+            variant="plain"
+            aria-label="Settings"
+            onClick={() => {
+              document.documentElement.dataset.viewTransitionDirection =
+                "forward";
+            }}
+          >
+            <Cog6ToothIcon className="h-5 w-5" />
+          </ButtonLink>
+        </div>
       </header>
 
       {error && (
-        <div className="mb-4 rounded-lg bg-red-500/15 p-3 text-red-700 ring-1 ring-red-500/20 dark:text-red-400">
+        <div className="mb-3 rounded-lg bg-red-500/15 p-3 text-red-700 ring-1 ring-red-500/20 dark:text-red-400">
           {String(error)}
         </div>
       )}
 
-      <main className="space-y-4">
-        {hasAnyResources ? (
-          activeGames.map((gameId) => {
-            const metadata = GAME_METADATA[gameId];
-            const gameResources = resources?.games[gameId];
-            if (!gameResources) return null;
-            return (
-              <GameSection
-                key={gameId}
-                title={metadata.title}
-                gameId={gameId}
-                resources={gameResources}
-              />
-            );
-          })
-        ) : (
-          <div className="py-8 text-center text-zinc-500 dark:text-zinc-400">
-            <p className="mb-2">No games configured</p>
-            <p className="text-sm">
-              Add your game credentials in the config file to get started.
-            </p>
-          </div>
-        )}
+      <main className="space-y-2">
+        <AnimatePresence>
+          {!isConfigLoading &&
+            (hasAnyGames ? (
+              <motion.div
+                key="sections"
+                className="space-y-2"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.2 }}
+              >
+                {hasGenshin && <GenshinSection />}
+                {hasHsr && <HsrSection />}
+                {hasZzz && <ZzzSection />}
+                {hasWuwa && <WuwaSection />}
+              </motion.div>
+            ) : (
+              <motion.div
+                key="empty"
+                className="py-8 text-center text-zinc-500 dark:text-zinc-400"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.2 }}
+              >
+                <p className="mb-2">No games configured</p>
+                <p className="text-sm">
+                  Add your game credentials in the config file to get started.
+                </p>
+              </motion.div>
+            ))}
+        </AnimatePresence>
       </main>
     </div>
   );
 };
 
 export const Route = createFileRoute("/")({
-  component: HomePage,
+  component: DashboardPage,
 });

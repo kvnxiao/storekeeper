@@ -3,8 +3,8 @@ import { atom } from "jotai";
 import { atomEffect } from "jotai-effect";
 import { atomWithMutation, atomWithQuery } from "jotai-tanstack-query";
 
+import { configQueryAtom } from "@/modules/core/core.config";
 import {
-  configQueryOptions,
   reloadConfigMutationOptions,
   saveConfigMutationOptions,
   saveSecretsMutationOptions,
@@ -16,119 +16,133 @@ import type {
 } from "@/modules/settings/settings.types";
 
 // =============================================================================
-// Query Atoms
+// SettingsAtoms Class
 // =============================================================================
 
-/** Fetch config from backend */
-export const configQueryAtom = atomWithQuery(() => configQueryOptions());
+export class SettingsAtoms {
+  // ---------------------------------------------------------------------------
+  // Query Atoms
+  // ---------------------------------------------------------------------------
 
-/** Fetch secrets from backend */
-export const secretsQueryAtom = atomWithQuery(() => secretsQueryOptions());
+  /** Config query from core (re-exported for convenience) */
+  readonly configQuery = configQueryAtom;
 
-// =============================================================================
-// Edited State (local form state)
-// =============================================================================
+  /** Fetch secrets from backend */
+  readonly secretsQuery = atomWithQuery(() => secretsQueryOptions());
 
-/** Locally edited config (null until loaded) */
-export const editedConfigAtom = atom<AppConfig | null>(null);
+  // ---------------------------------------------------------------------------
+  // Edited State (local form state)
+  // ---------------------------------------------------------------------------
 
-/** Locally edited secrets (null until loaded) */
-export const editedSecretsAtom = atom<SecretsConfig | null>(null);
+  /** Locally edited config (null until loaded) */
+  readonly editedConfig = atom<AppConfig | null>(null);
 
-/** Original config snapshot for dirty checking */
-export const originalConfigAtom = atom<AppConfig | null>(null);
+  /** Locally edited secrets (null until loaded) */
+  readonly editedSecrets = atom<SecretsConfig | null>(null);
 
-/** Original secrets snapshot for dirty checking */
-export const originalSecretsAtom = atom<SecretsConfig | null>(null);
+  /** Original config snapshot for dirty checking */
+  private readonly originalConfig = atom<AppConfig | null>(null);
 
-/** Check if form has unsaved changes */
-export const isDirtyAtom = atom((get) => {
-  const config = get(editedConfigAtom);
-  const secrets = get(editedSecretsAtom);
-  const origConfig = get(originalConfigAtom);
-  const origSecrets = get(originalSecretsAtom);
+  /** Original secrets snapshot for dirty checking */
+  private readonly originalSecrets = atom<SecretsConfig | null>(null);
 
-  if (!config || !secrets || !origConfig || !origSecrets) return false;
-  return !deepEqual(config, origConfig) || !deepEqual(secrets, origSecrets);
-});
+  /** Check if form has unsaved changes */
+  readonly isDirty = atom((get) => {
+    const config = get(this.editedConfig);
+    const secrets = get(this.editedSecrets);
+    const origConfig = get(this.originalConfig);
+    const origSecrets = get(this.originalSecrets);
 
-// =============================================================================
-// Form Initialization Effect
-// =============================================================================
+    if (!config || !secrets || !origConfig || !origSecrets) return false;
+    return !deepEqual(config, origConfig) || !deepEqual(secrets, origSecrets);
+  });
 
-/** Effect that initializes form state when queries complete (runs once) */
-const formInitEffect = atomEffect((get, set) => {
-  const { data: loadedConfig } = get(configQueryAtom);
-  const { data: loadedSecrets } = get(secretsQueryAtom);
-  const currentConfig = get(editedConfigAtom);
-  const currentSecrets = get(editedSecretsAtom);
+  // ---------------------------------------------------------------------------
+  // Form Initialization Effect
+  // ---------------------------------------------------------------------------
 
-  // Only initialize if queries loaded and form not already initialized
-  if (loadedConfig && loadedSecrets && !currentConfig && !currentSecrets) {
-    set(editedConfigAtom, loadedConfig);
-    set(editedSecretsAtom, loadedSecrets);
-    set(originalConfigAtom, structuredClone(loadedConfig));
-    set(originalSecretsAtom, structuredClone(loadedSecrets));
-  }
-});
+  /** Effect that initializes form state when queries complete (runs once) */
+  private readonly formInitEffect = atomEffect((get, set) => {
+    const { data: loadedConfig } = get(this.configQuery);
+    const { data: loadedSecrets } = get(this.secretsQuery);
+    const currentConfig = get(this.editedConfig);
+    const currentSecrets = get(this.editedSecrets);
 
-/** Subscribe to enable form auto-initialization */
-export const formInitAtom = atom((get) => {
-  get(formInitEffect);
-});
+    // Only initialize if queries loaded and form not already initialized
+    if (loadedConfig && loadedSecrets && !currentConfig && !currentSecrets) {
+      set(this.editedConfig, loadedConfig);
+      set(this.editedSecrets, loadedSecrets);
+      set(this.originalConfig, structuredClone(loadedConfig));
+      set(this.originalSecrets, structuredClone(loadedSecrets));
+    }
+  });
 
-// =============================================================================
-// Mutations
-// =============================================================================
+  /** Subscribe to enable form auto-initialization */
+  readonly formInit = atom((get) => {
+    get(this.formInitEffect);
+  });
 
-/** Save config to backend */
-export const saveConfigMutationAtom = atomWithMutation(() =>
-  saveConfigMutationOptions(),
-);
+  // ---------------------------------------------------------------------------
+  // Mutations
+  // ---------------------------------------------------------------------------
 
-/** Save secrets to backend */
-export const saveSecretsMutationAtom = atomWithMutation(() =>
-  saveSecretsMutationOptions(),
-);
+  /** Save config to backend */
+  private readonly saveConfigMutation = atomWithMutation(() =>
+    saveConfigMutationOptions(),
+  );
 
-/** Reload config in backend (applies changes) */
-export const reloadConfigMutationAtom = atomWithMutation(() =>
-  reloadConfigMutationOptions(),
-);
+  /** Save secrets to backend */
+  private readonly saveSecretsMutation = atomWithMutation(() =>
+    saveSecretsMutationOptions(),
+  );
 
-// =============================================================================
-// Actions
-// =============================================================================
+  /** Reload config in backend (applies changes) */
+  private readonly reloadConfigMutation = atomWithMutation(() =>
+    reloadConfigMutationOptions(),
+  );
 
-/** Update original snapshots after successful save */
-export const markAsSavedAtom = atom(null, (get, set) => {
-  const config = get(editedConfigAtom);
-  const secrets = get(editedSecretsAtom);
-  if (config) set(originalConfigAtom, structuredClone(config));
-  if (secrets) set(originalSecretsAtom, structuredClone(secrets));
-});
+  // ---------------------------------------------------------------------------
+  // Actions
+  // ---------------------------------------------------------------------------
 
-/** Error state for save operations */
-export const saveErrorAtom = atom<string | null>(null);
+  /** Update original snapshots after successful save */
+  private readonly markAsSaved = atom(null, (get, set) => {
+    const config = get(this.editedConfig);
+    const secrets = get(this.editedSecrets);
+    if (config) set(this.originalConfig, structuredClone(config));
+    if (secrets) set(this.originalSecrets, structuredClone(secrets));
+  });
 
-/** Coordinated save action - saves config + secrets, reloads, marks as saved */
-export const saveAtom = atom(null, async (get, set) => {
-  const config = get(editedConfigAtom);
-  const secrets = get(editedSecretsAtom);
-  if (!config || !secrets) return;
+  /** Error state for save operations */
+  readonly saveError = atom<string | null>(null);
 
-  set(saveErrorAtom, null);
+  /** Derived pending state from mutation atoms */
+  readonly isSaving = atom((get) => {
+    const { isPending: isSavingConfig } = get(this.saveConfigMutation);
+    const { isPending: isSavingSecrets } = get(this.saveSecretsMutation);
+    const { isPending: isReloading } = get(this.reloadConfigMutation);
+    return isSavingConfig || isSavingSecrets || isReloading;
+  });
 
-  try {
-    const { mutateAsync: doSaveConfig } = get(saveConfigMutationAtom);
-    const { mutateAsync: doSaveSecrets } = get(saveSecretsMutationAtom);
-    const { mutateAsync: doReloadConfig } = get(reloadConfigMutationAtom);
+  /** Coordinated save action - saves config + secrets, reloads, marks as saved */
+  readonly save = atom(null, async (get, set) => {
+    const config = get(this.editedConfig);
+    const secrets = get(this.editedSecrets);
+    if (!config || !secrets) return;
 
-    await Promise.all([doSaveConfig(config), doSaveSecrets(secrets)]);
-    // biome-ignore lint/nursery/useAwaitThenable: mutateAsync returns Promise, type inference issue
-    await doReloadConfig();
-    set(markAsSavedAtom);
-  } catch (e) {
-    set(saveErrorAtom, `Failed to save settings: ${String(e)}`);
-  }
-});
+    set(this.saveError, null);
+
+    try {
+      const { mutateAsync: doSaveConfig } = get(this.saveConfigMutation);
+      const { mutateAsync: doSaveSecrets } = get(this.saveSecretsMutation);
+      const { mutateAsync: doReloadConfig } = get(this.reloadConfigMutation);
+
+      await Promise.all([doSaveConfig(config), doSaveSecrets(secrets)]);
+      // biome-ignore lint/nursery/useAwaitThenable: mutateAsync returns Promise, type inference issue
+      await doReloadConfig();
+      set(this.markAsSaved);
+    } catch (e) {
+      set(this.saveError, `Failed to save settings: ${String(e)}`);
+    }
+  });
+}
