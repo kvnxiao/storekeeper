@@ -12,9 +12,7 @@ import {
   type ListBoxItemProps,
   Popover,
 } from "react-aria-components";
-
 import { tv } from "tailwind-variants";
-
 import { cn } from "@/modules/ui/ui.styles";
 
 // Label style (matches TextField)

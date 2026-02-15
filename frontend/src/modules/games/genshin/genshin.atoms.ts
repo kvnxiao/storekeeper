@@ -1,5 +1,4 @@
 import { atom } from "jotai";
-
 import type { CoreAtoms } from "@/modules/core/core.atoms";
 import type { ExpeditionResource } from "@/modules/resources/resources.types";
 import { isPastDateTime } from "@/modules/resources/resources.utils";

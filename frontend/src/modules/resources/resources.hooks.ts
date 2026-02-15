@@ -1,6 +1,5 @@
 import { useAtomValue } from "jotai";
 import { useMemo } from "react";
-
 import { atoms } from "@/modules/atoms";
 import {
   formatAbsoluteDateTime,

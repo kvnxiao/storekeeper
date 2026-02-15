@@ -5,7 +5,6 @@ import {
   composeRenderProps,
 } from "react-aria-components";
 import { tv } from "tailwind-variants";
-
 import { cn } from "@/modules/ui/ui.styles";
 
 const trackStyle = tv({

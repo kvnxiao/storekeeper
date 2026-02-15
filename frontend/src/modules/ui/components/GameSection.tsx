@@ -6,7 +6,6 @@ import {
   DisclosurePanel,
   Heading,
 } from "react-aria-components";
-
 import {
   cardContainerVariants,
   springTransition,
