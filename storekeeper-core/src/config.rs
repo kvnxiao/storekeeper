@@ -180,10 +180,6 @@ pub struct AppConfig {
     #[serde(default)]
     pub general: GeneralConfig,
 
-    /// Notification settings.
-    #[serde(default)]
-    pub notifications: NotificationConfig,
-
     /// Per-game configuration.
     #[serde(default)]
     pub games: GamesConfig,
@@ -316,21 +312,6 @@ start_minimized = true
 # Log level: error, warn, info, debug, trace (default: info)
 log_level = "info"
 
-[notifications]
-# Enable desktop notifications (default: true)
-enabled = true
-
-# Cooldown between notifications in minutes (default: 30)
-cooldown_minutes = 30
-
-# Per-resource notification thresholds
-# Uncomment and customize as needed
-#
-# [notifications.thresholds.resin]
-# enabled = true
-# threshold_value = 150
-# notify_when_full = true
-
 # =============================================================================
 # GAME CONFIGURATION
 # =============================================================================
@@ -342,6 +323,12 @@ cooldown_minutes = 30
 # HoYoLab games (Genshin, HSR, ZZZ) support auto-claiming daily rewards:
 #   auto_claim_daily_rewards = true/false
 #   auto_claim_time = "HH:MM"  # Optional, in UTC+8. Defaults to "00:00" (midnight)
+#
+# Per-resource notifications (optional):
+#   [games.<game>.notifications.<resource_type>]
+#   enabled = true
+#   notify_minutes_before_full = 60  # Start notifying 60 min before full (0 = only when full)
+#   cooldown_minutes = 10            # Minutes between repeated notifications
 
 # Genshin Impact
 [games.genshin_impact]
@@ -350,6 +337,11 @@ uid = "YOUR_UID_HERE"
 # region = "os_usa"  # Optional: auto-detected from UID
 # auto_claim_daily_rewards = false
 # auto_claim_time = "00:00"  # Optional: HH:MM in UTC+8 (China Standard Time)
+#
+# [games.genshin_impact.notifications.resin]
+# enabled = true
+# notify_minutes_before_full = 60
+# cooldown_minutes = 10
 
 # Honkai: Star Rail
 [games.honkai_star_rail]
@@ -358,6 +350,11 @@ uid = "YOUR_UID_HERE"
 # region = "prod_official_usa"  # Optional: auto-detected from UID
 # auto_claim_daily_rewards = false
 # auto_claim_time = "00:00"  # Optional: HH:MM in UTC+8 (China Standard Time)
+#
+# [games.honkai_star_rail.notifications.trailblaze_power]
+# enabled = true
+# notify_minutes_before_full = 30
+# cooldown_minutes = 15
 
 # Zenless Zone Zero
 [games.zenless_zone_zero]
@@ -366,12 +363,22 @@ uid = "YOUR_UID_HERE"
 # region = "prod_gf_us"  # Optional: auto-detected from UID
 # auto_claim_daily_rewards = false
 # auto_claim_time = "00:00"  # Optional: HH:MM in UTC+8 (China Standard Time)
+#
+# [games.zenless_zone_zero.notifications.battery]
+# enabled = true
+# notify_minutes_before_full = 30
+# cooldown_minutes = 15
 
 # Wuthering Waves
 [games.wuthering_waves]
 enabled = false
 player_id = "YOUR_PLAYER_ID_HERE"
 # region = "na"  # Optional: auto-detected from player ID
+#
+# [games.wuthering_waves.notifications.waveplates]
+# enabled = true
+# notify_minutes_before_full = 30
+# cooldown_minutes = 15
 "#
     }
 }
@@ -414,49 +421,26 @@ fn default_log_level() -> String {
     "info".to_string()
 }
 
-/// Notification configuration.
+/// Notification configuration for a specific resource.
+///
+/// Controls when and how often OS notifications are sent for a tracked resource.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NotificationConfig {
-    /// Whether notifications are enabled.
+pub struct ResourceNotificationConfig {
+    /// Whether notifications are enabled for this resource.
     #[serde(default = "default_true")]
     pub enabled: bool,
 
-    /// Cooldown between notifications in minutes.
-    #[serde(default = "default_notification_cooldown")]
-    pub cooldown_minutes: u64,
-
-    /// Per-resource notification thresholds.
+    /// Minutes before full to start notifying. 0 = only when full/ready.
     #[serde(default)]
-    pub thresholds: HashMap<String, ThresholdConfig>,
+    pub notify_minutes_before_full: u32,
+
+    /// Minutes between repeated notifications.
+    #[serde(default = "default_notification_cooldown")]
+    pub cooldown_minutes: u32,
 }
 
-impl Default for NotificationConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            cooldown_minutes: default_notification_cooldown(),
-            thresholds: HashMap::new(),
-        }
-    }
-}
-
-fn default_notification_cooldown() -> u64 {
+fn default_notification_cooldown() -> u32 {
     30
-}
-
-/// Threshold configuration for a specific resource.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ThresholdConfig {
-    /// Whether this threshold is enabled.
-    #[serde(default = "default_true")]
-    pub enabled: bool,
-
-    /// The value at which to trigger a notification.
-    pub threshold_value: u32,
-
-    /// Whether to notify when the resource is full.
-    #[serde(default = "default_true")]
-    pub notify_when_full: bool,
 }
 
 /// Default claim time in UTC+8 (midnight), displayed as "00:00".
@@ -552,6 +536,10 @@ pub struct GenshinConfig {
     /// Internally stored as UTC. If not specified, defaults to "00:00" (midnight UTC+8).
     #[serde(default, with = "claim_time_serde")]
     pub auto_claim_time: Option<ClaimTime>,
+
+    /// Per-resource notification settings.
+    #[serde(default)]
+    pub notifications: HashMap<String, ResourceNotificationConfig>,
 }
 
 fn default_genshin_resources() -> Vec<String> {
@@ -588,6 +576,10 @@ pub struct HsrConfig {
     /// Internally stored as UTC. If not specified, defaults to "00:00" (midnight UTC+8).
     #[serde(default, with = "claim_time_serde")]
     pub auto_claim_time: Option<ClaimTime>,
+
+    /// Per-resource notification settings.
+    #[serde(default)]
+    pub notifications: HashMap<String, ResourceNotificationConfig>,
 }
 
 fn default_hsr_resources() -> Vec<String> {
@@ -619,6 +611,10 @@ pub struct ZzzConfig {
     /// Internally stored as UTC. If not specified, defaults to "00:00" (midnight UTC+8).
     #[serde(default, with = "claim_time_serde")]
     pub auto_claim_time: Option<ClaimTime>,
+
+    /// Per-resource notification settings.
+    #[serde(default)]
+    pub notifications: HashMap<String, ResourceNotificationConfig>,
 }
 
 fn default_zzz_resources() -> Vec<String> {
@@ -641,6 +637,10 @@ pub struct WuwaConfig {
     /// Resources to track.
     #[serde(default = "default_wuwa_resources")]
     pub tracked_resources: Vec<String>,
+
+    /// Per-resource notification settings.
+    #[serde(default)]
+    pub notifications: HashMap<String, ResourceNotificationConfig>,
 }
 
 fn default_wuwa_resources() -> Vec<String> {
@@ -1233,5 +1233,96 @@ mod tests {
 
         assert_eq!(time.to_utc8_string(), time2.to_utc8_string());
         assert_eq!(time.to_utc8_string(), time3.to_utc8_string());
+    }
+
+    // =========================================================================
+    // ResourceNotificationConfig tests
+    // =========================================================================
+
+    #[test]
+    fn test_resource_notification_config_serde_roundtrip() {
+        let toml_str = r"
+            enabled = true
+            notify_minutes_before_full = 60
+            cooldown_minutes = 10
+        ";
+
+        let config: ResourceNotificationConfig =
+            toml::from_str(toml_str).expect("should parse notification config");
+        assert!(config.enabled);
+        assert_eq!(config.notify_minutes_before_full, 60);
+        assert_eq!(config.cooldown_minutes, 10);
+
+        let serialized = toml::to_string(&config).expect("should serialize");
+        let roundtripped: ResourceNotificationConfig =
+            toml::from_str(&serialized).expect("should roundtrip");
+        assert_eq!(roundtripped.enabled, config.enabled);
+        assert_eq!(
+            roundtripped.notify_minutes_before_full,
+            config.notify_minutes_before_full
+        );
+        assert_eq!(roundtripped.cooldown_minutes, config.cooldown_minutes);
+    }
+
+    #[test]
+    fn test_game_config_with_notifications() {
+        let toml_str = r#"
+            enabled = true
+            uid = "123456789"
+
+            [notifications.resin]
+            enabled = true
+            notify_minutes_before_full = 60
+            cooldown_minutes = 10
+
+            [notifications.expeditions]
+            enabled = true
+            notify_minutes_before_full = 0
+            cooldown_minutes = 30
+        "#;
+
+        let config: GenshinConfig = toml::from_str(toml_str).expect("should parse config");
+        assert_eq!(config.notifications.len(), 2);
+
+        let resin = config
+            .notifications
+            .get("resin")
+            .expect("should have resin config");
+        assert!(resin.enabled);
+        assert_eq!(resin.notify_minutes_before_full, 60);
+        assert_eq!(resin.cooldown_minutes, 10);
+
+        let expeditions = config
+            .notifications
+            .get("expeditions")
+            .expect("should have expeditions config");
+        assert!(expeditions.enabled);
+        assert_eq!(expeditions.notify_minutes_before_full, 0);
+        assert_eq!(expeditions.cooldown_minutes, 30);
+    }
+
+    #[test]
+    fn test_game_config_without_notifications_backward_compat() {
+        // Old config without notifications field should still parse
+        let toml_str = r#"
+            enabled = true
+            uid = "123456789"
+            auto_claim_daily_rewards = true
+        "#;
+
+        let config: GenshinConfig = toml::from_str(toml_str).expect("should parse config");
+        assert!(config.notifications.is_empty());
+    }
+
+    #[test]
+    fn test_app_config_without_notifications_section() {
+        // AppConfig no longer has a top-level notifications section
+        let toml_str = r"
+            [general]
+            poll_interval_secs = 300
+        ";
+
+        let config: AppConfig = toml::from_str(toml_str).expect("should parse config");
+        assert_eq!(config.general.poll_interval_secs, 300);
     }
 }

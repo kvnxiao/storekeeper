@@ -2,9 +2,12 @@
 
 use std::collections::HashMap;
 
+use chrono::Utc;
 use storekeeper_core::{AppConfig, GameId, SecretsConfig};
 use tauri::{AppHandle, Manager, State};
+use tauri_plugin_notification::NotificationExt;
 
+use crate::notification;
 use crate::polling;
 use crate::state::{AllDailyRewardStatus, AllResources, AppState};
 
@@ -168,4 +171,62 @@ pub async fn get_daily_reward_status_for_game(
     state: State<'_, AppState>,
 ) -> Result<serde_json::Value, String> {
     state.get_daily_reward_status_for_game(game_id).await
+}
+
+// ============================================================================
+// Notification Commands
+// ============================================================================
+
+/// Sends a test notification for a specific game resource using cached data.
+#[tauri::command]
+pub async fn send_test_notification(
+    game_id: GameId,
+    resource_type: String,
+    app_handle: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let resources = state.get_resources().await;
+    let game_name = game_id.display_name();
+    let resource_name = notification::resource_display_name(game_id, &resource_type);
+
+    // Try to find cached resource data and build a real notification body
+    let body = resources
+        .games
+        .get(&game_id)
+        .and_then(|v| v.as_array())
+        .and_then(|arr| {
+            arr.iter().find(|obj| {
+                obj.get("type")
+                    .and_then(serde_json::Value::as_str)
+                    .is_some_and(|t| t == resource_type)
+            })
+        })
+        .and_then(|obj| obj.get("data"))
+        .and_then(|data| {
+            let info = notification::extract_resource_info(data)?;
+            let now = Utc::now();
+            let time_to_full = info.completion_at - now;
+            Some(if info.is_complete {
+                let overdue_mins = (now - info.completion_at).num_minutes();
+                if overdue_mins <= 0 {
+                    format!("{resource_name} is full!")
+                } else {
+                    format!("{resource_name} has been full for {overdue_mins} minutes")
+                }
+            } else {
+                let mins_remaining = time_to_full.num_minutes();
+                format!("{resource_name} will be full in {mins_remaining} minutes")
+            })
+        })
+        .unwrap_or_else(|| {
+            format!("{resource_name} — No data available yet, try refreshing first")
+        });
+
+    app_handle
+        .notification()
+        .builder()
+        .title(format!("{game_name} — {resource_name}"))
+        .body(&body)
+        .show()
+        .map_err(|e| e.to_string())
 }

@@ -86,6 +86,7 @@ export const buttonStyle = tv({
       sm: "px-2.5 py-1 text-xs",
       md: "px-3 py-1.5 text-sm",
       lg: "px-4 py-2 text-base",
+      icon: "p-1.5 rounded-full",
     },
   },
   compoundVariants: [
@@ -94,6 +95,12 @@ export const buttonStyle = tv({
       variant: "solid",
       color: "dark/zinc",
       class: "",
+    },
+    // Fix pseudo-element border-radius for icon size
+    {
+      variant: "solid",
+      size: "icon",
+      class: "before:rounded-full after:rounded-full",
     },
   ],
   defaultVariants: {

@@ -10,26 +10,6 @@ start_minimized = true
 # Log level: error, warn, info, debug, trace (default: info)
 log_level = "info"
 
-[notifications]
-# Enable desktop notifications (default: true)
-enabled = true
-
-# Cooldown between notifications in minutes (default: 30)
-cooldown_minutes = 30
-
-# Per-resource notification thresholds
-# Uncomment and customize as needed
-#
-# [notifications.thresholds.resin]
-# enabled = true
-# threshold_value = 150
-# notify_when_full = true
-#
-# [notifications.thresholds.trailblaze_power]
-# enabled = true
-# threshold_value = 220
-# notify_when_full = true
-
 # =============================================================================
 # GAME CONFIGURATION
 # =============================================================================
@@ -41,6 +21,12 @@ cooldown_minutes = 30
 # HoYoLab games (Genshin, HSR, ZZZ) support auto-claiming daily rewards:
 #   auto_claim_daily_rewards = true/false
 #   auto_claim_time = "HH:MM"  # Optional, in UTC+8. Defaults to "00:00" (midnight)
+#
+# Per-resource notifications (optional):
+#   [games.<game>.notifications.<resource_type>]
+#   enabled = true
+#   notify_minutes_before_full = 60  # Start notifying N min before full (0 = only when full)
+#   cooldown_minutes = 10            # Minutes between repeated notifications
 
 # Genshin Impact
 [games.genshin_impact]
@@ -51,6 +37,16 @@ uid = "YOUR_UID_HERE"
 # auto_claim_daily_rewards = false
 # auto_claim_time = "00:00"  # Optional: HH:MM in UTC+8 (China Standard Time)
 
+# [games.genshin_impact.notifications.resin]
+# enabled = true
+# notify_minutes_before_full = 60
+# cooldown_minutes = 10
+
+# [games.genshin_impact.notifications.expeditions]
+# enabled = true
+# notify_minutes_before_full = 0   # Only notify when ready
+# cooldown_minutes = 30
+
 # Honkai: Star Rail
 [games.honkai_star_rail]
 enabled = false
@@ -59,6 +55,11 @@ uid = "YOUR_UID_HERE"
 # tracked_resources = ["trailblaze_power"]
 # auto_claim_daily_rewards = false
 # auto_claim_time = "00:00"  # Optional: HH:MM in UTC+8 (China Standard Time)
+
+# [games.honkai_star_rail.notifications.trailblaze_power]
+# enabled = true
+# notify_minutes_before_full = 30
+# cooldown_minutes = 15
 
 # Zenless Zone Zero
 [games.zenless_zone_zero]
@@ -69,9 +70,19 @@ uid = "YOUR_UID_HERE"
 # auto_claim_daily_rewards = false
 # auto_claim_time = "00:00"  # Optional: HH:MM in UTC+8 (China Standard Time)
 
+# [games.zenless_zone_zero.notifications.battery]
+# enabled = true
+# notify_minutes_before_full = 30
+# cooldown_minutes = 15
+
 # Wuthering Waves
 [games.wuthering_waves]
 enabled = false
 player_id = "YOUR_PLAYER_ID_HERE"
 # region = "na"  # Optional: auto-detected from player ID
 # tracked_resources = ["waveplates"]
+
+# [games.wuthering_waves.notifications.waveplates]
+# enabled = true
+# notify_minutes_before_full = 30
+# cooldown_minutes = 15

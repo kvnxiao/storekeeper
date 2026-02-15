@@ -24,3 +24,7 @@ fix-web:
 icon:
     cd storekeeper-app-tauri && cargo tauri icon icons/app-icon.svg
 
+upgrade-deps:
+    cargo update
+    cd frontend && pnpm upgrade
+

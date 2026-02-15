@@ -15,3 +15,14 @@ export const GAME_ORDER: GameId[] = [
   "ZENLESS_ZONE_ZERO",
   "WUTHERING_WAVES",
 ];
+
+/** Human-readable display names for resource type tags */
+export const RESOURCE_DISPLAY_NAMES: Record<string, string> = {
+  resin: "Original Resin",
+  parametric_transformer: "Parametric Transformer",
+  realm_currency: "Realm Currency",
+  expeditions: "Expeditions",
+  trailblaze_power: "Trailblaze Power",
+  battery: "Battery",
+  waveplates: "Waveplates",
+};

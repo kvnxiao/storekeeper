@@ -1,6 +1,7 @@
 import { useAtomValue } from "jotai";
 import { motion, useReducedMotion } from "motion/react";
 import { atoms } from "@/modules/atoms";
+import { RESOURCE_DISPLAY_NAMES } from "@/modules/games/games.constants";
 import { CooldownCard } from "@/modules/resources/components/CooldownCard";
 import { isCooldownResource } from "@/modules/resources/resources.types";
 import {
@@ -8,7 +9,7 @@ import {
   cardItemVariantsReduced,
 } from "@/modules/ui/ui.animations";
 
-const RESOURCE_NAME = "Parametric Transformer";
+const RESOURCE_NAME = RESOURCE_DISPLAY_NAMES.parametric_transformer;
 const RESOURCE_ICON = "/icons/game/genshin/Item_Parametric_Transformer.webp";
 
 export const ParametricTransformerCard: React.FC = () => {

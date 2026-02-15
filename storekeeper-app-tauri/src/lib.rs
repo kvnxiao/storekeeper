@@ -6,6 +6,7 @@ mod clients;
 mod commands;
 mod daily_reward_registry;
 mod events;
+mod notification;
 mod polling;
 mod registry;
 mod scheduled_claim;
@@ -51,6 +52,9 @@ pub fn run() -> Result<()> {
             // Start scheduled daily reward claims
             scheduled_claim::start_scheduled_claims(app.handle().clone(), cancel_token.clone());
 
+            // Start notification checker
+            notification::start_notification_checker(app.handle().clone(), cancel_token.clone());
+
             // Set up Ctrl+C handler to trigger graceful shutdown
             setup_ctrlc_handler(app.handle().clone(), cancel_token);
 
@@ -68,6 +72,8 @@ pub fn run() -> Result<()> {
             commands::save_secrets,
             commands::reload_config,
             commands::open_config_folder,
+            // Notification commands
+            commands::send_test_notification,
             // Daily reward commands
             commands::get_daily_reward_status,
             commands::refresh_daily_reward_status,

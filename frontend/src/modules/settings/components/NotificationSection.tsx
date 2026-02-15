@@ -1,47 +1,46 @@
-import { Section } from "@/modules/settings/components/Section";
-import type { NotificationConfig } from "@/modules/settings/settings.types";
-import { NumberField } from "@/modules/ui/components/NumberField";
-import { Switch } from "@/modules/ui/components/Switch";
+import { RESOURCE_DISPLAY_NAMES } from "@/modules/games/games.constants";
+import { NotificationResourceRow } from "@/modules/settings/components/NotificationResourceRow";
+import type { ResourceNotificationConfig } from "@/modules/settings/settings.types";
 
 interface NotificationSectionProps {
-  config: NotificationConfig;
-  onChange: (config: NotificationConfig) => void;
+  gameId: string;
+  resourceTypes: readonly string[];
+  notifications:
+    | Partial<Record<string, ResourceNotificationConfig>>
+    | undefined;
+  onChange: (
+    notifications: Partial<Record<string, ResourceNotificationConfig>>,
+  ) => void;
 }
 
 export const NotificationSection: React.FC<NotificationSectionProps> = ({
-  config,
+  gameId,
+  resourceTypes,
+  notifications,
   onChange,
 }) => {
   return (
-    <Section
-      title="Notifications"
-      description="Configure desktop notification behavior."
-    >
-      <Switch
-        isSelected={config.enabled}
-        onChange={(isSelected) =>
-          onChange({
-            ...config,
-            enabled: isSelected,
-          })
-        }
-      >
-        Enable desktop notifications
-      </Switch>
-      <NumberField
-        label="Notification Cooldown (minutes)"
-        description="Minimum time between notifications for the same resource."
-        value={config.cooldown_minutes}
-        onChange={(value) =>
-          onChange({
-            ...config,
-            cooldown_minutes: value,
-          })
-        }
-        minValue={5}
-        maxValue={120}
-        step={5}
-      />
-    </Section>
+    <div className="space-y-3">
+      <div>
+        <h3 className="text-sm font-semibold text-zinc-950 dark:text-white">
+          Notifications
+        </h3>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+          Configure desktop notifications for this game's resources.
+        </p>
+      </div>
+      {resourceTypes.map((type) => (
+        <NotificationResourceRow
+          key={type}
+          gameId={gameId}
+          resourceType={type}
+          label={RESOURCE_DISPLAY_NAMES[type] ?? type}
+          config={notifications?.[type]}
+          onChange={(resourceConfig) =>
+            onChange({ ...notifications, [type]: resourceConfig })
+          }
+        />
+      ))}
+    </div>
   );
 };

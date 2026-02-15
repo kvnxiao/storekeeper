@@ -9,19 +9,22 @@ export interface GeneralConfig {
   log_level: string;
 }
 
-/** Notification settings */
-export interface NotificationConfig {
+/** Per-resource notification configuration */
+export interface ResourceNotificationConfig {
   enabled: boolean;
+  notify_minutes_before_full: number;
   cooldown_minutes: number;
-  thresholds: Record<string, ThresholdConfig>;
 }
 
-/** Threshold configuration for a specific resource */
-export interface ThresholdConfig {
-  enabled: boolean;
-  threshold_value: number;
-  notify_when_full: boolean;
-}
+/** Known resource type tags per game */
+export type GenshinResourceType =
+  | "resin"
+  | "parametric_transformer"
+  | "realm_currency"
+  | "expeditions";
+export type HsrResourceType = "trailblaze_power";
+export type ZzzResourceType = "battery";
+export type WuwaResourceType = "waveplates";
 
 /** Genshin Impact configuration */
 export interface GenshinConfig {
@@ -31,6 +34,9 @@ export interface GenshinConfig {
   tracked_resources?: string[];
   auto_claim_daily_rewards: boolean;
   auto_claim_time?: string;
+  notifications?: Partial<
+    Record<GenshinResourceType, ResourceNotificationConfig>
+  >;
 }
 
 /** Honkai: Star Rail configuration */
@@ -41,6 +47,7 @@ export interface HsrConfig {
   tracked_resources?: string[];
   auto_claim_daily_rewards: boolean;
   auto_claim_time?: string;
+  notifications?: Partial<Record<HsrResourceType, ResourceNotificationConfig>>;
 }
 
 /** Zenless Zone Zero configuration */
@@ -51,6 +58,7 @@ export interface ZzzConfig {
   tracked_resources?: string[];
   auto_claim_daily_rewards: boolean;
   auto_claim_time?: string;
+  notifications?: Partial<Record<ZzzResourceType, ResourceNotificationConfig>>;
 }
 
 /** Wuthering Waves configuration */
@@ -59,6 +67,7 @@ export interface WuwaConfig {
   player_id: string;
   region?: string;
   tracked_resources?: string[];
+  notifications?: Partial<Record<WuwaResourceType, ResourceNotificationConfig>>;
 }
 
 /** Per-game configuration */
@@ -72,7 +81,6 @@ export interface GamesConfig {
 /** Main application configuration (config.toml) */
 export interface AppConfig {
   general: GeneralConfig;
-  notifications: NotificationConfig;
   games: GamesConfig;
 }
 

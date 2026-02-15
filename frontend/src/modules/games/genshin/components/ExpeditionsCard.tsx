@@ -1,6 +1,7 @@
 import { useAtomValue } from "jotai";
 import { motion, useReducedMotion } from "motion/react";
 import { atoms } from "@/modules/atoms";
+import { RESOURCE_DISPLAY_NAMES } from "@/modules/games/games.constants";
 import { CooldownCard } from "@/modules/resources/components/CooldownCard";
 import { isExpeditionResource } from "@/modules/resources/resources.types";
 import {
@@ -8,7 +9,7 @@ import {
   cardItemVariantsReduced,
 } from "@/modules/ui/ui.animations";
 
-const RESOURCE_NAME = "Expeditions";
+const RESOURCE_NAME = RESOURCE_DISPLAY_NAMES.expeditions;
 const RESOURCE_ICON = "/icons/game/genshin/Expeditions.webp";
 
 export const ExpeditionsCard: React.FC = () => {

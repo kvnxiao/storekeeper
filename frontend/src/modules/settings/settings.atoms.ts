@@ -112,6 +112,14 @@ export class SettingsAtoms {
     if (secrets) set(this.originalSecrets, structuredClone(secrets));
   });
 
+  /** Revert edited state back to original snapshots */
+  readonly reset = atom(null, (get, set) => {
+    const origConfig = get(this.originalConfig);
+    const origSecrets = get(this.originalSecrets);
+    if (origConfig) set(this.editedConfig, structuredClone(origConfig));
+    if (origSecrets) set(this.editedSecrets, structuredClone(origSecrets));
+  });
+
   /** Error state for save operations */
   readonly saveError = atom<string | null>(null);
 
