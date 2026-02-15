@@ -5,6 +5,7 @@
 mod clients;
 mod commands;
 mod daily_reward_registry;
+mod events;
 mod polling;
 mod registry;
 mod scheduled_claim;

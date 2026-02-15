@@ -9,7 +9,10 @@ import {
   refreshResourcesMutationOptions,
   resourcesQueryOptions,
 } from "@/modules/resources/resources.query";
-import type { AllResources } from "@/modules/resources/resources.types";
+import type {
+  AllResources,
+  GameResourcePayload,
+} from "@/modules/resources/resources.types";
 
 // =============================================================================
 // CoreAtoms Class
@@ -93,13 +96,32 @@ export class CoreAtoms {
   // ---------------------------------------------------------------------------
 
   private readonly resourcesEventEffect = atomEffect((_get, set) => {
-    const unlisten = listen<AllResources>("resources-updated", (event) => {
-      queryClient.setQueryData(["resources"], event.payload);
-      set(this.refreshTick);
-    });
+    const unlistenPromises: Promise<UnlistenFn>[] = [];
+
+    // Listen for full resource updates (all games at once)
+    unlistenPromises.push(
+      listen<AllResources>("resources-updated", (event) => {
+        queryClient.setQueryData(["resources"], event.payload);
+        set(this.refreshTick);
+      }),
+    );
+
+    // Listen for per-game resource updates (incremental)
+    unlistenPromises.push(
+      listen<GameResourcePayload>("game-resource-updated", (event) => {
+        const { gameId, data } = event.payload;
+        queryClient.setQueryData<AllResources>(["resources"], (old) => ({
+          ...old,
+          games: { ...old?.games, [gameId]: data },
+        }));
+        set(this.refreshTick);
+      }),
+    );
 
     return () => {
-      void unlisten.then((fn) => fn());
+      for (const p of unlistenPromises) {
+        void p.then((fn) => fn());
+      }
     };
   });
 

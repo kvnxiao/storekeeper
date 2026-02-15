@@ -28,11 +28,11 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for build instructions.
 
 Storekeeper uses two configuration files stored in your system's config directory:
 
-| Platform | Config Directory                              |
-|----------|-----------------------------------------------|
-| Windows  | `%APPDATA%\storekeeper\`                      |
+| Platform | Config Directory                             |
+| -------- | -------------------------------------------- |
+| Windows  | `%APPDATA%\storekeeper\`                     |
 | macOS    | `~/Library/Application Support/storekeeper/` |
-| Linux    | `~/.config/storekeeper/`                      |
+| Linux    | `~/.config/storekeeper/`                     |
 
 ### 1. Main Configuration (`config.toml`)
 

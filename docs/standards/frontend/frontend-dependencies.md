@@ -2,13 +2,7 @@
 
 ## Package Manager
 
-Use [pnpm](https://pnpm.io/) (version specified in `package.json`):
-
-```json
-{
-  "packageManager": "pnpm@10.27.0"
-}
-```
+Use [pnpm](https://pnpm.io/) (version specified by the `packageManager` field in `frontend/package.json`).
 
 ### Commands
 
