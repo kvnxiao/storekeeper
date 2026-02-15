@@ -1,4 +1,4 @@
-import { Focusable, TooltipTrigger } from "react-aria-components";
+import { Button, TooltipTrigger } from "react-aria-components";
 
 import { Tooltip } from "@/modules/ui/components/Tooltip";
 import { cn } from "@/modules/ui/ui.styles";
@@ -26,11 +26,9 @@ export const TimeRemaining: React.FC<TimeRemainingProps> = ({
 
   return (
     <TooltipTrigger delay={300}>
-      <Focusable>
-        <time className={cn(!plain && interactiveStyles, className)}>
-          {relativeTime}
-        </time>
-      </Focusable>
+      <Button className={cn(!plain && interactiveStyles, className)}>
+        {relativeTime}
+      </Button>
       <Tooltip>{absoluteTime}</Tooltip>
     </TooltipTrigger>
   );
