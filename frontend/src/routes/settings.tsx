@@ -6,7 +6,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback } from "react";
-import { Focusable, TooltipTrigger } from "react-aria-components";
+import { Button as AriaButton, TooltipTrigger } from "react-aria-components";
 import { atoms } from "@/modules/atoms";
 import { GeneralSection } from "@/modules/settings/components/GeneralSection";
 import { HoyolabGameSection } from "@/modules/settings/components/HoyolabGameSection";
@@ -108,7 +108,7 @@ const SettingsPage: React.FC = () => {
                 transition={{ duration: 0.15 }}
               >
                 <TooltipTrigger delay={300}>
-                  <Focusable>
+                  <AriaButton>
                     <motion.div
                       animate={{ scale: [1, 1.1, 1] }}
                       transition={{
@@ -119,7 +119,7 @@ const SettingsPage: React.FC = () => {
                     >
                       <ExclamationCircleIcon className="h-5 w-5 text-amber-500" />
                     </motion.div>
-                  </Focusable>
+                  </AriaButton>
                   <Tooltip placement="bottom">
                     You have unsaved changes. Click "Save Changes" to apply
                     them.
