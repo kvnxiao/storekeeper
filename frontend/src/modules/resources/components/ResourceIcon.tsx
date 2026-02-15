@@ -1,6 +1,5 @@
 import type React from "react";
 import { tv, type VariantProps } from "tailwind-variants";
-
 import { IconPlaceholder } from "@/modules/ui/components/IconPlaceholder";
 
 const resourceIconStyle = tv({

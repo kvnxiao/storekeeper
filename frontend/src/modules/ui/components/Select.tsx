@@ -13,7 +13,6 @@ import {
   Popover,
 } from "react-aria-components";
 import { tv } from "tailwind-variants";
-
 import { cn } from "@/modules/ui/ui.styles";
 
 // Label style (matches TextField)
@@ -24,10 +23,13 @@ const labelStyle = tv({
 // Select trigger button
 const selectTriggerStyle = tv({
   base: [
-    "flex h-9 w-full items-center justify-between rounded-lg border border-input bg-background px-3 py-2 text-sm shadow-sm",
+    "flex h-9 w-full items-center justify-between rounded-lg px-3 py-2 text-sm",
+    "bg-white dark:bg-zinc-800/50",
+    "shadow-sm",
+    "ring-1 ring-zinc-950/10 dark:ring-white/10",
     "transition-colors placeholder:text-muted-foreground",
     "disabled:cursor-not-allowed disabled:opacity-50",
-    "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500",
+    "outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
   ],
 });
 
@@ -41,8 +43,8 @@ const selectPopoverStyle = tv({
     "shadow-lg ring-1 ring-zinc-950/10 dark:ring-white/10",
     // Transitions with proper duration for exit
     "transition duration-100 ease-out",
-    "data-[entering]:animate-in data-[entering]:fade-in-0 data-[entering]:zoom-in-95",
-    "data-[exiting]:animate-out data-[exiting]:fade-out-0 data-[exiting]:zoom-out-95 data-[exiting]:duration-100 data-[exiting]:ease-in",
+    "entering:animate-in entering:fade-in-0 entering:zoom-in-95",
+    "exiting:animate-out exiting:fade-out-0 exiting:zoom-out-95 exiting:duration-100 exiting:ease-in",
   ],
 });
 
@@ -54,10 +56,10 @@ const selectListBoxStyle = tv({
 // Select item - Catalyst-style with blue focus
 const selectItemStyle = tv({
   base: [
-    "group relative flex w-full cursor-default select-none items-center rounded-lg px-3 py-1.5 text-sm outline-none",
+    "group flex w-full cursor-default select-none items-center gap-x-1.5 rounded-lg px-2 py-1.5 text-sm outline-none",
     "text-zinc-950 dark:text-white",
     // Focus state - blue background like Catalyst
-    "data-[focused]:bg-blue-500 data-[focused]:text-white",
+    "focused:bg-blue-500 focused:text-white",
     "disabled:pointer-events-none disabled:opacity-50",
   ],
 });
@@ -81,12 +83,12 @@ export const Select = <T extends object>({
     <AriaSelect {...props} className={cn("flex flex-col gap-1", className)}>
       {label && <Label className={labelStyle()}>{label}</Label>}
       <Button className={selectTriggerStyle()}>
-        <AriaSelectValue className="placeholder:text-muted-foreground">
-          {({ defaultChildren, isPlaceholder }) =>
+        <AriaSelectValue className="flex-1 truncate text-left placeholder:text-muted-foreground">
+          {({ selectedText, defaultChildren, isPlaceholder }) =>
             isPlaceholder ? (
               <span className="text-muted-foreground">{placeholder}</span>
             ) : (
-              defaultChildren
+              selectedText || defaultChildren
             )
           }
         </AriaSelectValue>
@@ -111,24 +113,27 @@ export const SelectItem: React.FC<SelectItemProps> = ({
   children,
   ...props
 }) => {
+  const textValue =
+    props.textValue || (typeof children === "string" ? children : undefined);
   return (
     <ListBoxItem
       {...props}
+      textValue={textValue}
       className={composeRenderProps(className, (cn) =>
         selectItemStyle({ className: cn }),
       )}
     >
       {composeRenderProps(children, (children, { isSelected }) => (
         <>
-          <span className="absolute left-2 flex size-4 items-center justify-center">
+          <span className="flex size-4 items-center justify-center">
             {isSelected && (
               <CheckIcon
-                className="size-4 text-blue-500 group-data-focused:text-white"
+                className="size-4 text-blue-500 group-focused:text-white"
                 aria-hidden="true"
               />
             )}
           </span>
-          <span className="pl-6">{children}</span>
+          {children}
         </>
       ))}
     </ListBoxItem>

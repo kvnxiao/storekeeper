@@ -1,6 +1,5 @@
 import { useAtomValue } from "jotai";
 import { motion, useReducedMotion } from "motion/react";
-
 import { atoms } from "@/modules/atoms";
 import { CooldownCard } from "@/modules/resources/components/CooldownCard";
 import { isCooldownResource } from "@/modules/resources/resources.types";

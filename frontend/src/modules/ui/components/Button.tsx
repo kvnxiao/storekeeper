@@ -27,30 +27,36 @@ export const buttonStyle = tv({
   variants: {
     variant: {
       solid: [
-        // Optical border as button background
+        // Optical border, implemented as the button background to avoid corner artifacts
         "border-transparent bg-(--btn-border)",
         // Dark mode: border rendered on `after`, bg is button bg
         "dark:bg-(--btn-bg)",
-        // Button background via before pseudo (after touch-target's before)
-        "after:absolute after:inset-0 after:-z-10 after:rounded-[calc(var(--radius-lg)-1px)] after:bg-(--btn-bg)",
-        // Drop shadow on after layer
-        "after:shadow-sm",
-        // Hide after in dark mode
-        "dark:after:hidden",
+        // Button background on `before`, stacked on top of pseudo-border layer
+        "before:absolute before:inset-0 before:-z-10 before:rounded-[calc(var(--radius-lg)-1px)] before:bg-(--btn-bg)",
+        // Drop shadow on `before` layer
+        "before:shadow-sm",
+        // Hide `before` in dark mode
+        "dark:before:hidden",
         // Dark mode: subtle white outline
         "dark:border-white/5",
-        // Hover overlay using box-shadow (since pseudo-elements are used)
-        "hover:shadow-[inset_0_0_0_100px_var(--btn-hover-overlay)] active:shadow-[inset_0_0_0_100px_var(--btn-hover-overlay)]",
+        // Shim/overlay on `after` for hover state + highlight shadow
+        "after:absolute after:inset-0 after:-z-10 after:rounded-[calc(var(--radius-lg)-1px)]",
+        // Inner highlight shadow (top edge light bevel)
+        "after:shadow-[inset_0_1px_--theme(--color-white/15%)]",
+        // Hover overlay
+        "hover:after:bg-(--btn-hover-overlay) pressed:after:bg-(--btn-hover-overlay)",
+        // Dark mode: `after` expands to cover entire button
+        "dark:after:-inset-px dark:after:rounded-lg",
         // Disabled
-        "disabled:after:shadow-none",
+        "disabled:before:shadow-none disabled:after:shadow-none",
       ],
       outline: [
-        "border-zinc-950/10 text-zinc-950 hover:bg-zinc-950/2.5 active:bg-zinc-950/5",
-        "dark:border-white/15 dark:text-white dark:hover:bg-white/5 dark:active:bg-white/10",
+        "border-zinc-950/10 text-zinc-950 hover:bg-zinc-950/2.5 pressed:bg-zinc-950/5",
+        "dark:border-white/15 dark:text-white dark:hover:bg-white/5 dark:pressed:bg-white/10",
       ],
       plain: [
-        "border-transparent text-zinc-950 hover:bg-zinc-950/10 active:bg-zinc-950/15",
-        "dark:text-white dark:hover:bg-white/15 dark:active:bg-white/20",
+        "border-transparent text-zinc-950 hover:bg-zinc-950/10 pressed:bg-zinc-950/15",
+        "dark:text-white dark:hover:bg-white/15 dark:pressed:bg-white/20",
       ],
     },
     color: {

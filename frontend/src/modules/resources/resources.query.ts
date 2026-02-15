@@ -1,6 +1,5 @@
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-
 import type { AllResources } from "@/modules/resources/resources.types";
 
 /** Query options for fetching all resources from Tauri backend */

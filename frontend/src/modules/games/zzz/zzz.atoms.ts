@@ -1,5 +1,4 @@
 import { atom } from "jotai";
-
 import type { CoreAtoms } from "@/modules/core/core.atoms";
 
 // =============================================================================

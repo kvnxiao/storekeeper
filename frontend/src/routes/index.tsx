@@ -2,7 +2,6 @@ import { ArrowPathIcon, Cog6ToothIcon } from "@heroicons/react/24/outline";
 import { createFileRoute } from "@tanstack/react-router";
 import { useAtomValue } from "jotai";
 import { AnimatePresence, motion } from "motion/react";
-
 import { atoms } from "@/modules/atoms";
 import { GenshinSection } from "@/modules/games/genshin/components/GenshinSection";
 import { HsrSection } from "@/modules/games/hsr/components/HsrSection";

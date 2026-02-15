@@ -1,5 +1,4 @@
 import { atomWithQuery } from "jotai-tanstack-query";
-
 import { configQueryOptions } from "@/modules/settings/settings.query";
 
 // =============================================================================

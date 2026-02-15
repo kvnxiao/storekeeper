@@ -12,7 +12,7 @@ const checkboxStyle = tv({
 });
 
 const checkboxBoxStyle = tv({
-  base: "flex size-4 shrink-0 items-center justify-center rounded border border-primary shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 selected:bg-primary selected:text-primary-foreground",
+  base: "flex size-4 shrink-0 items-center justify-center rounded border border-primary shadow-sm transition-colors group-focus-visible:outline-none group-focus-visible:ring-2 group-focus-visible:ring-ring group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-background group-disabled:cursor-not-allowed group-disabled:opacity-50 group-selected:bg-primary group-selected:text-primary-foreground",
 });
 
 export interface CheckboxProps extends AriaCheckboxProps {

@@ -2,7 +2,6 @@ import { deepEqual } from "fast-equals";
 import { atom } from "jotai";
 import { atomEffect } from "jotai-effect";
 import { atomWithMutation, atomWithQuery } from "jotai-tanstack-query";
-
 import { configQueryAtom } from "@/modules/core/core.config";
 import {
   reloadConfigMutationOptions,

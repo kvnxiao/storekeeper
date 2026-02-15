@@ -8,7 +8,6 @@ import {
 import { Provider as JotaiProvider } from "jotai";
 import { useHydrateAtoms } from "jotai/utils";
 import { queryClientAtom } from "jotai-tanstack-query";
-
 import { queryClient } from "@/modules/core/core.queryClient";
 import appCss from "@/styles.css?url";
 
