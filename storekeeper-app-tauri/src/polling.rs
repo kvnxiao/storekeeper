@@ -5,13 +5,8 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager};
 use tokio_util::sync::CancellationToken;
 
+use crate::events::AppEvent;
 use crate::state::{AllResources, AppState};
-
-/// Event name for resource updates sent to the frontend.
-pub const RESOURCES_UPDATED_EVENT: &str = "resources-updated";
-
-/// Event name for refresh started sent to the frontend.
-pub const REFRESH_STARTED_EVENT: &str = "refresh-started";
 
 /// Starts the background polling task.
 ///
@@ -72,7 +67,7 @@ async fn poll_resources(app_handle: &AppHandle) -> Result<(), String> {
     tracing::debug!("Fetching resources from all game clients");
 
     // Fetch resources from all configured game clients
-    let resources = state.fetch_all_resources().await;
+    let resources = state.fetch_all_resources(app_handle).await;
 
     state.set_resources(resources.clone()).await;
     state.set_refreshing(false).await;
@@ -80,7 +75,7 @@ async fn poll_resources(app_handle: &AppHandle) -> Result<(), String> {
     tracing::debug!("Resources updated, emitting event to frontend");
 
     // Emit event to frontend
-    let _ = app_handle.emit(RESOURCES_UPDATED_EVENT, &resources);
+    let _ = app_handle.emit(AppEvent::ResourcesUpdated.as_str(), &resources);
 
     Ok(())
 }
@@ -107,14 +102,14 @@ pub async fn refresh_now(app_handle: &AppHandle) -> Result<AllResources, String>
     }
 
     // Emit refresh started event to frontend
-    let _ = app_handle.emit(REFRESH_STARTED_EVENT, ());
+    let _ = app_handle.emit(AppEvent::RefreshStarted.as_str(), ());
 
     state.set_refreshing(true).await;
 
     tracing::debug!("Fetching resources from all game clients");
 
     // Fetch resources from all configured game clients
-    let resources = state.fetch_all_resources().await;
+    let resources = state.fetch_all_resources(app_handle).await;
 
     state.set_resources(resources.clone()).await;
     state.set_refreshing(false).await;
@@ -122,7 +117,7 @@ pub async fn refresh_now(app_handle: &AppHandle) -> Result<AllResources, String>
     tracing::info!("Manual refresh completed");
 
     // Emit event to frontend
-    let _ = app_handle.emit(RESOURCES_UPDATED_EVENT, &resources);
+    let _ = app_handle.emit(AppEvent::ResourcesUpdated.as_str(), &resources);
 
     Ok(resources)
 }

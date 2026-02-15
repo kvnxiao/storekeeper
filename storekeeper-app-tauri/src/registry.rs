@@ -4,6 +4,9 @@ use std::collections::HashMap;
 
 use futures::future::join_all;
 use storekeeper_core::{ApiProvider, DynGameClient, GameId};
+use tauri::{AppHandle, Emitter};
+
+use crate::events::{AppEvent, GameResourcePayload};
 
 /// Registry that holds type-erased game clients.
 ///
@@ -46,9 +49,11 @@ impl GameClientRegistry {
     /// Fetches resources from clients for a specific API provider sequentially.
     ///
     /// This avoids rate limiting by fetching one game at a time for the same provider.
+    /// Emits a per-game event after each successful fetch.
     async fn fetch_provider(
         &self,
         provider: ApiProvider,
+        app_handle: &AppHandle,
     ) -> Vec<(
         GameId,
         Result<serde_json::Value, Box<dyn std::error::Error + Send + Sync>>,
@@ -58,6 +63,15 @@ impl GameClientRegistry {
         for (game_id, client) in &self.clients {
             if game_id.api_provider() == provider {
                 let result = client.fetch_resources_json().await;
+
+                if let Ok(ref resources) = result {
+                    let payload = GameResourcePayload {
+                        game_id: *game_id,
+                        data: resources.clone(),
+                    };
+                    let _ = app_handle.emit(AppEvent::GameResourceUpdated.as_str(), &payload);
+                }
+
                 results.push((*game_id, result));
             }
         }
@@ -73,7 +87,7 @@ impl GameClientRegistry {
     ///
     /// Returns a map from game ID to the JSON-serialized resources.
     /// Clients that fail to fetch are logged and skipped.
-    pub async fn fetch_all(&self) -> HashMap<GameId, serde_json::Value> {
+    pub async fn fetch_all(&self, app_handle: &AppHandle) -> HashMap<GameId, serde_json::Value> {
         if self.clients.is_empty() {
             return HashMap::new();
         }
@@ -98,7 +112,7 @@ impl GameClientRegistry {
         // Fetch each provider's games in parallel, but games within a provider sequentially
         let provider_futures: Vec<_> = providers
             .iter()
-            .map(|provider| self.fetch_provider(*provider))
+            .map(|provider| self.fetch_provider(*provider, app_handle))
             .collect();
 
         let all_results = join_all(provider_futures).await;

@@ -10,10 +10,8 @@ use storekeeper_core::{ClaimTime, GameId, next_claim_datetime_utc};
 use tauri::{AppHandle, Emitter, Manager};
 use tokio_util::sync::CancellationToken;
 
+use crate::events::AppEvent;
 use crate::state::AppState;
-
-/// Event name for daily reward claimed events sent to the frontend.
-pub const DAILY_REWARD_CLAIMED_EVENT: &str = "daily-reward-claimed";
 
 /// Starts the scheduled daily claim task.
 ///
@@ -116,7 +114,7 @@ pub fn start_scheduled_claims(app_handle: AppHandle, cancel_token: CancellationT
                         state.set_daily_reward_status(status).await;
 
                         // Emit event to frontend
-                        if let Err(e) = app_handle.emit(DAILY_REWARD_CLAIMED_EVENT, &results) {
+                        if let Err(e) = app_handle.emit(AppEvent::DailyRewardClaimed.as_str(), &results) {
                             tracing::warn!(error = %e, "Failed to emit daily reward claimed event");
                         }
 
@@ -182,7 +180,7 @@ async fn run_startup_claims(state: &AppState, app_handle: &AppHandle) {
         state.set_daily_reward_status(status).await;
 
         // Emit event to frontend
-        if let Err(e) = app_handle.emit(DAILY_REWARD_CLAIMED_EVENT, &results) {
+        if let Err(e) = app_handle.emit(AppEvent::DailyRewardClaimed.as_str(), &results) {
             tracing::warn!(error = %e, "Failed to emit daily reward claimed event");
         }
 

@@ -138,7 +138,6 @@ export class SettingsAtoms {
       const { mutateAsync: doReloadConfig } = get(this.reloadConfigMutation);
 
       await Promise.all([doSaveConfig(config), doSaveSecrets(secrets)]);
-      // biome-ignore lint/nursery/useAwaitThenable: mutateAsync returns Promise, type inference issue
       await doReloadConfig();
       set(this.markAsSaved);
     } catch (e) {

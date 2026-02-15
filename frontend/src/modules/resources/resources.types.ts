@@ -27,6 +27,12 @@ export interface GameResource {
   data: StaminaResource | CooldownResource | ExpeditionResource;
 }
 
+/** Payload for per-game resource update events */
+export interface GameResourcePayload {
+  gameId: GameId;
+  data: GameResource[];
+}
+
 /** All resources from all games (camelCase from Rust) */
 export interface AllResources {
   games?: Partial<Record<GameId, GameResource[]>>;

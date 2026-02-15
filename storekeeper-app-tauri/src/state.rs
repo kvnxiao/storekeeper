@@ -134,9 +134,11 @@ impl AppState {
     }
 
     /// Fetches resources from all configured game clients using the registry.
-    pub async fn fetch_all_resources(&self) -> AllResources {
+    ///
+    /// Emits per-game update events via the app handle as each game completes.
+    pub async fn fetch_all_resources(&self, app_handle: &tauri::AppHandle) -> AllResources {
         let state = self.inner.read().await;
-        let games = state.registry.fetch_all().await;
+        let games = state.registry.fetch_all(app_handle).await;
         AllResources {
             games,
             last_updated: Some(Utc::now()),
