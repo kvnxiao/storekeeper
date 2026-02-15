@@ -39,4 +39,9 @@ missing_panics_doc = "warn"
 multiple_crate_versions = "allow"
 ```
 
-Always run Clippy with `cargo clippy --workspace --all-targets --all-features` to catch potential issues early, followed by a `cargo fmt --check` to ensure code is formatted correctly.
+Run lint checks and auto-fix from the repository root:
+
+```bash
+just lint  # Check: clippy + format check
+just fix   # Auto-fix: clippy --fix + cargo fmt
+```
