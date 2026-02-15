@@ -20,3 +20,7 @@ lint-web:
 
 fix-web:
     cd frontend && pnpm fix
+
+icon:
+    cd storekeeper-app-tauri && cargo tauri icon icons/app-icon.svg
+
