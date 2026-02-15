@@ -1,5 +1,7 @@
+import { invoke } from "@tauri-apps/api/core";
 import { Section } from "@/modules/settings/components/Section";
 import type { GeneralConfig } from "@/modules/settings/settings.types";
+import { Button } from "@/modules/ui/components/Button";
 import { NumberField } from "@/modules/ui/components/NumberField";
 import { Select, SelectItem } from "@/modules/ui/components/Select";
 import { Switch } from "@/modules/ui/components/Switch";
@@ -64,6 +66,13 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
         {/* biome-ignore lint/correctness/useUniqueElementIds: React Aria SelectItem id is a key, not a DOM id */}
         <SelectItem id="trace">Trace</SelectItem>
       </Select>
+      <Button
+        variant="solid"
+        color="light"
+        onPress={() => invoke("open_config_folder")}
+      >
+        Open Config Folder
+      </Button>
     </Section>
   );
 };

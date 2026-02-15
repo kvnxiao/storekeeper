@@ -108,7 +108,7 @@ const SettingsPage: React.FC = () => {
                 transition={{ duration: 0.15 }}
               >
                 <TooltipTrigger delay={300}>
-                  <AriaButton>
+                  <AriaButton className="flex items-center">
                     <motion.div
                       animate={{ scale: [1, 1.1, 1] }}
                       transition={{
