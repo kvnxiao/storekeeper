@@ -1,3 +1,4 @@
+import { paraglideVitePlugin } from "@inlang/paraglide-js";
 import tailwindcss from "@tailwindcss/vite";
 import { devtools } from "@tanstack/devtools-vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
@@ -26,6 +27,11 @@ const spaWithPrerenderOptions: SpaOptions = {
 
 export default defineConfig(async () => ({
   plugins: [
+    paraglideVitePlugin({
+      project: "./project.inlang",
+      outdir: "./src/paraglide",
+      strategy: ["localStorage", "baseLocale"],
+    }),
     devtools(),
     nitro(),
     viteTsConfigPaths({

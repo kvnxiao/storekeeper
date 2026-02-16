@@ -58,7 +58,21 @@ impl GameId {
         }
     }
 
+    /// Returns a short identifier for this game, used in i18n key lookup.
+    #[must_use]
+    pub const fn short_id(&self) -> &'static str {
+        match self {
+            Self::GenshinImpact => "genshin",
+            Self::HonkaiStarRail => "hsr",
+            Self::ZenlessZoneZero => "zzz",
+            Self::WutheringWaves => "wuwa",
+        }
+    }
+
     /// Returns the human-readable display name for this game.
+    ///
+    /// For internal logging only — user-facing strings should use i18n
+    /// via `i18n::t("game.<short_id>.name")` instead.
     #[must_use]
     pub const fn display_name(&self) -> &'static str {
         match self {

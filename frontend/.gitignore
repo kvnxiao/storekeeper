@@ -19,6 +19,9 @@ dist-ssr
 .output
 .vinxi
 
+# Paraglide generated output
+src/paraglide/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

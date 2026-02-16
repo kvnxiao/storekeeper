@@ -7,6 +7,7 @@ use storekeeper_core::{AppConfig, GameId, SecretsConfig};
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_notification::NotificationExt;
 
+use crate::i18n;
 use crate::notification;
 use crate::polling;
 use crate::state::{AllDailyRewardStatus, AllResources, AppState};
@@ -60,6 +61,20 @@ pub async fn reload_config(app_handle: AppHandle) -> Result<(), String> {
 
     // Reload config and reinitialize game clients
     state.reload_config().await;
+
+    // Update locale from new config
+    let language = {
+        let inner = state.inner.read().await;
+        inner.config.general.language.clone()
+    };
+    if let Err(e) = i18n::set_locale(&language) {
+        tracing::warn!(error = %e, "Failed to update i18n locale");
+    }
+
+    // Rebuild tray menu with new locale strings
+    if let Err(e) = crate::tray::build_tray_menu(&app_handle) {
+        tracing::warn!(error = %e, "Failed to rebuild tray menu");
+    }
 
     // Trigger an immediate refresh to fetch resources with new config
     let _ = polling::refresh_now(&app_handle).await;
@@ -187,7 +202,7 @@ pub async fn send_preview_notification(
 ) -> Result<(), String> {
     let resources = state.get_resources().await;
     let notification_configs = state.get_game_notification_config(game_id).await;
-    let game_name = game_id.display_name();
+    let game_name = notification::game_display_name(game_id);
     let resource_name = notification::resource_display_name(game_id, &resource_type);
 
     let config = notification_configs.get(&resource_type);
@@ -209,35 +224,43 @@ pub async fn send_preview_notification(
         .and_then(|data| {
             let info = notification::extract_resource_info(data)?;
             let now = Utc::now();
-            let time_to_full = info.completion_at - now;
-            Some(if info.is_complete {
-                let overdue_mins = (now - info.completion_at).num_minutes();
-                if overdue_mins <= 0 {
-                    format!("{resource_name} is full!")
-                } else {
-                    format!("{resource_name} has been full for {overdue_mins} minutes")
-                }
-            } else if is_value_mode {
-                match (info.current, info.max) {
-                    (Some(current), Some(max)) => {
-                        format!("{resource_name} has reached {current}/{max}")
-                    }
-                    _ => format!("{resource_name} threshold reached"),
-                }
-            } else {
-                let mins_remaining = time_to_full.num_minutes();
-                format!("{resource_name} will be full in {mins_remaining} minutes")
-            })
+            Some(notification::build_notification_body(
+                &resource_name,
+                &info,
+                is_value_mode,
+                now,
+            ))
         })
         .unwrap_or_else(|| {
-            format!("{resource_name} — No data available yet, try refreshing first")
+            i18n::t_args(
+                "notification.no_data",
+                &[("resource_name", i18n::Value::from(resource_name.as_str()))],
+            )
         });
+
+    let title = i18n::t_args(
+        "notification.title",
+        &[
+            ("game_name", i18n::Value::from(game_name.as_str())),
+            ("resource_name", i18n::Value::from(resource_name.as_str())),
+        ],
+    );
 
     app_handle
         .notification()
         .builder()
-        .title(format!("{game_name} — {resource_name}"))
+        .title(&title)
         .body(&body)
         .show()
         .map_err(|e| e.to_string())
+}
+
+// ============================================================================
+// Locale Commands
+// ============================================================================
+
+/// Returns the list of supported locale codes.
+#[tauri::command]
+pub fn get_supported_locales() -> Vec<&'static str> {
+    i18n::supported_locales()
 }

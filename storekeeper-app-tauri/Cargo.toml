@@ -37,6 +37,10 @@ serde_json.workspace = true
 # Error handling
 anyhow.workspace = true
 
+# Internationalization (ICU4X)
+icu_locale.workspace = true
+icu_plurals.workspace = true
+
 # Logging
 tracing.workspace = true
 tracing-subscriber.workspace = true

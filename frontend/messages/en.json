@@ -1,0 +1,93 @@
+{
+  "app_title": "Storekeeper",
+
+  "dashboard_refresh_resources": "Refresh resources",
+  "dashboard_settings": "Settings",
+  "dashboard_no_games": "No games configured",
+  "dashboard_no_games_hint": "Add your game credentials in the config file to get started.",
+
+  "stamina_full": "Full!",
+  "stamina_full_in": "Full in",
+  "stamina_progress_label": "{name}: {current} of {max}",
+
+  "cooldown_ready": "Ready!",
+  "cooldown_ready_in": "Ready in",
+
+  "time_remaining_full": "Full",
+
+  "game_genshin_impact": "Genshin Impact",
+  "game_honkai_star_rail": "Honkai: Star Rail",
+  "game_zenless_zone_zero": "Zenless Zone Zero",
+  "game_wuthering_waves": "Wuthering Waves",
+
+  "resource_resin": "Original Resin",
+  "resource_parametric_transformer": "Parametric Transformer",
+  "resource_realm_currency": "Realm Currency",
+  "resource_expeditions": "Expeditions",
+  "resource_trailblaze_power": "Trailblaze Power",
+  "resource_battery": "Battery",
+  "resource_waveplates": "Waveplates",
+
+  "settings_title": "Settings",
+  "settings_back": "Back",
+  "settings_failed_to_load": "Failed to load settings: {error}",
+  "settings_loading": "Loading settings...",
+  "settings_unsaved_changes": "You have unsaved changes.",
+  "settings_undo": "Undo Changes",
+  "settings_save": "Save Changes",
+
+  "settings_general_title": "General",
+  "settings_general_description": "Application-wide settings for polling and startup behavior.",
+  "settings_general_poll_interval": "Poll Interval (seconds)",
+  "settings_general_poll_description": "How often to fetch resource data from game APIs.",
+  "settings_general_start_minimized": "Start minimized to system tray",
+  "settings_general_log_level": "Log Level",
+  "settings_general_log_error": "Error",
+  "settings_general_log_warning": "Warning",
+  "settings_general_log_info": "Info",
+  "settings_general_log_debug": "Debug",
+  "settings_general_log_trace": "Trace",
+  "settings_general_open_config": "Open Config Folder",
+
+  "settings_game_enable_tracking": "Enable {title} tracking",
+  "settings_game_uid": "UID",
+  "settings_game_uid_placeholder": "Enter your UID",
+  "settings_game_auto_claim": "Auto-claim daily rewards",
+
+  "settings_game_configure_genshin": "Configure your Genshin Impact account.",
+  "settings_game_configure_hsr": "Configure your Honkai: Star Rail account.",
+  "settings_game_configure_zzz": "Configure your Zenless Zone Zero account.",
+  "settings_game_configure_wuwa": "Configure your Wuthering Waves account.",
+
+  "settings_wuwa_enable_tracking": "Enable Wuthering Waves tracking",
+  "settings_wuwa_player_id": "Player ID",
+  "settings_wuwa_player_id_placeholder": "Enter your Player ID",
+
+  "settings_notifications_title": "Notifications",
+  "settings_notifications_description": "Configure desktop notifications for this game's resources.",
+
+  "settings_notification_preview": "Preview {label} notification",
+  "settings_notification_mode": "Notification mode",
+  "settings_notification_minutes_before_full": "Minutes before full",
+  "settings_notification_at_value": "At value",
+  "settings_notification_value_with_max": "Notify when >= value (max {maxValue})",
+  "settings_notification_value": "Notify when >= value",
+  "settings_notification_cooldown": "Remind again every (min)",
+  "settings_notification_once": "Will only notify once",
+  "settings_notification_renotify_stamina": "Re-notifies while threshold is exceeded",
+  "settings_notification_renotify_cooldown": "Re-notifies while resource is ready",
+
+  "settings_hoyolab_title": "HoYoLab Authentication",
+  "settings_hoyolab_description": "Enter your HoYoLab cookies for Genshin Impact, Honkai: Star Rail, and Zenless Zone Zero. Get these from the HoYoLab website developer tools.",
+  "settings_hoyolab_ltuid_placeholder": "Your ltuid_v2 cookie value",
+  "settings_hoyolab_ltoken_placeholder": "Your ltoken_v2 cookie value",
+  "settings_hoyolab_ltmid_placeholder": "Your ltmid_v2 cookie value",
+
+  "settings_kuro_title": "Kuro Games Authentication",
+  "settings_kuro_description": "For Wuthering Waves. The oauth_code is automatically loaded from the Kuro SDK launcher cache. Only set this if you need to override the automatic detection.",
+  "settings_kuro_oauth_label": "OAuth Code (Optional Override)",
+  "settings_kuro_oauth_placeholder": "Leave empty to use automatic detection",
+
+  "textfield_hide_password": "Hide password",
+  "textfield_show_password": "Show password"
+}

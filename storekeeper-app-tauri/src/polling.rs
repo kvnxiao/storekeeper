@@ -6,6 +6,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use tokio_util::sync::CancellationToken;
 
 use crate::events::AppEvent;
+use crate::notification;
 use crate::state::{AllResources, AppState};
 
 /// Starts the background polling task.
@@ -77,6 +78,9 @@ async fn poll_resources(app_handle: &AppHandle) -> Result<(), String> {
     // Emit event to frontend
     let _ = app_handle.emit(AppEvent::ResourcesUpdated.as_str(), &resources);
 
+    // Check notification thresholds immediately after fetch
+    notification::check_and_notify(app_handle).await;
+
     Ok(())
 }
 
@@ -118,6 +122,9 @@ pub async fn refresh_now(app_handle: &AppHandle) -> Result<AllResources, String>
 
     // Emit event to frontend
     let _ = app_handle.emit(AppEvent::ResourcesUpdated.as_str(), &resources);
+
+    // Check notification thresholds immediately after refresh
+    notification::check_and_notify(app_handle).await;
 
     Ok(resources)
 }

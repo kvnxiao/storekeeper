@@ -12,6 +12,7 @@ import type {
   AllResources,
   GameResourcePayload,
 } from "@/modules/resources/resources.types";
+import { getLocale, isLocale, setLocale } from "@/paraglide/runtime";
 
 // =============================================================================
 // CoreAtoms Class
@@ -160,5 +161,22 @@ export class CoreAtoms {
       enabled.add("ZENLESS_ZONE_ZERO");
     if (config?.games.wuthering_waves?.enabled) enabled.add("WUTHERING_WAVES");
     return enabled;
+  });
+
+  // ---------------------------------------------------------------------------
+  // Locale sync - syncs Paraglide locale from backend config on startup
+  // ---------------------------------------------------------------------------
+
+  private readonly localeSyncEffect = atomEffect((get) => {
+    const { data: config } = get(configQueryAtom);
+    if (!config) return;
+    const language = config.general.language;
+    if (isLocale(language) && language !== getLocale()) {
+      setLocale(language, { reload: false });
+    }
+  });
+
+  readonly localeSync = atom((get) => {
+    get(this.localeSyncEffect);
   });
 }

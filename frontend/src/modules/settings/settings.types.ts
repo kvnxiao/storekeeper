@@ -7,6 +7,7 @@ export interface GeneralConfig {
   poll_interval_secs: number;
   start_minimized: boolean;
   log_level: string;
+  language: string;
 }
 
 /** Per-resource notification configuration */

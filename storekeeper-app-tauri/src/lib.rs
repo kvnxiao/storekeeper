@@ -6,6 +6,7 @@ mod clients;
 mod commands;
 mod daily_reward_registry;
 mod events;
+pub mod i18n;
 mod notification;
 mod polling;
 mod registry;
@@ -40,6 +41,20 @@ pub fn run() -> Result<()> {
         .setup(|app| {
             // Initialize application state with config and game clients
             let app_state = state::AppState::with_config();
+
+            // Initialize i18n with language from config
+            {
+                let language = tauri::async_runtime::block_on(async {
+                    let inner = app_state.inner.read().await;
+                    inner.config.general.language.clone()
+                });
+                if let Err(e) = i18n::init(&language) {
+                    tracing::warn!(error = %e, "Failed to initialize i18n, falling back to defaults");
+                    // Try English as fallback
+                    let _ = i18n::init("en");
+                }
+            }
+
             app.manage(app_state);
 
             // Create cancellation token for background tasks
@@ -80,6 +95,8 @@ pub fn run() -> Result<()> {
             commands::claim_daily_rewards,
             commands::claim_daily_reward_for_game,
             commands::get_daily_reward_status_for_game,
+            // Locale commands
+            commands::get_supported_locales,
         ])
         .on_window_event(|window, event| {
             // Handle close button - minimize to tray instead of closing

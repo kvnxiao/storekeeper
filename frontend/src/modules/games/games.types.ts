@@ -4,9 +4,3 @@ export type GameId =
   | "HONKAI_STAR_RAIL"
   | "ZENLESS_ZONE_ZERO"
   | "WUTHERING_WAVES";
-
-/** Game metadata for display */
-export interface GameMetadata {
-  title: string;
-  shortId: string;
-}

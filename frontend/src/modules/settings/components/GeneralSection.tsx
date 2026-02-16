@@ -5,6 +5,7 @@ import { Button } from "@/modules/ui/components/Button";
 import { NumberField } from "@/modules/ui/components/NumberField";
 import { Select, SelectItem } from "@/modules/ui/components/Select";
 import { Switch } from "@/modules/ui/components/Switch";
+import * as m from "@/paraglide/messages";
 
 interface GeneralSectionProps {
   config: GeneralConfig;
@@ -17,12 +18,12 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
 }) => {
   return (
     <Section
-      title="General"
-      description="Application-wide settings for polling and startup behavior."
+      title={m.settings_general_title()}
+      description={m.settings_general_description()}
     >
       <NumberField
-        label="Poll Interval (seconds)"
-        description="How often to fetch resource data from game APIs."
+        label={m.settings_general_poll_interval()}
+        description={m.settings_general_poll_description()}
         value={config.poll_interval_secs}
         onChange={(value) =>
           onChange({
@@ -43,10 +44,10 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
           })
         }
       >
-        Start minimized to system tray
+        {m.settings_general_start_minimized()}
       </Switch>
       <Select
-        label="Log Level"
+        label={m.settings_general_log_level()}
         selectedKey={config.log_level}
         onSelectionChange={(key) =>
           onChange({
@@ -56,22 +57,22 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
         }
       >
         {/* biome-ignore lint/correctness/useUniqueElementIds: React Aria SelectItem id is a key, not a DOM id */}
-        <SelectItem id="error">Error</SelectItem>
+        <SelectItem id="error">{m.settings_general_log_error()}</SelectItem>
         {/* biome-ignore lint/correctness/useUniqueElementIds: React Aria SelectItem id is a key, not a DOM id */}
-        <SelectItem id="warn">Warning</SelectItem>
+        <SelectItem id="warn">{m.settings_general_log_warning()}</SelectItem>
         {/* biome-ignore lint/correctness/useUniqueElementIds: React Aria SelectItem id is a key, not a DOM id */}
-        <SelectItem id="info">Info</SelectItem>
+        <SelectItem id="info">{m.settings_general_log_info()}</SelectItem>
         {/* biome-ignore lint/correctness/useUniqueElementIds: React Aria SelectItem id is a key, not a DOM id */}
-        <SelectItem id="debug">Debug</SelectItem>
+        <SelectItem id="debug">{m.settings_general_log_debug()}</SelectItem>
         {/* biome-ignore lint/correctness/useUniqueElementIds: React Aria SelectItem id is a key, not a DOM id */}
-        <SelectItem id="trace">Trace</SelectItem>
+        <SelectItem id="trace">{m.settings_general_log_trace()}</SelectItem>
       </Select>
       <Button
         variant="solid"
         color="light"
         onPress={() => invoke("open_config_folder")}
       >
-        Open Config Folder
+        {m.settings_general_open_config()}
       </Button>
     </Section>
   );

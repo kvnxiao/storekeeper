@@ -1,6 +1,7 @@
 import { Section } from "@/modules/settings/components/Section";
 import type { HoyolabSecrets } from "@/modules/settings/settings.types";
 import { TextField } from "@/modules/ui/components/TextField";
+import * as m from "@/paraglide/messages";
 
 interface HoyolabSecretsSectionProps {
   secrets: HoyolabSecrets;
@@ -13,8 +14,8 @@ export const HoyolabSecretsSection: React.FC<HoyolabSecretsSectionProps> = ({
 }) => {
   return (
     <Section
-      title="HoYoLab Authentication"
-      description="Enter your HoYoLab cookies for Genshin Impact, Honkai: Star Rail, and Zenless Zone Zero. Get these from the HoYoLab website developer tools."
+      title={m.settings_hoyolab_title()}
+      description={m.settings_hoyolab_description()}
     >
       <TextField
         label="ltuid_v2"
@@ -26,7 +27,7 @@ export const HoyolabSecretsSection: React.FC<HoyolabSecretsSectionProps> = ({
             ltuid_v2: value,
           })
         }
-        placeholder="Your ltuid_v2 cookie value"
+        placeholder={m.settings_hoyolab_ltuid_placeholder()}
       />
       <TextField
         label="ltoken_v2"
@@ -38,7 +39,7 @@ export const HoyolabSecretsSection: React.FC<HoyolabSecretsSectionProps> = ({
             ltoken_v2: value,
           })
         }
-        placeholder="Your ltoken_v2 cookie value"
+        placeholder={m.settings_hoyolab_ltoken_placeholder()}
       />
       <TextField
         label="ltmid_v2"
@@ -50,7 +51,7 @@ export const HoyolabSecretsSection: React.FC<HoyolabSecretsSectionProps> = ({
             ltmid_v2: value,
           })
         }
-        placeholder="Your ltmid_v2 cookie value"
+        placeholder={m.settings_hoyolab_ltmid_placeholder()}
       />
     </Section>
   );

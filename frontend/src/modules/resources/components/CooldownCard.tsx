@@ -3,6 +3,7 @@ import { TimeRemaining } from "@/modules/resources/components/TimeRemaining";
 import { useFormattedTime } from "@/modules/resources/resources.hooks";
 import type { CooldownResource } from "@/modules/resources/resources.types";
 import { Badge } from "@/modules/ui/components/Badge";
+import * as m from "@/paraglide/messages";
 
 interface CooldownCardProps {
   iconPath: string;
@@ -46,7 +47,7 @@ export const CooldownCard: React.FC<CooldownCardProps> = ({
           {name}
         </span>
         {data.isReady ? (
-          <Badge variant="success">Ready!</Badge>
+          <Badge variant="success">{m.cooldown_ready()}</Badge>
         ) : (
           <Badge variant="warning">
             <TimeRemaining
@@ -59,10 +60,10 @@ export const CooldownCard: React.FC<CooldownCardProps> = ({
       </div>
       <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
         {data.isReady ? (
-          "Ready!"
+          m.cooldown_ready()
         ) : (
           <>
-            Ready in{" "}
+            {m.cooldown_ready_in()}{" "}
             <TimeRemaining
               relativeTime={relativeTime}
               absoluteTime={absoluteTime}

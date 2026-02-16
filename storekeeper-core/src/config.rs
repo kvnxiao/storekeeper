@@ -312,6 +312,9 @@ start_minimized = true
 # Log level: error, warn, info, debug, trace (default: info)
 log_level = "info"
 
+# Language/locale for the application (default: "en")
+language = "en"
+
 # =============================================================================
 # GAME CONFIGURATION
 # =============================================================================
@@ -398,6 +401,10 @@ pub struct GeneralConfig {
     /// Log level.
     #[serde(default = "default_log_level")]
     pub log_level: String,
+
+    /// Language/locale for the application (e.g. "en", "zh-CN").
+    #[serde(default = "default_language")]
+    pub language: String,
 }
 
 impl Default for GeneralConfig {
@@ -406,8 +413,13 @@ impl Default for GeneralConfig {
             poll_interval_secs: default_poll_interval(),
             start_minimized: true,
             log_level: default_log_level(),
+            language: default_language(),
         }
     }
+}
+
+fn default_language() -> String {
+    "en".to_string()
 }
 
 fn default_poll_interval() -> u64 {
