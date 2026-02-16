@@ -12,7 +12,8 @@ export interface GeneralConfig {
 /** Per-resource notification configuration */
 export interface ResourceNotificationConfig {
   enabled: boolean;
-  notify_minutes_before_full: number;
+  notify_minutes_before_full?: number | null;
+  notify_at_value?: number | null;
   cooldown_minutes: number;
 }
 

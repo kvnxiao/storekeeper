@@ -1,5 +1,11 @@
-import { RESOURCE_DISPLAY_NAMES } from "@/modules/games/games.constants";
-import { NotificationResourceRow } from "@/modules/settings/components/NotificationResourceRow";
+import {
+  RESOURCE_DISPLAY_NAMES,
+  STAMINA_RESOURCE_TYPES,
+} from "@/modules/games/games.constants";
+import {
+  NotificationResourceRow,
+  type ResourceLimits,
+} from "@/modules/settings/components/NotificationResourceRow";
 import type { ResourceNotificationConfig } from "@/modules/settings/settings.types";
 
 interface NotificationSectionProps {
@@ -8,6 +14,7 @@ interface NotificationSectionProps {
   notifications:
     | Partial<Record<string, ResourceNotificationConfig>>
     | undefined;
+  resourceLimits?: Partial<Record<string, ResourceLimits>>;
   onChange: (
     notifications: Partial<Record<string, ResourceNotificationConfig>>,
   ) => void;
@@ -17,6 +24,7 @@ export const NotificationSection: React.FC<NotificationSectionProps> = ({
   gameId,
   resourceTypes,
   notifications,
+  resourceLimits,
   onChange,
 }) => {
   return (
@@ -36,6 +44,8 @@ export const NotificationSection: React.FC<NotificationSectionProps> = ({
           resourceType={type}
           label={RESOURCE_DISPLAY_NAMES[type] ?? type}
           config={notifications?.[type]}
+          isStaminaResource={STAMINA_RESOURCE_TYPES.has(type)}
+          limits={resourceLimits?.[type]}
           onChange={(resourceConfig) =>
             onChange({ ...notifications, [type]: resourceConfig })
           }

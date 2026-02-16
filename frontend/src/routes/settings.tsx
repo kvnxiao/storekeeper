@@ -5,13 +5,19 @@ import {
 import { createFileRoute } from "@tanstack/react-router";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { Button as AriaButton, TooltipTrigger } from "react-aria-components";
 import { atoms } from "@/modules/atoms";
+import type { GameId } from "@/modules/games/games.types";
+import {
+  type AllResources,
+  isStaminaResource,
+} from "@/modules/resources/resources.types";
 import { GeneralSection } from "@/modules/settings/components/GeneralSection";
 import { HoyolabGameSection } from "@/modules/settings/components/HoyolabGameSection";
 import { HoyolabSecretsSection } from "@/modules/settings/components/HoyolabSecretsSection";
 import { KuroSecretsSection } from "@/modules/settings/components/KuroSecretsSection";
+import type { ResourceLimits } from "@/modules/settings/components/NotificationResourceRow";
 import { WuwaSection } from "@/modules/settings/components/WuwaSection";
 import type {
   AppConfig,
@@ -24,6 +30,26 @@ import type {
 import { Button } from "@/modules/ui/components/Button";
 import { ButtonLink } from "@/modules/ui/components/ButtonLink";
 import { Tooltip } from "@/modules/ui/components/Tooltip";
+
+/** Extract resource limits from backend resource data for a given game */
+function getResourceLimitsForGame(
+  resources: AllResources | undefined,
+  gameId: GameId,
+): Partial<Record<string, ResourceLimits>> | undefined {
+  const gameResources = resources?.games?.[gameId];
+  if (!gameResources) return undefined;
+
+  const limits: Record<string, ResourceLimits> = {};
+  for (const resource of gameResources) {
+    if (isStaminaResource(resource.data)) {
+      limits[resource.type] = {
+        maxValue: resource.data.max,
+        regenRateSeconds: resource.data.regenRateSeconds,
+      };
+    }
+  }
+  return Object.keys(limits).length > 0 ? limits : undefined;
+}
 
 // =============================================================================
 // Settings Page Component
@@ -47,6 +73,25 @@ const SettingsPage: React.FC = () => {
   const resetSettings = useSetAtom(atoms.settings.reset);
   const saveError = useAtomValue(atoms.settings.saveError);
   const isSaving = useAtomValue(atoms.settings.isSaving);
+
+  // Resource data for computing input limits
+  const { data: resources } = useAtomValue(atoms.core.resourcesQuery);
+  const genshinLimits = useMemo(
+    () => getResourceLimitsForGame(resources, "GENSHIN_IMPACT"),
+    [resources],
+  );
+  const hsrLimits = useMemo(
+    () => getResourceLimitsForGame(resources, "HONKAI_STAR_RAIL"),
+    [resources],
+  );
+  const zzzLimits = useMemo(
+    () => getResourceLimitsForGame(resources, "ZENLESS_ZONE_ZERO"),
+    [resources],
+  );
+  const wuwaLimits = useMemo(
+    () => getResourceLimitsForGame(resources, "WUTHERING_WAVES"),
+    [resources],
+  );
 
   // Helper to update nested config values
   const updateConfig = useCallback(
@@ -125,6 +170,7 @@ const SettingsPage: React.FC = () => {
             "expeditions",
           ]}
           config={config.games.genshin_impact}
+          resourceLimits={genshinLimits}
           onChange={(genshin) =>
             updateConfig("games", {
               ...config.games,
@@ -139,6 +185,7 @@ const SettingsPage: React.FC = () => {
           gameId="HONKAI_STAR_RAIL"
           resourceTypes={["trailblaze_power"]}
           config={config.games.honkai_star_rail}
+          resourceLimits={hsrLimits}
           onChange={(hsr) =>
             updateConfig("games", {
               ...config.games,
@@ -153,6 +200,7 @@ const SettingsPage: React.FC = () => {
           gameId="ZENLESS_ZONE_ZERO"
           resourceTypes={["battery"]}
           config={config.games.zenless_zone_zero}
+          resourceLimits={zzzLimits}
           onChange={(zzz) =>
             updateConfig("games", {
               ...config.games,
@@ -163,6 +211,7 @@ const SettingsPage: React.FC = () => {
 
         <WuwaSection
           config={config.games.wuthering_waves}
+          resourceLimits={wuwaLimits}
           onChange={(wuwa) =>
             updateConfig("games", {
               ...config.games,

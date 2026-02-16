@@ -1,3 +1,4 @@
+import type { ResourceLimits } from "@/modules/settings/components/NotificationResourceRow";
 import { NotificationSection } from "@/modules/settings/components/NotificationSection";
 import { Section } from "@/modules/settings/components/Section";
 import type { ResourceNotificationConfig } from "@/modules/settings/settings.types";
@@ -17,6 +18,7 @@ interface HoyolabGameSectionProps {
   gameId: string;
   resourceTypes: readonly string[];
   config: HoyolabGameConfig | undefined;
+  resourceLimits?: Partial<Record<string, ResourceLimits>>;
   onChange: (config: HoyolabGameConfig) => void;
 }
 
@@ -26,6 +28,7 @@ export const HoyolabGameSection: React.FC<HoyolabGameSectionProps> = ({
   gameId,
   resourceTypes,
   config,
+  resourceLimits,
   onChange,
 }) => {
   const enabled = config?.enabled ?? false;
@@ -79,6 +82,7 @@ export const HoyolabGameSection: React.FC<HoyolabGameSectionProps> = ({
             gameId={gameId}
             resourceTypes={resourceTypes}
             notifications={config?.notifications}
+            resourceLimits={resourceLimits}
             onChange={(notifications) =>
               onChange({
                 ...config,

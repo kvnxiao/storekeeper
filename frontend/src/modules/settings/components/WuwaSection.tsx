@@ -1,3 +1,4 @@
+import type { ResourceLimits } from "@/modules/settings/components/NotificationResourceRow";
 import { NotificationSection } from "@/modules/settings/components/NotificationSection";
 import { Section } from "@/modules/settings/components/Section";
 import type { WuwaConfig } from "@/modules/settings/settings.types";
@@ -8,11 +9,13 @@ const RESOURCE_TYPES = ["waveplates"] as const;
 
 interface WuwaSectionProps {
   config: WuwaConfig | undefined;
+  resourceLimits?: Partial<Record<string, ResourceLimits>>;
   onChange: (config: WuwaConfig) => void;
 }
 
 export const WuwaSection: React.FC<WuwaSectionProps> = ({
   config,
+  resourceLimits,
   onChange,
 }) => {
   const enabled = config?.enabled ?? false;
@@ -53,6 +56,7 @@ export const WuwaSection: React.FC<WuwaSectionProps> = ({
             gameId="WUTHERING_WAVES"
             resourceTypes={RESOURCE_TYPES}
             notifications={config?.notifications}
+            resourceLimits={resourceLimits}
             onChange={(notifications) =>
               onChange({
                 ...config,

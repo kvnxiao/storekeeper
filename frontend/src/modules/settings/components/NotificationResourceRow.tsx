@@ -4,27 +4,59 @@ import { useCallback, useState } from "react";
 import type { ResourceNotificationConfig } from "@/modules/settings/settings.types";
 import { Button } from "@/modules/ui/components/Button";
 import { NumberField } from "@/modules/ui/components/NumberField";
+import { SegmentedControl } from "@/modules/ui/components/SegmentedControl";
 import { Switch } from "@/modules/ui/components/Switch";
+
+type NotifyMode = "minutes" | "value";
+
+function getNotifyMode(config: ResourceNotificationConfig): NotifyMode {
+  if (config.notify_at_value != null) return "value";
+  return "minutes";
+}
+
+/** Resource limits derived from backend data, used for input constraints */
+export interface ResourceLimits {
+  /** Maximum resource value (e.g., 160 for resin, 240 for trailblaze power) */
+  maxValue: number;
+  /** Seconds to regenerate one unit */
+  regenRateSeconds: number;
+}
 
 interface NotificationResourceRowProps {
   gameId: string;
   resourceType: string;
   label: string;
   config: ResourceNotificationConfig | undefined;
+  isStaminaResource: boolean;
+  limits?: ResourceLimits;
   onChange: (config: ResourceNotificationConfig) => void;
 }
 
 const DEFAULT_CONFIG: ResourceNotificationConfig = {
   enabled: true,
-  notify_minutes_before_full: 0,
   cooldown_minutes: 30,
 };
 
+const MODE_ITEMS = [
+  { id: "minutes", label: "Minutes before full" },
+  { id: "value", label: "At value" },
+] as const;
+
 export const NotificationResourceRow: React.FC<
   NotificationResourceRowProps
-> = ({ gameId, resourceType, label, config, onChange }) => {
+> = ({
+  gameId,
+  resourceType,
+  label,
+  config,
+  isStaminaResource,
+  limits,
+  onChange,
+}) => {
   const enabled = config?.enabled ?? false;
-  const [isTesting, setIsTesting] = useState(false);
+  const [isPreviewing, setIsPreviewing] = useState<boolean>(false);
+
+  const mode = config ? getNotifyMode(config) : "minutes";
 
   const handleToggle = useCallback(
     (isSelected: boolean) => {
@@ -37,15 +69,35 @@ export const NotificationResourceRow: React.FC<
     [config, onChange],
   );
 
-  const handleTest = useCallback(async () => {
-    setIsTesting(true);
+  const handleModeChange = useCallback(
+    (newMode: string) => {
+      if (!config) return;
+      if (newMode === "value") {
+        onChange({
+          ...config,
+          notify_minutes_before_full: null,
+          notify_at_value: config.notify_at_value ?? 0,
+        });
+      } else {
+        onChange({
+          ...config,
+          notify_at_value: null,
+          notify_minutes_before_full: config.notify_minutes_before_full ?? 0,
+        });
+      }
+    },
+    [config, onChange],
+  );
+
+  const handlePreview = useCallback(async () => {
+    setIsPreviewing(true);
     try {
-      await invoke("send_test_notification", {
+      await invoke("send_preview_notification", {
         gameId,
         resourceType,
       });
     } finally {
-      setIsTesting(false);
+      setIsPreviewing(false);
     }
   }, [gameId, resourceType]);
 
@@ -58,11 +110,11 @@ export const NotificationResourceRow: React.FC<
         <Button
           size="icon"
           variant="plain"
-          aria-label={`Test ${label} notification`}
-          onPress={() => void handleTest()}
-          isPending={isTesting}
+          aria-label={`Preview ${label} notification`}
+          onPress={() => void handlePreview()}
+          isPending={isPreviewing}
         >
-          {!isTesting && <BellAlertIcon className="h-4 w-4" />}
+          {!isPreviewing && <BellAlertIcon className="h-4 w-4" />}
         </Button>
       </div>
       {enabled && config && (
@@ -70,22 +122,61 @@ export const NotificationResourceRow: React.FC<
           {/* Empty cell aligns with switch track width */}
           <div />
           <div className="space-y-3">
+            {isStaminaResource && (
+              <SegmentedControl
+                aria-label="Notification mode"
+                selectedKey={mode}
+                onSelectionChange={handleModeChange}
+                items={[...MODE_ITEMS]}
+              />
+            )}
+            {mode === "minutes" ? (
+              <NumberField
+                label="Minutes before full"
+                value={config.notify_minutes_before_full ?? 0}
+                onChange={(value) =>
+                  onChange({
+                    ...config,
+                    notify_minutes_before_full: value,
+                    notify_at_value: null,
+                  })
+                }
+                minValue={0}
+                maxValue={
+                  limits
+                    ? Math.floor(
+                        (limits.maxValue * limits.regenRateSeconds) / 60,
+                      )
+                    : 999
+                }
+                step={5}
+              />
+            ) : (
+              <NumberField
+                label={
+                  limits
+                    ? `Notify when >= value (max ${limits.maxValue})`
+                    : "Notify when >= value"
+                }
+                value={config.notify_at_value ?? 0}
+                onChange={(value) =>
+                  onChange({
+                    ...config,
+                    notify_at_value: value,
+                    notify_minutes_before_full: null,
+                  })
+                }
+                minValue={1}
+                maxValue={limits?.maxValue ?? 9999}
+                step={1}
+              />
+            )}
             <NumberField
-              label="Notify minutes before full"
-              value={config.notify_minutes_before_full}
-              onChange={(value) =>
-                onChange({ ...config, notify_minutes_before_full: value })
-              }
-              minValue={0}
-              maxValue={999}
-              step={5}
-            />
-            <NumberField
-              label="Cooldown minutes"
+              label="Remind again every (min)"
               description={
                 config.cooldown_minutes === 0
-                  ? "0 = notify once, no repeat"
-                  : undefined
+                  ? "Will only notify once"
+                  : "Re-notifies while threshold is exceeded"
               }
               value={config.cooldown_minutes}
               onChange={(value) =>
@@ -93,7 +184,7 @@ export const NotificationResourceRow: React.FC<
               }
               minValue={0}
               maxValue={120}
-              step={5}
+              step={1}
             />
           </div>
         </>

@@ -30,7 +30,9 @@ cd ..
 
 ## Configuration
 
-Storekeeper requires two config files in the platform-specific config directory:
+Storekeeper auto-creates `config.toml` and `secrets.toml` with commented templates on first launch. No manual setup is needed to get started.
+
+Config files are stored in the platform-specific config directory:
 
 | Platform | Path |
 |----------|------|
@@ -38,15 +40,7 @@ Storekeeper requires two config files in the platform-specific config directory:
 | macOS | `~/Library/Application Support/storekeeper/` |
 | Linux | `~/.config/storekeeper/` |
 
-Copy the example files:
-
-```bash
-# Adjust the target path for your OS
-cp config.example.toml <CONFIG_DIR>/config.toml
-cp secrets.example.toml <CONFIG_DIR>/secrets.toml
-```
-
-Edit `config.toml` to enable the games you play and `secrets.toml` to add your credentials. See [README.md](../../README.md#configuration-setup) for detailed credential instructions.
+Edit these files to enable games and add credentials, or use the in-app settings UI. See [README.md](../../README.md#configuration) for credential instructions.
 
 ## Running
 

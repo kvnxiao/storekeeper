@@ -73,7 +73,7 @@ pub fn run() -> Result<()> {
             commands::reload_config,
             commands::open_config_folder,
             // Notification commands
-            commands::send_test_notification,
+            commands::send_preview_notification,
             // Daily reward commands
             commands::get_daily_reward_status,
             commands::refresh_daily_reward_status,

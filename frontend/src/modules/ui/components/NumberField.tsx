@@ -67,6 +67,7 @@ export interface NumberFieldProps
     NumberFieldStyleProps {
   label?: string;
   description?: string;
+  placeholder?: string;
   className?: string;
 }
 
@@ -84,6 +85,7 @@ const StepperButton: React.FC<ButtonProps> = ({ className, ...props }) => {
 export const NumberField: React.FC<NumberFieldProps> = ({
   label,
   description,
+  placeholder,
   className,
   ...props
 }) => {
@@ -96,7 +98,7 @@ export const NumberField: React.FC<NumberFieldProps> = ({
     >
       {label && <Label className={labelStyle()}>{label}</Label>}
       <Group className={groupStyle()}>
-        <Input className={inputStyle()} />
+        <Input className={inputStyle()} placeholder={placeholder} />
         <div className={stepperDividerStyle()} />
         <div className="flex flex-col">
           <StepperButton slot="increment" className="rounded-tr-lg">

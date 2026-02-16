@@ -344,6 +344,7 @@ impl AppState {
         state.config = config;
         state.registry = registry;
         state.daily_reward_registry = daily_reward_registry;
+        state.notification_tracker.clear_all();
 
         tracing::info!("Configuration reloaded successfully");
     }

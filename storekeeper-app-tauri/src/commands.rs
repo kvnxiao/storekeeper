@@ -177,17 +177,21 @@ pub async fn get_daily_reward_status_for_game(
 // Notification Commands
 // ============================================================================
 
-/// Sends a test notification for a specific game resource using cached data.
+/// Sends a preview notification for a specific game resource using cached data.
 #[tauri::command]
-pub async fn send_test_notification(
+pub async fn send_preview_notification(
     game_id: GameId,
     resource_type: String,
     app_handle: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
     let resources = state.get_resources().await;
+    let notification_configs = state.get_game_notification_config(game_id).await;
     let game_name = game_id.display_name();
     let resource_name = notification::resource_display_name(game_id, &resource_type);
+
+    let config = notification_configs.get(&resource_type);
+    let is_value_mode = config.is_some_and(|c| c.notify_at_value.is_some());
 
     // Try to find cached resource data and build a real notification body
     let body = resources
@@ -212,6 +216,13 @@ pub async fn send_test_notification(
                     format!("{resource_name} is full!")
                 } else {
                     format!("{resource_name} has been full for {overdue_mins} minutes")
+                }
+            } else if is_value_mode {
+                match (info.current, info.max) {
+                    (Some(current), Some(max)) => {
+                        format!("{resource_name} has reached {current}/{max}")
+                    }
+                    _ => format!("{resource_name} threshold reached"),
                 }
             } else {
                 let mins_remaining = time_to_full.num_minutes();
