@@ -17,6 +17,7 @@ edition = "2024"
 rust-version = "1.85"
 license = "MIT"
 repository = "https://github.com/kvnxiao/storekeeper"
+authors = ["Kevin Xiao"]
 
 [workspace.dependencies]
 # Tauri
