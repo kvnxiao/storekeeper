@@ -15,6 +15,8 @@ test:
 bundle:
     cargo tauri build
 
+build: bundle
+
 lint-web:
     cd frontend && pnpm lint && pnpm tsc --noEmit
 
