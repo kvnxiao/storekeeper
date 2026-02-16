@@ -8,6 +8,11 @@ import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useMemo } from "react";
 import { Button as AriaButton, TooltipTrigger } from "react-aria-components";
 import { atoms } from "@/modules/atoms";
+import {
+  GenshinResource,
+  HsrResource,
+  ZzzResource,
+} from "@/modules/games/games.constants";
 import type { GameId } from "@/modules/games/games.types";
 import {
   type AllResources,
@@ -21,11 +26,9 @@ import type { ResourceLimits } from "@/modules/settings/components/NotificationR
 import { WuwaSection } from "@/modules/settings/components/WuwaSection";
 import type {
   AppConfig,
-  GenshinConfig,
-  HsrConfig,
+  GamesConfig,
   SecretsConfig,
   WuwaConfig,
-  ZzzConfig,
 } from "@/modules/settings/settings.types";
 import { Button } from "@/modules/ui/components/Button";
 import { ButtonLink } from "@/modules/ui/components/ButtonLink";
@@ -53,6 +56,45 @@ function getResourceLimitsForGame(
 }
 
 // =============================================================================
+// HoYoLab game configuration metadata
+// =============================================================================
+
+const HOYOLAB_GAMES: {
+  gameId: GameId;
+  configKey: keyof GamesConfig;
+  title: () => string;
+  description: () => string;
+  resourceTypes: readonly string[];
+}[] = [
+  {
+    gameId: "GENSHIN_IMPACT",
+    configKey: "genshin_impact",
+    title: m.game_genshin_impact,
+    description: m.settings_game_configure_genshin,
+    resourceTypes: [
+      GenshinResource.Resin,
+      GenshinResource.ParametricTransformer,
+      GenshinResource.RealmCurrency,
+      GenshinResource.Expeditions,
+    ],
+  },
+  {
+    gameId: "HONKAI_STAR_RAIL",
+    configKey: "honkai_star_rail",
+    title: m.game_honkai_star_rail,
+    description: m.settings_game_configure_hsr,
+    resourceTypes: [HsrResource.TrailblazePower],
+  },
+  {
+    gameId: "ZENLESS_ZONE_ZERO",
+    configKey: "zenless_zone_zero",
+    title: m.game_zenless_zone_zero,
+    description: m.settings_game_configure_zzz,
+    resourceTypes: [ZzzResource.Battery],
+  },
+];
+
+// =============================================================================
 // Settings Page Component
 // =============================================================================
 
@@ -77,20 +119,16 @@ const SettingsPage: React.FC = () => {
 
   // Resource data for computing input limits
   const { data: resources } = useAtomValue(atoms.core.resourcesQuery);
-  const genshinLimits = useMemo(
-    () => getResourceLimitsForGame(resources, "GENSHIN_IMPACT"),
-    [resources],
-  );
-  const hsrLimits = useMemo(
-    () => getResourceLimitsForGame(resources, "HONKAI_STAR_RAIL"),
-    [resources],
-  );
-  const zzzLimits = useMemo(
-    () => getResourceLimitsForGame(resources, "ZENLESS_ZONE_ZERO"),
-    [resources],
-  );
-  const wuwaLimits = useMemo(
-    () => getResourceLimitsForGame(resources, "WUTHERING_WAVES"),
+  const resourceLimits = useMemo(
+    () => ({
+      GENSHIN_IMPACT: getResourceLimitsForGame(resources, "GENSHIN_IMPACT"),
+      HONKAI_STAR_RAIL: getResourceLimitsForGame(resources, "HONKAI_STAR_RAIL"),
+      ZENLESS_ZONE_ZERO: getResourceLimitsForGame(
+        resources,
+        "ZENLESS_ZONE_ZERO",
+      ),
+      WUTHERING_WAVES: getResourceLimitsForGame(resources, "WUTHERING_WAVES"),
+    }),
     [resources],
   );
 
@@ -162,59 +200,27 @@ const SettingsPage: React.FC = () => {
           onChange={(general) => updateConfig("general", general)}
         />
 
-        <HoyolabGameSection
-          title={m.game_genshin_impact()}
-          description={m.settings_game_configure_genshin()}
-          gameId="GENSHIN_IMPACT"
-          resourceTypes={[
-            "resin",
-            "parametric_transformer",
-            "realm_currency",
-            "expeditions",
-          ]}
-          config={config.games.genshin_impact}
-          resourceLimits={genshinLimits}
-          onChange={(genshin) =>
-            updateConfig("games", {
-              ...config.games,
-              genshin_impact: genshin as GenshinConfig,
-            })
-          }
-        />
-
-        <HoyolabGameSection
-          title={m.game_honkai_star_rail()}
-          description={m.settings_game_configure_hsr()}
-          gameId="HONKAI_STAR_RAIL"
-          resourceTypes={["trailblaze_power"]}
-          config={config.games.honkai_star_rail}
-          resourceLimits={hsrLimits}
-          onChange={(hsr) =>
-            updateConfig("games", {
-              ...config.games,
-              honkai_star_rail: hsr as HsrConfig,
-            })
-          }
-        />
-
-        <HoyolabGameSection
-          title={m.game_zenless_zone_zero()}
-          description={m.settings_game_configure_zzz()}
-          gameId="ZENLESS_ZONE_ZERO"
-          resourceTypes={["battery"]}
-          config={config.games.zenless_zone_zero}
-          resourceLimits={zzzLimits}
-          onChange={(zzz) =>
-            updateConfig("games", {
-              ...config.games,
-              zenless_zone_zero: zzz as ZzzConfig,
-            })
-          }
-        />
+        {HOYOLAB_GAMES.map((game) => (
+          <HoyolabGameSection
+            key={game.gameId}
+            title={game.title()}
+            description={game.description()}
+            gameId={game.gameId}
+            resourceTypes={game.resourceTypes}
+            config={config.games[game.configKey]}
+            resourceLimits={resourceLimits[game.gameId]}
+            onChange={(value) =>
+              updateConfig("games", {
+                ...config.games,
+                [game.configKey]: value,
+              })
+            }
+          />
+        ))}
 
         <WuwaSection
           config={config.games.wuthering_waves}
-          resourceLimits={wuwaLimits}
+          resourceLimits={resourceLimits.WUTHERING_WAVES}
           onChange={(wuwa) =>
             updateConfig("games", {
               ...config.games,

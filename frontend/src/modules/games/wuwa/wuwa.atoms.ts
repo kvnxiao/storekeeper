@@ -1,5 +1,6 @@
-import { atom } from "jotai";
 import type { CoreAtoms } from "@/modules/core/core.atoms";
+import { createResourceSelector } from "@/modules/games/games.atoms";
+import { WuwaResource } from "@/modules/games/games.constants";
 
 // =============================================================================
 // WuwaAtoms Class
@@ -8,10 +9,9 @@ import type { CoreAtoms } from "@/modules/core/core.atoms";
 export class WuwaAtoms {
   constructor(readonly core: CoreAtoms) {}
 
-  readonly waveplates = atom((get) => {
-    const { data } = get(this.core.resourcesQuery);
-    return (
-      data?.games?.WUTHERING_WAVES?.find((r) => r.type === "waveplates") ?? null
-    );
-  });
+  readonly waveplates = createResourceSelector(
+    this.core,
+    "WUTHERING_WAVES",
+    WuwaResource.Waveplates,
+  );
 }

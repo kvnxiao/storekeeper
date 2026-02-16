@@ -332,14 +332,21 @@ impl AppState {
     /// Reloads configuration and reinitializes game clients.
     ///
     /// This reloads config.toml and secrets.toml, then recreates the game
-    /// client registries with the new settings.
-    pub async fn reload_config(&self) {
-        let config = AppConfig::load().unwrap_or_default();
-        let secrets = SecretsConfig::load().unwrap_or_default();
+    /// client registries with the new settings. All new state is built outside
+    /// the write lock and swapped atomically.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if config or secrets files cannot be loaded.
+    pub async fn reload_config(&self) -> Result<(), String> {
+        // Build all new state outside the write lock
+        let config = AppConfig::load().map_err(|e| format!("Failed to load config: {e}"))?;
+        let secrets = SecretsConfig::load().map_err(|e| format!("Failed to load secrets: {e}"))?;
 
         let registry = create_registry(&config, &secrets);
         let daily_reward_registry = create_daily_reward_registry(&config, &secrets);
 
+        // Swap atomically under write lock
         let mut state = self.inner.write().await;
         state.config = config;
         state.registry = registry;
@@ -347,6 +354,7 @@ impl AppState {
         state.notification_tracker.clear_all();
 
         tracing::info!("Configuration reloaded successfully");
+        Ok(())
     }
 }
 
