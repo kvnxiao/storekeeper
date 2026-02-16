@@ -363,3 +363,99 @@ impl Default for AppState {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // =========================================================================
+    // AllResources tests
+    // =========================================================================
+
+    #[test]
+    fn all_resources_default_is_empty() {
+        let r = AllResources::default();
+        assert!(r.games.is_empty());
+        assert!(r.last_updated.is_none());
+    }
+
+    #[test]
+    fn all_resources_serde_roundtrip_empty() {
+        let r = AllResources::default();
+        let json = serde_json::to_string(&r).expect("serialize");
+        let r2: AllResources = serde_json::from_str(&json).expect("deserialize");
+        assert!(r2.games.is_empty());
+        assert!(r2.last_updated.is_none());
+    }
+
+    #[test]
+    fn all_resources_serde_roundtrip_with_data() {
+        let mut r = AllResources::default();
+        r.games
+            .insert(GameId::GenshinImpact, serde_json::json!([{"stamina": 160}]));
+        r.last_updated = Some(Utc::now());
+
+        let json = serde_json::to_string(&r).expect("serialize");
+        let r2: AllResources = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(r2.games.len(), 1);
+        assert!(r2.last_updated.is_some());
+    }
+
+    #[test]
+    fn all_resources_camel_case_keys() {
+        let r = AllResources {
+            last_updated: Some(Utc::now()),
+            ..AllResources::default()
+        };
+        let v = serde_json::to_value(&r).expect("serialize");
+        assert!(v.get("lastUpdated").is_some(), "should be camelCase");
+        assert!(v.get("last_updated").is_none(), "should NOT be snake_case");
+    }
+
+    #[test]
+    fn all_resources_empty_games_skipped() {
+        let r = AllResources::default();
+        let v = serde_json::to_value(&r).expect("serialize");
+        assert!(
+            v.get("games").is_none(),
+            "empty games map should be skipped"
+        );
+    }
+
+    // =========================================================================
+    // AllDailyRewardStatus tests
+    // =========================================================================
+
+    #[test]
+    fn all_daily_reward_status_default_is_empty() {
+        let s = AllDailyRewardStatus::default();
+        assert!(s.games.is_empty());
+        assert!(s.last_checked.is_none());
+    }
+
+    #[test]
+    fn all_daily_reward_status_serde_roundtrip() {
+        let mut s = AllDailyRewardStatus::default();
+        s.games.insert(
+            GameId::HonkaiStarRail,
+            serde_json::json!({"is_signed": true}),
+        );
+        s.last_checked = Some(Utc::now());
+
+        let json = serde_json::to_string(&s).expect("serialize");
+        let s2: AllDailyRewardStatus = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(s2.games.len(), 1);
+        assert!(s2.last_checked.is_some());
+    }
+
+    #[test]
+    fn all_daily_reward_status_camel_case_keys() {
+        let s = AllDailyRewardStatus {
+            last_checked: Some(Utc::now()),
+            ..AllDailyRewardStatus::default()
+        };
+        let v = serde_json::to_value(&s).expect("serialize");
+        assert!(v.get("lastChecked").is_some(), "should be camelCase");
+        assert!(v.get("last_checked").is_none(), "should NOT be snake_case");
+    }
+}

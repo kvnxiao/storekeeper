@@ -142,3 +142,104 @@ impl Default for GameClientRegistry {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use async_trait::async_trait;
+
+    struct MockGameClient {
+        id: GameId,
+    }
+
+    #[async_trait]
+    impl DynGameClient for MockGameClient {
+        fn game_id(&self) -> GameId {
+            self.id
+        }
+
+        fn game_name(&self) -> &'static str {
+            "Mock Game"
+        }
+
+        async fn fetch_resources_json(
+            &self,
+        ) -> Result<serde_json::Value, Box<dyn std::error::Error + Send + Sync>> {
+            Ok(serde_json::json!({"mock": true}))
+        }
+
+        async fn is_authenticated_dyn(
+            &self,
+        ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+            Ok(true)
+        }
+    }
+
+    // =========================================================================
+    // Construction
+    // =========================================================================
+
+    #[test]
+    fn new_registry_is_empty() {
+        let r = GameClientRegistry::new();
+        assert_eq!(r.len(), 0);
+        assert!(!r.has_any());
+    }
+
+    #[test]
+    fn default_registry_is_empty() {
+        let r = GameClientRegistry::default();
+        assert_eq!(r.len(), 0);
+        assert!(!r.has_any());
+    }
+
+    // =========================================================================
+    // Registration
+    // =========================================================================
+
+    #[test]
+    fn register_single_client() {
+        let mut r = GameClientRegistry::new();
+        r.register(Box::new(MockGameClient {
+            id: GameId::GenshinImpact,
+        }));
+        assert_eq!(r.len(), 1);
+        assert!(r.has_any());
+    }
+
+    #[test]
+    fn register_multiple_clients() {
+        let mut r = GameClientRegistry::new();
+        r.register(Box::new(MockGameClient {
+            id: GameId::GenshinImpact,
+        }));
+        r.register(Box::new(MockGameClient {
+            id: GameId::HonkaiStarRail,
+        }));
+        r.register(Box::new(MockGameClient {
+            id: GameId::WutheringWaves,
+        }));
+        assert_eq!(r.len(), 3);
+    }
+
+    #[test]
+    fn duplicate_game_id_replaces() {
+        let mut r = GameClientRegistry::new();
+        r.register(Box::new(MockGameClient {
+            id: GameId::GenshinImpact,
+        }));
+        r.register(Box::new(MockGameClient {
+            id: GameId::GenshinImpact,
+        }));
+        assert_eq!(r.len(), 1, "duplicate should replace, not add");
+    }
+
+    #[test]
+    fn register_all_four_games() {
+        let mut r = GameClientRegistry::new();
+        for &id in GameId::all() {
+            r.register(Box::new(MockGameClient { id }));
+        }
+        assert_eq!(r.len(), 4);
+    }
+}

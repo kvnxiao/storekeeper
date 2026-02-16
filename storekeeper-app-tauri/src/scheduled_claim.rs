@@ -339,3 +339,85 @@ async fn calculate_next_claim(
 
     Some((duration, games_at_earliest))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // =========================================================================
+    // is_retryable_error — positive cases (each keyword)
+    // =========================================================================
+
+    #[test]
+    fn retryable_timeout() {
+        assert!(is_retryable_error("request timeout"));
+    }
+
+    #[test]
+    fn retryable_connection() {
+        assert!(is_retryable_error("connection refused by host"));
+    }
+
+    #[test]
+    fn retryable_network() {
+        assert!(is_retryable_error("network error"));
+    }
+
+    #[test]
+    fn retryable_dns() {
+        assert!(is_retryable_error("dns resolution failed"));
+    }
+
+    #[test]
+    fn retryable_reset() {
+        assert!(is_retryable_error("connection reset by peer"));
+    }
+
+    #[test]
+    fn retryable_refused() {
+        assert!(is_retryable_error("connection refused"));
+    }
+
+    #[test]
+    fn retryable_unreachable() {
+        assert!(is_retryable_error("host unreachable"));
+    }
+
+    // =========================================================================
+    // is_retryable_error — case insensitivity
+    // =========================================================================
+
+    #[test]
+    fn retryable_case_insensitive_uppercase() {
+        assert!(is_retryable_error("CONNECTION TIMEOUT"));
+    }
+
+    #[test]
+    fn retryable_case_insensitive_mixed() {
+        assert!(is_retryable_error("Network Error: DNS lookup failed"));
+    }
+
+    // =========================================================================
+    // is_retryable_error — negative cases
+    // =========================================================================
+
+    #[test]
+    fn not_retryable_auth_error() {
+        assert!(!is_retryable_error("authentication failed: invalid token"));
+    }
+
+    #[test]
+    fn not_retryable_rate_limit() {
+        assert!(!is_retryable_error("rate limit exceeded"));
+    }
+
+    #[test]
+    fn not_retryable_invalid_cookie() {
+        assert!(!is_retryable_error("invalid cookie"));
+    }
+
+    #[test]
+    fn not_retryable_empty_string() {
+        assert!(!is_retryable_error(""));
+    }
+}

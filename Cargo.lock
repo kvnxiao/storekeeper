@@ -4011,6 +4011,7 @@ name = "storekeeper-app-tauri"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-trait",
  "chrono",
  "futures",
  "icu_locale",
