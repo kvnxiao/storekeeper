@@ -48,5 +48,9 @@ tracing-subscriber.workspace = true
 # Time
 chrono.workspace = true
 
+[dev-dependencies]
+async-trait.workspace = true
+tokio = { workspace = true, features = ["test-util"] }
+
 [lints]
 workspace = true
