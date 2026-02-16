@@ -61,12 +61,24 @@ export const NotificationResourceRow: React.FC<
   const handleToggle = useCallback(
     (isSelected: boolean) => {
       if (isSelected) {
-        onChange(config ? { ...config, enabled: true } : DEFAULT_CONFIG);
+        if (!config) {
+          onChange(DEFAULT_CONFIG);
+        } else if (isStaminaResource) {
+          onChange({ ...config, enabled: true });
+        } else {
+          // Cooldown resources: clear threshold fields so backend uses "notify when complete"
+          onChange({
+            ...config,
+            enabled: true,
+            notify_minutes_before_full: null,
+            notify_at_value: null,
+          });
+        }
       } else if (config) {
         onChange({ ...config, enabled: false });
       }
     },
-    [config, onChange],
+    [config, isStaminaResource, onChange],
   );
 
   const handleModeChange = useCallback(
@@ -123,60 +135,64 @@ export const NotificationResourceRow: React.FC<
           <div />
           <div className="space-y-3">
             {isStaminaResource && (
-              <SegmentedControl
-                aria-label="Notification mode"
-                selectedKey={mode}
-                onSelectionChange={handleModeChange}
-                items={[...MODE_ITEMS]}
-              />
-            )}
-            {mode === "minutes" ? (
-              <NumberField
-                label="Minutes before full"
-                value={config.notify_minutes_before_full ?? 0}
-                onChange={(value) =>
-                  onChange({
-                    ...config,
-                    notify_minutes_before_full: value,
-                    notify_at_value: null,
-                  })
-                }
-                minValue={0}
-                maxValue={
-                  limits
-                    ? Math.floor(
-                        (limits.maxValue * limits.regenRateSeconds) / 60,
-                      )
-                    : 999
-                }
-                step={5}
-              />
-            ) : (
-              <NumberField
-                label={
-                  limits
-                    ? `Notify when >= value (max ${limits.maxValue})`
-                    : "Notify when >= value"
-                }
-                value={config.notify_at_value ?? 0}
-                onChange={(value) =>
-                  onChange({
-                    ...config,
-                    notify_at_value: value,
-                    notify_minutes_before_full: null,
-                  })
-                }
-                minValue={1}
-                maxValue={limits?.maxValue ?? 9999}
-                step={1}
-              />
+              <>
+                <SegmentedControl
+                  aria-label="Notification mode"
+                  selectedKey={mode}
+                  onSelectionChange={handleModeChange}
+                  items={[...MODE_ITEMS]}
+                />
+                {mode === "minutes" ? (
+                  <NumberField
+                    label="Minutes before full"
+                    value={config.notify_minutes_before_full ?? 0}
+                    onChange={(value) =>
+                      onChange({
+                        ...config,
+                        notify_minutes_before_full: value,
+                        notify_at_value: null,
+                      })
+                    }
+                    minValue={0}
+                    maxValue={
+                      limits
+                        ? Math.floor(
+                            (limits.maxValue * limits.regenRateSeconds) / 60,
+                          )
+                        : 999
+                    }
+                    step={5}
+                  />
+                ) : (
+                  <NumberField
+                    label={
+                      limits
+                        ? `Notify when >= value (max ${limits.maxValue})`
+                        : "Notify when >= value"
+                    }
+                    value={config.notify_at_value ?? 0}
+                    onChange={(value) =>
+                      onChange({
+                        ...config,
+                        notify_at_value: value,
+                        notify_minutes_before_full: null,
+                      })
+                    }
+                    minValue={1}
+                    maxValue={limits?.maxValue ?? 9999}
+                    step={1}
+                  />
+                )}
+              </>
             )}
             <NumberField
               label="Remind again every (min)"
               description={
                 config.cooldown_minutes === 0
                   ? "Will only notify once"
-                  : "Re-notifies while threshold is exceeded"
+                  : isStaminaResource
+                    ? "Re-notifies while threshold is exceeded"
+                    : "Re-notifies while resource is ready"
               }
               value={config.cooldown_minutes}
               onChange={(value) =>
