@@ -50,7 +50,7 @@ pub(crate) fn build_notification_body(
             )
         }
     } else if is_value_mode {
-        match (info.current, info.max) {
+        match (info.estimated_current(now), info.max) {
             (Some(current), Some(max)) => i18n::t_args(
                 "notification.resource_reached",
                 &[
