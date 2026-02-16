@@ -10,7 +10,7 @@ export class ZzzAtoms {
   constructor(readonly core: CoreAtoms) {}
 
   readonly battery = createResourceSelector(
-    this.core,
+    () => this.core,
     "ZENLESS_ZONE_ZERO",
     ZzzResource.Battery,
   );

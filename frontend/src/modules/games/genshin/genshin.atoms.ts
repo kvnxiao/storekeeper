@@ -13,25 +13,25 @@ export class GenshinAtoms {
   constructor(readonly core: CoreAtoms) {}
 
   readonly resin = createResourceSelector(
-    this.core,
+    () => this.core,
     "GENSHIN_IMPACT",
     GenshinResource.Resin,
   );
 
   readonly parametricTransformer = createResourceSelector(
-    this.core,
+    () => this.core,
     "GENSHIN_IMPACT",
     GenshinResource.ParametricTransformer,
   );
 
   readonly realmCurrency = createResourceSelector(
-    this.core,
+    () => this.core,
     "GENSHIN_IMPACT",
     GenshinResource.RealmCurrency,
   );
 
   readonly expeditions = createResourceSelector(
-    this.core,
+    () => this.core,
     "GENSHIN_IMPACT",
     GenshinResource.Expeditions,
   );

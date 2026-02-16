@@ -10,7 +10,7 @@ export class WuwaAtoms {
   constructor(readonly core: CoreAtoms) {}
 
   readonly waveplates = createResourceSelector(
-    this.core,
+    () => this.core,
     "WUTHERING_WAVES",
     WuwaResource.Waveplates,
   );

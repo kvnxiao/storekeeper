@@ -10,12 +10,12 @@ import type { GameResource } from "@/modules/resources/resources.types";
  * or null if not found.
  */
 export function createResourceSelector(
-  core: CoreAtoms,
+  getCore: () => CoreAtoms,
   gameId: GameId,
   resourceType: string,
 ) {
   return atom((get) => {
-    const { data } = get(core.resourcesQuery);
+    const { data } = get(getCore().resourcesQuery);
     return (
       (data?.games?.[gameId]?.find(
         (r: GameResource) => r.type === resourceType,

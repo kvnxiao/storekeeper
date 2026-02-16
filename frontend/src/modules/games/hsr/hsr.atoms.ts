@@ -10,7 +10,7 @@ export class HsrAtoms {
   constructor(readonly core: CoreAtoms) {}
 
   readonly trailblazePower = createResourceSelector(
-    this.core,
+    () => this.core,
     "HONKAI_STAR_RAIL",
     HsrResource.TrailblazePower,
   );
