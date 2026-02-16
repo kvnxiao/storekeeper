@@ -17,6 +17,35 @@ pub(crate) struct ResourceInfo {
     pub(crate) regen_rate_seconds: Option<u64>,
 }
 
+impl ResourceInfo {
+    /// Estimates the current resource value from `completion_at` and regen rate.
+    ///
+    /// The cached `current` field can be stale (set at API-fetch time), so this
+    /// computes the value from elapsed time instead.  Falls back to the cached
+    /// `current` when max/rate are unavailable.
+    pub(crate) fn estimated_current(&self, now: DateTime<Utc>) -> Option<u64> {
+        let (max, rate) = match (self.max, self.regen_rate_seconds) {
+            (Some(m), Some(r)) if r > 0 => (m, r),
+            _ => return self.current,
+        };
+
+        if self.is_complete || now >= self.completion_at {
+            return Some(max);
+        }
+
+        let secs_to_full = (self.completion_at - now).num_seconds();
+        if secs_to_full <= 0 {
+            return Some(max);
+        }
+
+        // Ceiling division: partial progress toward the next unit hasn't ticked yet.
+        // Safety: secs_to_full is guaranteed positive by the check above.
+        let secs = u64::try_from(secs_to_full).unwrap_or(0);
+        let remaining_units = secs.div_ceil(rate);
+        Some(max.saturating_sub(remaining_units))
+    }
+}
+
 /// Extracts completion timing from a resource data object.
 ///
 /// Attempts typed deserialization in order: StaminaResource, CooldownResource,
@@ -148,5 +177,89 @@ mod tests {
         });
 
         assert!(extract_resource_info(&data).is_none());
+    }
+
+    // =========================================================================
+    // estimated_current tests
+    // =========================================================================
+
+    fn stamina_info(
+        completion_at: DateTime<Utc>,
+        is_complete: bool,
+        current: u64,
+        max: u64,
+        rate: u64,
+    ) -> ResourceInfo {
+        ResourceInfo {
+            completion_at,
+            is_complete,
+            current: Some(current),
+            max: Some(max),
+            regen_rate_seconds: Some(rate),
+        }
+    }
+
+    #[test]
+    fn test_estimated_current_matches_threshold_exactly() {
+        // WuWa: max=240, rate=360s. At exactly 360 min to full → current=180.
+        let now = Utc::now();
+        let info = stamina_info(now + TimeDelta::minutes(360), false, 179, 240, 360);
+        assert_eq!(info.estimated_current(now), Some(180));
+    }
+
+    #[test]
+    fn test_estimated_current_one_second_before_tick() {
+        // 1 second before the 180th unit ticks: still 179.
+        let now = Utc::now();
+        let info = stamina_info(
+            now + TimeDelta::minutes(360) + TimeDelta::seconds(1),
+            false,
+            179,
+            240,
+            360,
+        );
+        assert_eq!(info.estimated_current(now), Some(179));
+    }
+
+    #[test]
+    fn test_estimated_current_one_second_after_tick() {
+        // 1 second after the 180th unit ticked: 180.
+        let now = Utc::now();
+        let info = stamina_info(
+            now + TimeDelta::minutes(360) - TimeDelta::seconds(1),
+            false,
+            179,
+            240,
+            360,
+        );
+        assert_eq!(info.estimated_current(now), Some(180));
+    }
+
+    #[test]
+    fn test_estimated_current_when_full() {
+        let now = Utc::now();
+        let info = stamina_info(now - TimeDelta::minutes(5), true, 240, 240, 360);
+        assert_eq!(info.estimated_current(now), Some(240));
+    }
+
+    #[test]
+    fn test_estimated_current_past_completion() {
+        // completion_at is in the past but is_complete not set (stale flag).
+        let now = Utc::now();
+        let info = stamina_info(now - TimeDelta::minutes(1), false, 239, 240, 360);
+        assert_eq!(info.estimated_current(now), Some(240));
+    }
+
+    #[test]
+    fn test_estimated_current_no_rate_falls_back() {
+        let now = Utc::now();
+        let info = ResourceInfo {
+            completion_at: now + TimeDelta::hours(1),
+            is_complete: false,
+            current: Some(100),
+            max: Some(160),
+            regen_rate_seconds: None,
+        };
+        assert_eq!(info.estimated_current(now), Some(100));
     }
 }
