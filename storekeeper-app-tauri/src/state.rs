@@ -5,7 +5,11 @@ use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use storekeeper_core::{AppConfig, ClaimTime, GameId, SecretsConfig, ensure_configs_exist};
+use storekeeper_core::{
+    AppConfig, ClaimTime, GameId, ResourceNotificationConfig, SecretsConfig, ensure_configs_exist,
+};
+
+use crate::notification::NotificationTracker;
 
 use tokio::sync::RwLock;
 
@@ -62,6 +66,9 @@ pub struct StateData {
 
     /// Application configuration.
     pub config: AppConfig,
+
+    /// Notification cooldown tracker.
+    pub notification_tracker: NotificationTracker,
 }
 
 /// Application state wrapper.
@@ -105,6 +112,7 @@ impl AppState {
                 daily_reward_registry,
                 daily_reward_status: AllDailyRewardStatus::default(),
                 config,
+                notification_tracker: NotificationTracker::default(),
             })),
         }
     }
@@ -283,6 +291,44 @@ impl AppState {
         state.daily_reward_registry.has_game(game_id)
     }
 
+    // ========================================================================
+    // Notification Methods
+    // ========================================================================
+
+    /// Gets the notification config for a specific game.
+    pub async fn get_game_notification_config(
+        &self,
+        game_id: GameId,
+    ) -> HashMap<String, ResourceNotificationConfig> {
+        let state = self.inner.read().await;
+        match game_id {
+            GameId::GenshinImpact => state
+                .config
+                .games
+                .genshin_impact
+                .as_ref()
+                .map_or_else(HashMap::new, |c| c.notifications.clone()),
+            GameId::HonkaiStarRail => state
+                .config
+                .games
+                .honkai_star_rail
+                .as_ref()
+                .map_or_else(HashMap::new, |c| c.notifications.clone()),
+            GameId::ZenlessZoneZero => state
+                .config
+                .games
+                .zenless_zone_zero
+                .as_ref()
+                .map_or_else(HashMap::new, |c| c.notifications.clone()),
+            GameId::WutheringWaves => state
+                .config
+                .games
+                .wuthering_waves
+                .as_ref()
+                .map_or_else(HashMap::new, |c| c.notifications.clone()),
+        }
+    }
+
     /// Reloads configuration and reinitializes game clients.
     ///
     /// This reloads config.toml and secrets.toml, then recreates the game
@@ -298,6 +344,7 @@ impl AppState {
         state.config = config;
         state.registry = registry;
         state.daily_reward_registry = daily_reward_registry;
+        state.notification_tracker.clear_all();
 
         tracing::info!("Configuration reloaded successfully");
     }

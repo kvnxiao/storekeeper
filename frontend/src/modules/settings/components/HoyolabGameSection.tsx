@@ -1,4 +1,7 @@
+import type { ResourceLimits } from "@/modules/settings/components/NotificationResourceRow";
+import { NotificationSection } from "@/modules/settings/components/NotificationSection";
 import { Section } from "@/modules/settings/components/Section";
+import type { ResourceNotificationConfig } from "@/modules/settings/settings.types";
 import { Switch } from "@/modules/ui/components/Switch";
 import { TextField } from "@/modules/ui/components/TextField";
 
@@ -6,19 +9,26 @@ interface HoyolabGameConfig {
   enabled: boolean;
   uid: string;
   auto_claim_daily_rewards: boolean;
+  notifications?: Partial<Record<string, ResourceNotificationConfig>>;
 }
 
 interface HoyolabGameSectionProps {
   title: string;
   description: string;
+  gameId: string;
+  resourceTypes: readonly string[];
   config: HoyolabGameConfig | undefined;
+  resourceLimits?: Partial<Record<string, ResourceLimits>>;
   onChange: (config: HoyolabGameConfig) => void;
 }
 
 export const HoyolabGameSection: React.FC<HoyolabGameSectionProps> = ({
   title,
   description,
+  gameId,
+  resourceTypes,
   config,
+  resourceLimits,
   onChange,
 }) => {
   const enabled = config?.enabled ?? false;
@@ -31,6 +41,7 @@ export const HoyolabGameSection: React.FC<HoyolabGameSectionProps> = ({
         isSelected={enabled}
         onChange={(isSelected) =>
           onChange({
+            ...config,
             enabled: isSelected,
             uid,
             auto_claim_daily_rewards: autoClaimDailyRewards,
@@ -46,6 +57,7 @@ export const HoyolabGameSection: React.FC<HoyolabGameSectionProps> = ({
             value={uid}
             onChange={(value) =>
               onChange({
+                ...config,
                 enabled,
                 uid: value,
                 auto_claim_daily_rewards: autoClaimDailyRewards,
@@ -57,6 +69,7 @@ export const HoyolabGameSection: React.FC<HoyolabGameSectionProps> = ({
             isSelected={autoClaimDailyRewards}
             onChange={(isSelected) =>
               onChange({
+                ...config,
                 enabled,
                 uid,
                 auto_claim_daily_rewards: isSelected,
@@ -65,6 +78,21 @@ export const HoyolabGameSection: React.FC<HoyolabGameSectionProps> = ({
           >
             Auto-claim daily rewards
           </Switch>
+          <NotificationSection
+            gameId={gameId}
+            resourceTypes={resourceTypes}
+            notifications={config?.notifications}
+            resourceLimits={resourceLimits}
+            onChange={(notifications) =>
+              onChange({
+                ...config,
+                enabled,
+                uid,
+                auto_claim_daily_rewards: autoClaimDailyRewards,
+                notifications,
+              })
+            }
+          />
         </>
       )}
     </Section>

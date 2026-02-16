@@ -47,10 +47,7 @@ Configuration files are loaded from:
 | macOS    | `~/Library/Application Support/storekeeper/` |
 | Linux    | `~/.config/storekeeper/` |
 
-Copy the example files to the appropriate config directory to get started:
-
-- `config.example.toml` → `config.toml`
-- `secrets.example.toml` → `secrets.toml`
+Config files (`config.toml` and `secrets.toml`) are auto-created with commented templates on first `just dev` run.
 
 ## Further Reading
 

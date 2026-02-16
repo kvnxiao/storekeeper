@@ -5,14 +5,19 @@ import {
 import { createFileRoute } from "@tanstack/react-router";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { Button as AriaButton, TooltipTrigger } from "react-aria-components";
 import { atoms } from "@/modules/atoms";
+import type { GameId } from "@/modules/games/games.types";
+import {
+  type AllResources,
+  isStaminaResource,
+} from "@/modules/resources/resources.types";
 import { GeneralSection } from "@/modules/settings/components/GeneralSection";
 import { HoyolabGameSection } from "@/modules/settings/components/HoyolabGameSection";
 import { HoyolabSecretsSection } from "@/modules/settings/components/HoyolabSecretsSection";
 import { KuroSecretsSection } from "@/modules/settings/components/KuroSecretsSection";
-import { NotificationSection } from "@/modules/settings/components/NotificationSection";
+import type { ResourceLimits } from "@/modules/settings/components/NotificationResourceRow";
 import { WuwaSection } from "@/modules/settings/components/WuwaSection";
 import type {
   AppConfig,
@@ -25,6 +30,26 @@ import type {
 import { Button } from "@/modules/ui/components/Button";
 import { ButtonLink } from "@/modules/ui/components/ButtonLink";
 import { Tooltip } from "@/modules/ui/components/Tooltip";
+
+/** Extract resource limits from backend resource data for a given game */
+function getResourceLimitsForGame(
+  resources: AllResources | undefined,
+  gameId: GameId,
+): Partial<Record<string, ResourceLimits>> | undefined {
+  const gameResources = resources?.games?.[gameId];
+  if (!gameResources) return undefined;
+
+  const limits: Record<string, ResourceLimits> = {};
+  for (const resource of gameResources) {
+    if (isStaminaResource(resource.data)) {
+      limits[resource.type] = {
+        maxValue: resource.data.max,
+        regenRateSeconds: resource.data.regenRateSeconds,
+      };
+    }
+  }
+  return Object.keys(limits).length > 0 ? limits : undefined;
+}
 
 // =============================================================================
 // Settings Page Component
@@ -43,10 +68,30 @@ const SettingsPage: React.FC = () => {
   const [secrets, setSecrets] = useAtom(atoms.settings.editedSecrets);
   const isDirty = useAtomValue(atoms.settings.isDirty);
 
-  // Save action and state
+  // Save / reset actions and state
   const saveSettings = useSetAtom(atoms.settings.save);
+  const resetSettings = useSetAtom(atoms.settings.reset);
   const saveError = useAtomValue(atoms.settings.saveError);
   const isSaving = useAtomValue(atoms.settings.isSaving);
+
+  // Resource data for computing input limits
+  const { data: resources } = useAtomValue(atoms.core.resourcesQuery);
+  const genshinLimits = useMemo(
+    () => getResourceLimitsForGame(resources, "GENSHIN_IMPACT"),
+    [resources],
+  );
+  const hsrLimits = useMemo(
+    () => getResourceLimitsForGame(resources, "HONKAI_STAR_RAIL"),
+    [resources],
+  );
+  const zzzLimits = useMemo(
+    () => getResourceLimitsForGame(resources, "ZENLESS_ZONE_ZERO"),
+    [resources],
+  );
+  const wuwaLimits = useMemo(
+    () => getResourceLimitsForGame(resources, "WUTHERING_WAVES"),
+    [resources],
+  );
 
   // Helper to update nested config values
   const updateConfig = useCallback(
@@ -80,9 +125,9 @@ const SettingsPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen p-4">
+    <div className="min-h-screen p-4 pb-20">
       {/* Header */}
-      <header className="mb-6 flex items-center justify-between">
+      <header className="mb-6 flex items-center">
         <div className="flex items-center gap-3">
           <ButtonLink
             to="/"
@@ -97,50 +142,6 @@ const SettingsPage: React.FC = () => {
           <h1 className="text-xl font-bold text-zinc-950 dark:text-white">
             Settings
           </h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <AnimatePresence>
-            {isDirty && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={{ duration: 0.15 }}
-              >
-                <TooltipTrigger delay={300}>
-                  <AriaButton className="flex items-center">
-                    <motion.div
-                      animate={{ scale: [1, 1.1, 1] }}
-                      transition={{
-                        duration: 2,
-                        repeat: Number.POSITIVE_INFINITY,
-                        ease: "easeInOut",
-                      }}
-                    >
-                      <ExclamationCircleIcon className="h-5 w-5 text-amber-500" />
-                    </motion.div>
-                  </AriaButton>
-                  <Tooltip placement="bottom">
-                    You have unsaved changes. Click "Save Changes" to apply
-                    them.
-                  </Tooltip>
-                </TooltipTrigger>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          <motion.div
-            animate={{ opacity: isDirty ? 1 : 0.5 }}
-            transition={{ duration: 0.15 }}
-          >
-            <Button
-              onPress={() => void saveSettings()}
-              isDisabled={!isDirty || isSaving}
-              isPending={isSaving}
-              color="blue"
-            >
-              Save Changes
-            </Button>
-          </motion.div>
         </div>
       </header>
 
@@ -158,17 +159,18 @@ const SettingsPage: React.FC = () => {
           onChange={(general) => updateConfig("general", general)}
         />
 
-        <NotificationSection
-          config={config.notifications}
-          onChange={(notifications) =>
-            updateConfig("notifications", notifications)
-          }
-        />
-
         <HoyolabGameSection
           title="Genshin Impact"
           description="Configure your Genshin Impact account."
+          gameId="GENSHIN_IMPACT"
+          resourceTypes={[
+            "resin",
+            "parametric_transformer",
+            "realm_currency",
+            "expeditions",
+          ]}
           config={config.games.genshin_impact}
+          resourceLimits={genshinLimits}
           onChange={(genshin) =>
             updateConfig("games", {
               ...config.games,
@@ -180,7 +182,10 @@ const SettingsPage: React.FC = () => {
         <HoyolabGameSection
           title="Honkai: Star Rail"
           description="Configure your Honkai: Star Rail account."
+          gameId="HONKAI_STAR_RAIL"
+          resourceTypes={["trailblaze_power"]}
           config={config.games.honkai_star_rail}
+          resourceLimits={hsrLimits}
           onChange={(hsr) =>
             updateConfig("games", {
               ...config.games,
@@ -192,7 +197,10 @@ const SettingsPage: React.FC = () => {
         <HoyolabGameSection
           title="Zenless Zone Zero"
           description="Configure your Zenless Zone Zero account."
+          gameId="ZENLESS_ZONE_ZERO"
+          resourceTypes={["battery"]}
           config={config.games.zenless_zone_zero}
+          resourceLimits={zzzLimits}
           onChange={(zzz) =>
             updateConfig("games", {
               ...config.games,
@@ -203,6 +211,7 @@ const SettingsPage: React.FC = () => {
 
         <WuwaSection
           config={config.games.wuthering_waves}
+          resourceLimits={wuwaLimits}
           onChange={(wuwa) =>
             updateConfig("games", {
               ...config.games,
@@ -221,6 +230,51 @@ const SettingsPage: React.FC = () => {
           onChange={(kuro) => updateSecrets("kuro", kuro)}
         />
       </div>
+
+      {/* Floating action bar */}
+      <AnimatePresence>
+        {isDirty && (
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className="fixed bottom-0 left-0 right-0 z-50 border-t border-zinc-950/10 bg-white/80 px-4 py-3 backdrop-blur-lg dark:border-white/10 dark:bg-zinc-900/80"
+          >
+            <div className="flex items-center gap-3">
+              <TooltipTrigger delay={300}>
+                <AriaButton className="flex items-center">
+                  <motion.div
+                    animate={{ scale: [1, 1.1, 1] }}
+                    transition={{
+                      duration: 2,
+                      repeat: Number.POSITIVE_INFINITY,
+                      ease: "easeInOut",
+                    }}
+                  >
+                    <ExclamationCircleIcon className="h-5 w-5 text-amber-500" />
+                  </motion.div>
+                </AriaButton>
+                <Tooltip placement="top">You have unsaved changes.</Tooltip>
+              </TooltipTrigger>
+
+              <div className="flex-1" />
+
+              <Button onPress={() => resetSettings()} isDisabled={isSaving}>
+                Undo Changes
+              </Button>
+              <Button
+                onPress={() => void saveSettings()}
+                isDisabled={isSaving}
+                isPending={isSaving}
+                color="blue"
+              >
+                Save Changes
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

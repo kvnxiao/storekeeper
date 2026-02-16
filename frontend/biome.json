@@ -43,13 +43,12 @@
     "rules": {
       "recommended": true,
       "correctness": {
+        "noUnresolvedImports": "off",
         "useHookAtTopLevel": "error",
         "useImportExtensions": "off"
       },
       "nursery": {
-        "noDeprecatedImports": "error",
         "noFloatingPromises": "error",
-        "noImportCycles": "error",
         "noMisusedPromises": "error",
         "useArraySortCompare": "error",
         "useAwaitThenable": "error",
@@ -59,9 +58,11 @@
         "useRegexpExec": "error"
       },
       "suspicious": {
-        "useGoogleFontDisplay": "error",
+        "noDeprecatedImports": "error",
         "noDocumentImportInPage": "error",
-        "noHeadImportInDocument": "error"
+        "noHeadImportInDocument": "error",
+        "noImportCycles": "error",
+        "useGoogleFontDisplay": "error"
       },
       "style": {
         "noHeadElement": "error",

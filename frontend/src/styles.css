@@ -130,6 +130,7 @@ code {
   font-family: var(--font-mono);
 }
 
+
 /* Prevent horizontal scrollbar during page transitions */
 body {
   overflow-x: hidden;

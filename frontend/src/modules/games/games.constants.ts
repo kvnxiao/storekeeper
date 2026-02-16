@@ -15,3 +15,23 @@ export const GAME_ORDER: GameId[] = [
   "ZENLESS_ZONE_ZERO",
   "WUTHERING_WAVES",
 ];
+
+/** Resource types that are stamina-based (support value-threshold notifications) */
+export const STAMINA_RESOURCE_TYPES: ReadonlySet<string> = new Set([
+  "resin",
+  "realm_currency",
+  "trailblaze_power",
+  "battery",
+  "waveplates",
+]);
+
+/** Human-readable display names for resource type tags */
+export const RESOURCE_DISPLAY_NAMES: Record<string, string> = {
+  resin: "Original Resin",
+  parametric_transformer: "Parametric Transformer",
+  realm_currency: "Realm Currency",
+  expeditions: "Expeditions",
+  trailblaze_power: "Trailblaze Power",
+  battery: "Battery",
+  waveplates: "Waveplates",
+};

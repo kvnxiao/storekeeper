@@ -1,6 +1,7 @@
 import { useAtomValue } from "jotai";
 import { motion, useReducedMotion } from "motion/react";
 import { atoms } from "@/modules/atoms";
+import { RESOURCE_DISPLAY_NAMES } from "@/modules/games/games.constants";
 import { StaminaCard } from "@/modules/resources/components/StaminaCard";
 import { isStaminaResource } from "@/modules/resources/resources.types";
 import {
@@ -8,7 +9,7 @@ import {
   cardItemVariantsReduced,
 } from "@/modules/ui/ui.animations";
 
-const RESOURCE_NAME = "Realm Currency";
+const RESOURCE_NAME = RESOURCE_DISPLAY_NAMES.realm_currency;
 const RESOURCE_ICON = "/icons/game/genshin/Item_Realm_Currency.webp";
 
 export const RealmCurrencyCard: React.FC = () => {

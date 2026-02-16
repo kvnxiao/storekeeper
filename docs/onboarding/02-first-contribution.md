@@ -97,7 +97,7 @@ Add the section to the dashboard in `frontend/src/routes/index.tsx`.
 
 ### 6. Update Configuration
 
-Add fields to `config.example.toml` and the config types in `storekeeper-core/src/config.rs`.
+Update `default_config_content()` in `storekeeper-core/src/config.rs` and the config types.
 
 ## Modifying an Existing Game
 

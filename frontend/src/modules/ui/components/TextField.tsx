@@ -1,5 +1,7 @@
-import type React from "react";
+import { EyeIcon, EyeSlashIcon } from "@heroicons/react/20/solid";
+import { useState } from "react";
 import {
+  Button as AriaButton,
   TextField as AriaTextField,
   type TextFieldProps as AriaTextFieldProps,
   composeRenderProps,
@@ -30,11 +32,13 @@ const inputStyle = tv({
     "disabled:bg-zinc-100 disabled:text-zinc-400 disabled:ring-zinc-950/5",
     "dark:disabled:bg-zinc-900 dark:disabled:text-zinc-500",
     "invalid:ring-red-500",
+    // Hide native password reveal (WebView2/Edge)
+    "[&::-ms-reveal]:hidden",
   ],
   variants: {
     type: {
       text: "",
-      password: "font-mono",
+      password: "pr-9 font-mono",
     },
   },
   defaultVariants: {
@@ -63,6 +67,9 @@ export const TextField: React.FC<TextFieldProps> = ({
   className,
   ...props
 }) => {
+  const [revealed, setRevealed] = useState(false);
+  const isPassword = type === "password";
+
   return (
     <AriaTextField
       {...props}
@@ -71,11 +78,26 @@ export const TextField: React.FC<TextFieldProps> = ({
       )}
     >
       {label && <Label className={labelStyle()}>{label}</Label>}
-      <Input
-        type={type}
-        placeholder={placeholder}
-        className={inputStyle({ type: type as "text" | "password" })}
-      />
+      <div className="relative">
+        <Input
+          type={isPassword && revealed ? "text" : type}
+          placeholder={placeholder}
+          className={inputStyle({ type: type as "text" | "password" })}
+        />
+        {isPassword && (
+          <AriaButton
+            aria-label={revealed ? "Hide password" : "Show password"}
+            onPress={() => setRevealed((v) => !v)}
+            className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300"
+          >
+            {revealed ? (
+              <EyeSlashIcon className="h-4 w-4" />
+            ) : (
+              <EyeIcon className="h-4 w-4" />
+            )}
+          </AriaButton>
+        )}
+      </div>
       {description && (
         <Text slot="description" className={descriptionStyle()}>
           {description}
