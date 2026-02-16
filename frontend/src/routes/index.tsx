@@ -9,6 +9,7 @@ import { WuwaSection } from "@/modules/games/wuwa/components/WuwaSection";
 import { ZzzSection } from "@/modules/games/zzz/components/ZzzSection";
 import { Button } from "@/modules/ui/components/Button";
 import { ButtonLink } from "@/modules/ui/components/ButtonLink";
+import * as m from "@/paraglide/messages";
 
 const DashboardPage: React.FC = () => {
   const { error } = useAtomValue(atoms.core.resourcesQuery);
@@ -20,6 +21,8 @@ const DashboardPage: React.FC = () => {
 
   // Subscribe to backend resource updates
   useAtomValue(atoms.core.resourcesEventListener);
+  // Sync Paraglide locale from backend config on startup
+  useAtomValue(atoms.core.localeSync);
 
   const hasGenshin = enabledGames.has("GENSHIN_IMPACT");
   const hasHsr = enabledGames.has("HONKAI_STAR_RAIL");
@@ -31,12 +34,12 @@ const DashboardPage: React.FC = () => {
     <div className="mx-auto min-h-screen max-w-sm p-3">
       <header className="mb-3 flex items-center justify-between">
         <h1 className="text-lg font-bold text-zinc-950 dark:text-white">
-          Storekeeper
+          {m.app_title()}
         </h1>
         <div className="flex items-center gap-1">
           <Button
             variant="plain"
-            aria-label="Refresh resources"
+            aria-label={m.dashboard_refresh_resources()}
             isDisabled={isPending}
             onPress={() => refresh()}
           >
@@ -47,7 +50,7 @@ const DashboardPage: React.FC = () => {
           <ButtonLink
             to="/settings"
             variant="plain"
-            aria-label="Settings"
+            aria-label={m.dashboard_settings()}
             onClick={() => {
               document.documentElement.dataset.viewTransitionDirection =
                 "forward";
@@ -88,10 +91,8 @@ const DashboardPage: React.FC = () => {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.2 }}
               >
-                <p className="mb-2">No games configured</p>
-                <p className="text-sm">
-                  Add your game credentials in the config file to get started.
-                </p>
+                <p className="mb-2">{m.dashboard_no_games()}</p>
+                <p className="text-sm">{m.dashboard_no_games_hint()}</p>
               </motion.div>
             ))}
         </AnimatePresence>

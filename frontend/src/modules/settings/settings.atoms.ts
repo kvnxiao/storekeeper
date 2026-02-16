@@ -13,6 +13,7 @@ import type {
   AppConfig,
   SecretsConfig,
 } from "@/modules/settings/settings.types";
+import { getLocale, isLocale, setLocale } from "@/paraglide/runtime";
 
 // =============================================================================
 // SettingsAtoms Class
@@ -147,6 +148,12 @@ export class SettingsAtoms {
       await Promise.all([doSaveConfig(config), doSaveSecrets(secrets)]);
       await doReloadConfig();
       set(this.markAsSaved);
+
+      // Sync frontend locale if language changed
+      const newLanguage = config.general.language;
+      if (isLocale(newLanguage) && newLanguage !== getLocale()) {
+        setLocale(newLanguage);
+      }
     } catch (e) {
       set(this.saveError, `Failed to save settings: ${String(e)}`);
     }

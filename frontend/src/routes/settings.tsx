@@ -30,6 +30,7 @@ import type {
 import { Button } from "@/modules/ui/components/Button";
 import { ButtonLink } from "@/modules/ui/components/ButtonLink";
 import { Tooltip } from "@/modules/ui/components/Tooltip";
+import * as m from "@/paraglide/messages";
 
 /** Extract resource limits from backend resource data for a given game */
 function getResourceLimitsForGame(
@@ -114,10 +115,12 @@ const SettingsPage: React.FC = () => {
     return (
       <div className="flex min-h-screen items-center justify-center p-4">
         {loadError ? (
-          <p className="text-red-500">{`Failed to load settings: ${String(loadError)}`}</p>
+          <p className="text-red-500">
+            {m.settings_failed_to_load({ error: String(loadError) })}
+          </p>
         ) : (
           <p className="text-zinc-500 dark:text-zinc-400">
-            Loading settings...
+            {m.settings_loading()}
           </p>
         )}
       </div>
@@ -132,7 +135,7 @@ const SettingsPage: React.FC = () => {
           <ButtonLink
             to="/"
             variant="plain"
-            aria-label="Back"
+            aria-label={m.settings_back()}
             onClick={() => {
               document.documentElement.dataset.viewTransitionDirection = "back";
             }}
@@ -140,7 +143,7 @@ const SettingsPage: React.FC = () => {
             <ArrowLeftIcon className="h-5 w-5" />
           </ButtonLink>
           <h1 className="text-xl font-bold text-zinc-950 dark:text-white">
-            Settings
+            {m.settings_title()}
           </h1>
         </div>
       </header>
@@ -160,8 +163,8 @@ const SettingsPage: React.FC = () => {
         />
 
         <HoyolabGameSection
-          title="Genshin Impact"
-          description="Configure your Genshin Impact account."
+          title={m.game_genshin_impact()}
+          description={m.settings_game_configure_genshin()}
           gameId="GENSHIN_IMPACT"
           resourceTypes={[
             "resin",
@@ -180,8 +183,8 @@ const SettingsPage: React.FC = () => {
         />
 
         <HoyolabGameSection
-          title="Honkai: Star Rail"
-          description="Configure your Honkai: Star Rail account."
+          title={m.game_honkai_star_rail()}
+          description={m.settings_game_configure_hsr()}
           gameId="HONKAI_STAR_RAIL"
           resourceTypes={["trailblaze_power"]}
           config={config.games.honkai_star_rail}
@@ -195,8 +198,8 @@ const SettingsPage: React.FC = () => {
         />
 
         <HoyolabGameSection
-          title="Zenless Zone Zero"
-          description="Configure your Zenless Zone Zero account."
+          title={m.game_zenless_zone_zero()}
+          description={m.settings_game_configure_zzz()}
           gameId="ZENLESS_ZONE_ZERO"
           resourceTypes={["battery"]}
           config={config.games.zenless_zone_zero}
@@ -255,13 +258,15 @@ const SettingsPage: React.FC = () => {
                     <ExclamationCircleIcon className="h-5 w-5 text-amber-500" />
                   </motion.div>
                 </AriaButton>
-                <Tooltip placement="top">You have unsaved changes.</Tooltip>
+                <Tooltip placement="top">
+                  {m.settings_unsaved_changes()}
+                </Tooltip>
               </TooltipTrigger>
 
               <div className="flex-1" />
 
               <Button onPress={() => resetSettings()} isDisabled={isSaving}>
-                Undo Changes
+                {m.settings_undo()}
               </Button>
               <Button
                 onPress={() => void saveSettings()}
@@ -269,7 +274,7 @@ const SettingsPage: React.FC = () => {
                 isPending={isSaving}
                 color="blue"
               >
-                Save Changes
+                {m.settings_save()}
               </Button>
             </div>
           </motion.div>

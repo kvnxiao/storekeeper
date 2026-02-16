@@ -1,3 +1,4 @@
+import * as m from "@/paraglide/messages";
 import "@formatjs/intl-durationformat/polyfill.js";
 
 const durationFormatter = new Intl.DurationFormat(undefined, {
@@ -15,12 +16,12 @@ export function formatTimeRemaining(
   datetime: string | null | undefined,
   nowMs: number,
 ): string {
-  if (!datetime) return "Full";
+  if (!datetime) return m.time_remaining_full();
 
   const targetMs = new Date(datetime).getTime();
   const diffMs = targetMs - nowMs;
 
-  if (diffMs <= 0) return "Full";
+  if (diffMs <= 0) return m.time_remaining_full();
 
   const totalSeconds = Math.floor(diffMs / 1000);
   const hours = Math.floor(totalSeconds / 3600);

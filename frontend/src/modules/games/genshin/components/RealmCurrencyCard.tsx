@@ -1,7 +1,7 @@
 import { useAtomValue } from "jotai";
 import { motion, useReducedMotion } from "motion/react";
 import { atoms } from "@/modules/atoms";
-import { RESOURCE_DISPLAY_NAMES } from "@/modules/games/games.constants";
+import { getResourceDisplayName } from "@/modules/games/games.constants";
 import { StaminaCard } from "@/modules/resources/components/StaminaCard";
 import { isStaminaResource } from "@/modules/resources/resources.types";
 import {
@@ -9,7 +9,6 @@ import {
   cardItemVariantsReduced,
 } from "@/modules/ui/ui.animations";
 
-const RESOURCE_NAME = RESOURCE_DISPLAY_NAMES.realm_currency;
 const RESOURCE_ICON = "/icons/game/genshin/Item_Realm_Currency.webp";
 
 export const RealmCurrencyCard: React.FC = () => {
@@ -20,6 +19,7 @@ export const RealmCurrencyCard: React.FC = () => {
 
   const resource = useAtomValue(atoms.games.genshin.realmCurrency);
   const isRefreshing = useAtomValue(atoms.core.isRefreshing);
+  const resourceName = getResourceDisplayName("realm_currency");
 
   const data =
     resource && isStaminaResource(resource.data) ? resource.data : undefined;
@@ -28,7 +28,7 @@ export const RealmCurrencyCard: React.FC = () => {
     <motion.div variants={variants}>
       <StaminaCard
         iconPath={RESOURCE_ICON}
-        name={RESOURCE_NAME}
+        name={resourceName}
         data={data}
         isRefreshing={isRefreshing}
       />

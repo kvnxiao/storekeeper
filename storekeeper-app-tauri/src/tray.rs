@@ -2,11 +2,46 @@
 
 use anyhow::{Context, Result};
 use tauri::{
-    App, Manager,
+    App, AppHandle, Manager,
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconEvent},
 };
 use tokio_util::sync::CancellationToken;
+
+use crate::i18n;
+
+/// Builds (or rebuilds) the tray menu with localized strings.
+///
+/// Can be called at startup and again after locale changes.
+///
+/// # Errors
+///
+/// Returns an error if the menu items or menu cannot be created,
+/// or if the tray icon is not found.
+pub fn build_tray_menu(app: &AppHandle) -> Result<()> {
+    let refresh_label = i18n::t("tray.refresh_now");
+    let open_config_label = i18n::t("tray.open_config_folder");
+    let quit_label = i18n::t("tray.quit");
+
+    let refresh = MenuItem::with_id(app, "refresh", &refresh_label, true, None::<&str>)
+        .context("failed to create 'Refresh Now' menu item")?;
+    let open_config = MenuItem::with_id(app, "open_config", &open_config_label, true, None::<&str>)
+        .context("failed to create 'Open Config Folder' menu item")?;
+    let quit = MenuItem::with_id(app, "quit", &quit_label, true, None::<&str>)
+        .context("failed to create 'Quit' menu item")?;
+
+    let menu = Menu::with_items(app, &[&refresh, &open_config, &quit])
+        .context("failed to create tray menu")?;
+
+    let tray = app
+        .tray_by_id("main")
+        .context("tray icon 'main' not found, ensure it's defined in tauri.conf.json")?;
+
+    tray.set_menu(Some(menu))
+        .context("failed to set tray menu")?;
+
+    Ok(())
+}
 
 /// Sets up the system tray icon and menu.
 ///
@@ -14,26 +49,13 @@ use tokio_util::sync::CancellationToken;
 ///
 /// Returns an error if the tray icon or menu cannot be created.
 pub fn setup_tray(app: &App) -> Result<()> {
-    // Create menu items
-    let refresh = MenuItem::with_id(app, "refresh", "Refresh Now", true, None::<&str>)
-        .context("failed to create 'Refresh Now' menu item")?;
-    let open_config =
-        MenuItem::with_id(app, "open_config", "Open Config Folder", true, None::<&str>)
-            .context("failed to create 'Open Config Folder' menu item")?;
-    let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)
-        .context("failed to create 'Quit' menu item")?;
+    // Build initial menu using the app handle
+    build_tray_menu(app.handle())?;
 
-    // Build the menu
-    let menu = Menu::with_items(app, &[&refresh, &open_config, &quit])
-        .context("failed to create tray menu")?;
-
-    // Get the tray icon defined in tauri.conf.json and configure it
+    // Get the tray icon and attach event handlers
     let tray = app
         .tray_by_id("main")
         .context("tray icon 'main' not found, ensure it's defined in tauri.conf.json")?;
-
-    tray.set_menu(Some(menu))
-        .context("failed to set tray menu")?;
 
     tray.on_menu_event(|app, event| {
         match event.id.as_ref() {

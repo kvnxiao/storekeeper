@@ -4,6 +4,7 @@ import { Section } from "@/modules/settings/components/Section";
 import type { ResourceNotificationConfig } from "@/modules/settings/settings.types";
 import { Switch } from "@/modules/ui/components/Switch";
 import { TextField } from "@/modules/ui/components/TextField";
+import * as m from "@/paraglide/messages";
 
 interface HoyolabGameConfig {
   enabled: boolean;
@@ -48,12 +49,12 @@ export const HoyolabGameSection: React.FC<HoyolabGameSectionProps> = ({
           })
         }
       >
-        Enable {title} tracking
+        {m.settings_game_enable_tracking({ title })}
       </Switch>
       {enabled && (
         <>
           <TextField
-            label="UID"
+            label={m.settings_game_uid()}
             value={uid}
             onChange={(value) =>
               onChange({
@@ -63,7 +64,7 @@ export const HoyolabGameSection: React.FC<HoyolabGameSectionProps> = ({
                 auto_claim_daily_rewards: autoClaimDailyRewards,
               })
             }
-            placeholder="Enter your UID"
+            placeholder={m.settings_game_uid_placeholder()}
           />
           <Switch
             isSelected={autoClaimDailyRewards}
@@ -76,7 +77,7 @@ export const HoyolabGameSection: React.FC<HoyolabGameSectionProps> = ({
               })
             }
           >
-            Auto-claim daily rewards
+            {m.settings_game_auto_claim()}
           </Switch>
           <NotificationSection
             gameId={gameId}

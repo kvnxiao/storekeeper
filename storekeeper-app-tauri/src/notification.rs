@@ -11,6 +11,7 @@ use tauri::{AppHandle, Manager};
 use tauri_plugin_notification::NotificationExt;
 use tokio_util::sync::CancellationToken;
 
+use crate::i18n;
 use crate::state::AppState;
 
 /// Tracks notification cooldown state per (game, resource) pair.
@@ -124,7 +125,7 @@ pub fn start_notification_checker(app_handle: AppHandle, cancel_token: Cancellat
 }
 
 /// Checks all cached resources against notification thresholds.
-async fn check_and_notify(app_handle: &AppHandle) {
+pub(crate) async fn check_and_notify(app_handle: &AppHandle) {
     let state = app_handle.state::<AppState>();
     let now = Utc::now();
 
@@ -287,31 +288,22 @@ fn check_resource_and_notify(
         return;
     }
 
-    let game_name = game_id.display_name();
+    let game_name = game_display_name(game_id);
     let resource_name = resource_display_name(game_id, resource_type);
 
-    let time_to_full = info.completion_at - now;
-    let body = if info.is_complete {
-        let overdue_mins = (now - info.completion_at).num_minutes();
-        if overdue_mins <= 0 {
-            format!("{resource_name} is full!")
-        } else {
-            format!("{resource_name} has been full for {overdue_mins} minutes")
-        }
-    } else if config.notify_at_value.is_some() {
-        match (info.current, info.max) {
-            (Some(current), Some(max)) => {
-                format!("{resource_name} has reached {current}/{max}")
-            }
-            _ => format!("{resource_name} threshold reached"),
-        }
-    } else {
-        let mins_remaining = time_to_full.num_minutes();
-        format!("{resource_name} will be full in {mins_remaining} minutes")
-    };
+    let is_value_mode = config.notify_at_value.is_some();
+    let body = build_notification_body(&resource_name, info, is_value_mode, now);
+
+    let title = i18n::t_args(
+        "notification.title",
+        &[
+            ("game_name", i18n::Value::from(game_name.as_str())),
+            ("resource_name", i18n::Value::from(resource_name.as_str())),
+        ],
+    );
 
     tracing::info!(
-        game = game_name,
+        game = game_name.as_str(),
         resource = resource_type,
         body = %body,
         "Sending resource notification"
@@ -320,7 +312,7 @@ fn check_resource_and_notify(
     let result = app_handle
         .notification()
         .builder()
-        .title(format!("{game_name} — {resource_name}"))
+        .title(&title)
         .body(&body)
         .show();
 
@@ -334,29 +326,89 @@ fn check_resource_and_notify(
     }
 }
 
-/// Maps resource type tags to human-readable display names.
-pub(crate) fn resource_display_name(game_id: GameId, resource_type: &str) -> &'static str {
-    match (game_id, resource_type) {
-        // Genshin Impact
-        (GameId::GenshinImpact, "resin") => "Original Resin",
-        (GameId::GenshinImpact, "parametric_transformer") => "Parametric Transformer",
-        (GameId::GenshinImpact, "realm_currency") => "Realm Currency",
-        (GameId::GenshinImpact, "expeditions") => "Expeditions",
-        // Honkai: Star Rail
-        (GameId::HonkaiStarRail, "trailblaze_power") => "Trailblaze Power",
-        // Zenless Zone Zero
-        (GameId::ZenlessZoneZero, "battery") => "Battery",
-        // Wuthering Waves
-        (GameId::WutheringWaves, "waveplates") => "Waveplates",
-        // Fallback: return a leaked string from the type tag
-        // (acceptable since this is a bounded set of known resource types)
-        _ => "Unknown Resource",
+/// Maps resource type tags to localized display names via i18n lookup.
+pub(crate) fn resource_display_name(game_id: GameId, resource_type: &str) -> String {
+    let key = format!("game.{}.resource.{resource_type}", game_id.short_id());
+    let result = i18n::t(&key);
+    if result == key {
+        i18n::t("resource.unknown")
+    } else {
+        result
+    }
+}
+
+/// Returns the localized game display name via i18n lookup.
+pub(crate) fn game_display_name(game_id: GameId) -> String {
+    let key = format!("game.{}.name", game_id.short_id());
+    i18n::t(&key)
+}
+
+/// Builds the notification body text for a resource.
+///
+/// Uses i18n-formatted strings based on the resource state.
+pub(crate) fn build_notification_body(
+    resource_name: &str,
+    info: &ResourceInfo,
+    is_value_mode: bool,
+    now: DateTime<Utc>,
+) -> String {
+    if info.is_complete {
+        let overdue_mins = (now - info.completion_at).num_minutes();
+        if overdue_mins <= 0 {
+            i18n::t_args(
+                "notification.resource_full",
+                &[("resource_name", i18n::Value::from(resource_name))],
+            )
+        } else {
+            i18n::t_args(
+                "notification.resource_full_overdue",
+                &[
+                    ("resource_name", i18n::Value::from(resource_name)),
+                    ("minutes", i18n::Value::Number(overdue_mins)),
+                ],
+            )
+        }
+    } else if is_value_mode {
+        match (info.current, info.max) {
+            (Some(current), Some(max)) => i18n::t_args(
+                "notification.resource_reached",
+                &[
+                    ("resource_name", i18n::Value::from(resource_name)),
+                    (
+                        "current",
+                        i18n::Value::Number(i64::try_from(current).unwrap_or(i64::MAX)),
+                    ),
+                    (
+                        "max",
+                        i18n::Value::Number(i64::try_from(max).unwrap_or(i64::MAX)),
+                    ),
+                ],
+            ),
+            _ => i18n::t_args(
+                "notification.resource_threshold_reached",
+                &[("resource_name", i18n::Value::from(resource_name))],
+            ),
+        }
+    } else {
+        let mins_remaining = (info.completion_at - now).num_minutes();
+        i18n::t_args(
+            "notification.resource_full_in",
+            &[
+                ("resource_name", i18n::Value::from(resource_name)),
+                ("minutes", i18n::Value::Number(mins_remaining)),
+            ],
+        )
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Ensures i18n is initialized for tests.
+    fn ensure_init() {
+        let _ = crate::i18n::init("en");
+    }
 
     // =========================================================================
     // extract_resource_info tests
@@ -456,6 +508,7 @@ mod tests {
 
     #[test]
     fn test_display_names() {
+        ensure_init();
         assert_eq!(
             resource_display_name(GameId::GenshinImpact, "resin"),
             "Original Resin"
@@ -488,6 +541,7 @@ mod tests {
 
     #[test]
     fn test_display_name_unknown_fallback() {
+        ensure_init();
         assert_eq!(
             resource_display_name(GameId::GenshinImpact, "unknown_thing"),
             "Unknown Resource"

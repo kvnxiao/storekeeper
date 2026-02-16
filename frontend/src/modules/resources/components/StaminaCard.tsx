@@ -3,6 +3,7 @@ import { TimeRemaining } from "@/modules/resources/components/TimeRemaining";
 import { useFormattedTime } from "@/modules/resources/resources.hooks";
 import type { StaminaResource } from "@/modules/resources/resources.types";
 import { ProgressBar } from "@/modules/ui/components/ProgressBar";
+import * as m from "@/paraglide/messages";
 
 interface StaminaCardProps {
   iconPath: string;
@@ -68,14 +69,18 @@ export const StaminaCard: React.FC<StaminaCardProps> = ({
         fillColor="linear-gradient(to right, #3b82f6, #f59e0b, #ef4444)"
         size="xs"
         className="mt-1.5"
-        aria-label={`${name}: ${data.current} of ${data.max}`}
+        aria-label={m.stamina_progress_label({
+          name,
+          current: String(data.current),
+          max: String(data.max),
+        })}
       />
       <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
         {isFull ? (
-          "Full!"
+          m.stamina_full()
         ) : (
           <>
-            Full in{" "}
+            {m.stamina_full_in()}{" "}
             <TimeRemaining
               relativeTime={relativeTime}
               absoluteTime={absoluteTime}

@@ -4,6 +4,7 @@ import { Section } from "@/modules/settings/components/Section";
 import type { WuwaConfig } from "@/modules/settings/settings.types";
 import { Switch } from "@/modules/ui/components/Switch";
 import { TextField } from "@/modules/ui/components/TextField";
+import * as m from "@/paraglide/messages";
 
 const RESOURCE_TYPES = ["waveplates"] as const;
 
@@ -23,8 +24,8 @@ export const WuwaSection: React.FC<WuwaSectionProps> = ({
 
   return (
     <Section
-      title="Wuthering Waves"
-      description="Configure your Wuthering Waves account."
+      title={m.game_wuthering_waves()}
+      description={m.settings_game_configure_wuwa()}
     >
       <Switch
         isSelected={enabled}
@@ -36,12 +37,12 @@ export const WuwaSection: React.FC<WuwaSectionProps> = ({
           })
         }
       >
-        Enable Wuthering Waves tracking
+        {m.settings_wuwa_enable_tracking()}
       </Switch>
       {enabled && (
         <>
           <TextField
-            label="Player ID"
+            label={m.settings_wuwa_player_id()}
             value={playerId}
             onChange={(value) =>
               onChange({
@@ -50,7 +51,7 @@ export const WuwaSection: React.FC<WuwaSectionProps> = ({
                 player_id: value,
               })
             }
-            placeholder="Enter your Player ID"
+            placeholder={m.settings_wuwa_player_id_placeholder()}
           />
           <NotificationSection
             gameId="WUTHERING_WAVES"

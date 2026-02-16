@@ -6,6 +6,7 @@ import { Button } from "@/modules/ui/components/Button";
 import { NumberField } from "@/modules/ui/components/NumberField";
 import { SegmentedControl } from "@/modules/ui/components/SegmentedControl";
 import { Switch } from "@/modules/ui/components/Switch";
+import * as m from "@/paraglide/messages";
 
 type NotifyMode = "minutes" | "value";
 
@@ -37,11 +38,6 @@ const DEFAULT_CONFIG: ResourceNotificationConfig = {
   cooldown_minutes: 30,
 };
 
-const MODE_ITEMS = [
-  { id: "minutes", label: "Minutes before full" },
-  { id: "value", label: "At value" },
-] as const;
-
 export const NotificationResourceRow: React.FC<
   NotificationResourceRowProps
 > = ({
@@ -57,6 +53,11 @@ export const NotificationResourceRow: React.FC<
   const [isPreviewing, setIsPreviewing] = useState<boolean>(false);
 
   const mode = config ? getNotifyMode(config) : "minutes";
+
+  const modeItems = [
+    { id: "minutes", label: m.settings_notification_minutes_before_full() },
+    { id: "value", label: m.settings_notification_at_value() },
+  ] as const;
 
   const handleToggle = useCallback(
     (isSelected: boolean) => {
@@ -122,7 +123,7 @@ export const NotificationResourceRow: React.FC<
         <Button
           size="icon"
           variant="plain"
-          aria-label={`Preview ${label} notification`}
+          aria-label={m.settings_notification_preview({ label })}
           onPress={() => void handlePreview()}
           isPending={isPreviewing}
         >
@@ -137,14 +138,14 @@ export const NotificationResourceRow: React.FC<
             {isStaminaResource && (
               <>
                 <SegmentedControl
-                  aria-label="Notification mode"
+                  aria-label={m.settings_notification_mode()}
                   selectedKey={mode}
                   onSelectionChange={handleModeChange}
-                  items={[...MODE_ITEMS]}
+                  items={[...modeItems]}
                 />
                 {mode === "minutes" ? (
                   <NumberField
-                    label="Minutes before full"
+                    label={m.settings_notification_minutes_before_full()}
                     value={config.notify_minutes_before_full ?? 0}
                     onChange={(value) =>
                       onChange({
@@ -167,8 +168,10 @@ export const NotificationResourceRow: React.FC<
                   <NumberField
                     label={
                       limits
-                        ? `Notify when >= value (max ${limits.maxValue})`
-                        : "Notify when >= value"
+                        ? m.settings_notification_value_with_max({
+                            maxValue: String(limits.maxValue),
+                          })
+                        : m.settings_notification_value()
                     }
                     value={config.notify_at_value ?? 0}
                     onChange={(value) =>
@@ -186,13 +189,13 @@ export const NotificationResourceRow: React.FC<
               </>
             )}
             <NumberField
-              label="Remind again every (min)"
+              label={m.settings_notification_cooldown()}
               description={
                 config.cooldown_minutes === 0
-                  ? "Will only notify once"
+                  ? m.settings_notification_once()
                   : isStaminaResource
-                    ? "Re-notifies while threshold is exceeded"
-                    : "Re-notifies while resource is ready"
+                    ? m.settings_notification_renotify_stamina()
+                    : m.settings_notification_renotify_cooldown()
               }
               value={config.cooldown_minutes}
               onChange={(value) =>

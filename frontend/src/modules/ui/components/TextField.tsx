@@ -10,6 +10,7 @@ import {
   Text,
 } from "react-aria-components";
 import { tv, type VariantProps } from "tailwind-variants";
+import * as m from "@/paraglide/messages";
 
 const fieldStyle = tv({
   base: "group flex flex-col gap-1 font-sans",
@@ -86,7 +87,11 @@ export const TextField: React.FC<TextFieldProps> = ({
         />
         {isPassword && (
           <AriaButton
-            aria-label={revealed ? "Hide password" : "Show password"}
+            aria-label={
+              revealed
+                ? m.textfield_hide_password()
+                : m.textfield_show_password()
+            }
             onPress={() => setRevealed((v) => !v)}
             className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300"
           >

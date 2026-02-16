@@ -1,6 +1,7 @@
 import { Section } from "@/modules/settings/components/Section";
 import type { KuroSecrets } from "@/modules/settings/settings.types";
 import { TextField } from "@/modules/ui/components/TextField";
+import * as m from "@/paraglide/messages";
 
 interface KuroSecretsSectionProps {
   secrets: KuroSecrets;
@@ -13,11 +14,11 @@ export const KuroSecretsSection: React.FC<KuroSecretsSectionProps> = ({
 }) => {
   return (
     <Section
-      title="Kuro Games Authentication"
-      description="For Wuthering Waves. The oauth_code is automatically loaded from the Kuro SDK launcher cache. Only set this if you need to override the automatic detection."
+      title={m.settings_kuro_title()}
+      description={m.settings_kuro_description()}
     >
       <TextField
-        label="OAuth Code (Optional Override)"
+        label={m.settings_kuro_oauth_label()}
         type="password"
         value={secrets.oauth_code}
         onChange={(value) =>
@@ -26,7 +27,7 @@ export const KuroSecretsSection: React.FC<KuroSecretsSectionProps> = ({
             oauth_code: value,
           })
         }
-        placeholder="Leave empty to use automatic detection"
+        placeholder={m.settings_kuro_oauth_placeholder()}
       />
     </Section>
   );
