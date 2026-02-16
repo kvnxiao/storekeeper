@@ -64,11 +64,13 @@ graph TB
         UI[UI Components]
         Atoms[Jotai Atoms]
         Query[TanStack Query]
+        Paraglide[Paraglide i18n]
     end
 
     subgraph Tauri["Tauri Runtime"]
         IPC[IPC Bridge]
         Events[Event System]
+        Notify[Notification Plugin]
     end
 
     subgraph Backend["Backend (Rust)"]
@@ -76,6 +78,8 @@ graph TB
         State[Application State]
         Registry[Game Client Registry]
         Polling[Background Polling]
+        NotifCheck[Notification Checker]
+        I18n[i18n Module]
 
         subgraph Games["Game Clients"]
             Genshin[GenshinClient]
@@ -97,6 +101,10 @@ graph TB
         KuroAPI[Kuro Games API]
     end
 
+    subgraph OS["Operating System"]
+        Toast[OS Toast Notifications]
+    end
+
     UI --> Query
     Query --> IPC
     IPC --> Commands
@@ -115,6 +123,11 @@ graph TB
     Events --> IPC
     IPC --> Atoms
     Atoms --> UI
+
+    NotifCheck --> State
+    NotifCheck --> I18n
+    NotifCheck --> Notify
+    Notify --> Toast
 ```
 
 ## Core Architectural Principles
@@ -150,6 +163,15 @@ Games are grouped by API provider. Within each provider, requests are made **seq
 
 Backend emits events to the frontend for real-time updates without polling. The frontend subscribes via Jotai effect atoms that update the TanStack Query cache on each event.
 
+### 6. Dual i18n Architecture
+
+Localization is split across two independent systems optimized for their respective runtimes:
+
+- **Backend**: Custom i18n module using ICU4X for plural rules and ICU MessageFormat-style templates. Locale strings are embedded at compile time from `locales/*.json`. Used for OS notifications and system tray labels.
+- **Frontend**: Paraglide JS (inlang) with compile-time message generation. Message catalogs in `frontend/messages/*.json` are compiled to tree-shakeable functions. Used for all UI text.
+
+Each system has its own message catalog because the backend and frontend have different string requirements and runtime constraints. See [03-core-components.md](03-core-components.md) for details.
+
 ## Key Design Decisions
 
 ### Why Cargo Workspace?
@@ -174,6 +196,19 @@ Multi-crate workspace instead of a monolithic application. Each game and API cli
 - **Minimal boilerplate**: No reducers, actions, or dispatchers
 - **Integration**: `atomWithQuery` bridges Jotai and TanStack Query
 
+### Why Separate i18n Systems?
+
+The backend and frontend have fundamentally different i18n needs:
+
+- **Backend** runs in a single long-lived process. It needs ICU plural rules for notification messages (`"{minutes, plural, one {# minute} other {# minutes}}"`) and is constrained to Rust libraries. ICU4X provides correct CLDR-based plural rules.
+- **Frontend** needs tree-shakeable, type-safe message functions for UI rendering. Paraglide JS compiles messages at build time into direct function calls (`m.settings_title()`), eliminating runtime lookup overhead and dead message code.
+
+Sharing a single message catalog would couple the two systems without benefit — backend messages are notification/tray strings while frontend messages are UI labels.
+
+### Why OS Notifications Over In-App?
+
+Resource alerts need to reach users even when the window is minimized to tray (the primary usage mode). OS toast notifications via `tauri-plugin-notification` are visible regardless of window state. The notification checker reads cached state only (no API calls) and runs on a 60-second timer, separate from the polling loop.
+
 ## Technology Stack
 
 | Layer | Technology | Why |
@@ -182,6 +217,8 @@ Multi-crate workspace instead of a monolithic application. Each game and API cli
 | Desktop Framework | Tauri 2 | Small binaries, native performance |
 | HTTP Client | reqwest + reqwest-middleware | Async, retry middleware |
 | Async Runtime | Tokio (via Tauri) | Multi-threaded, mature |
+| OS Notifications | tauri-plugin-notification | Cross-platform toast notifications |
+| Backend i18n | ICU4X (icu_plurals, icu_locale) | CLDR-based plural rules for Rust |
 | Frontend Framework | React 19 | Stable, large ecosystem |
 | Router | TanStack Router | Type-safe, file-based routing |
 | State Management | Jotai | Atomic updates, derived state |
@@ -189,9 +226,10 @@ Multi-crate workspace instead of a monolithic application. Each game and API cli
 | UI Components | React Aria Components | Accessible, unstyled primitives |
 | Styling | Tailwind CSS 4 | Utility-first, dark mode |
 | Animations | Motion | Performant, declarative |
+| Frontend i18n | Paraglide JS (inlang) | Compile-time, tree-shakeable messages |
 
 ## Further Reading
 
 - [02-directory-structure.md](02-directory-structure.md) — Crate layout and dependency graph
-- [03-core-components.md](03-core-components.md) — Traits, registries, state management
-- [04-data-flow.md](04-data-flow.md) — Complete data flow from API to UI
+- [03-core-components.md](03-core-components.md) — Traits, registries, state management, notifications, i18n
+- [04-data-flow.md](04-data-flow.md) — Complete data flow from API to UI, notification flow, locale switching

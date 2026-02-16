@@ -14,6 +14,7 @@ storekeeper/
 ├── storekeeper-game-wuwa/         # Wuthering Waves GameClient implementation
 ├── storekeeper-app-tauri/         # Tauri application orchestrator
 ├── frontend/                      # React frontend
+├── locales/                       # Backend i18n locale strings (ICU MessageFormat)
 ├── docs/                          # Documentation
 │   ├── architecture/              # Architecture docs
 │   ├── onboarding/                # Getting started guides
@@ -75,7 +76,7 @@ storekeeper-core/src/
 ├── resource.rs         # StaminaResource, CooldownResource, ExpeditionResource
 ├── game_id.rs          # GameId enum, ApiProvider enum
 ├── region.rs           # Region enum for game servers
-├── config.rs           # AppConfig, SecretsConfig, TOML parsing
+├── config.rs           # AppConfig, SecretsConfig, ResourceNotificationConfig, TOML parsing
 ├── error.rs            # Core error types
 ├── macros.rs           # Utility macros
 └── serde_utils.rs      # Custom serde deserializers
@@ -149,50 +150,76 @@ storekeeper-app-tauri/src/
 ├── clients.rs                  # Client factory functions (config → clients)
 ├── polling.rs                  # Background polling loop with cancellation
 ├── scheduled_claim.rs          # Scheduled daily reward claiming with retry
+├── notification.rs             # Background notification checker with cooldown tracking
+├── i18n.rs                     # Backend i18n: ICU MessageFormat with ICU4X plural rules
 ├── tray.rs                     # System tray menu (Refresh, Config, Quit)
 └── events.rs                   # Event type definitions for frontend IPC
 ```
+
+## Backend Locales: `locales/`
+
+Locale strings for the Rust backend (OS notifications, system tray). Uses ICU MessageFormat syntax with plural support.
+
+```
+locales/
+└── en.json             # English locale strings
+```
+
+Keys use dot-separated namespaces: `notification.*`, `tray.*`, `game.{short_id}.*`, `resource.*`.
 
 ## Frontend: `frontend/`
 
 Feature-based module organization with React 19, TanStack Start, and Jotai.
 
 ```
-frontend/src/
-├── modules/                    # Feature modules
-│   ├── atoms.ts               # Global atom container (AtomsContainer class)
-│   ├── core/                  # Cross-cutting concerns
-│   │   ├── core.atoms.ts     # Tick system, resources query, event listeners
-│   │   ├── core.config.ts    # Config query atom
-│   │   └── core.queryClient.ts # TanStack Query client setup
-│   ├── games/                 # Per-game UI
-│   │   ├── games.constants.ts
-│   │   ├── games.types.ts
-│   │   ├── genshin/           # Genshin components + atoms
-│   │   ├── hsr/               # HSR components + atoms
-│   │   ├── zzz/               # ZZZ components + atoms
-│   │   └── wuwa/              # Wuwa components + atoms
-│   ├── resources/             # Shared resource display
-│   │   ├── components/        # StaminaCard, CooldownCard, etc.
-│   │   ├── resources.hooks.ts
-│   │   ├── resources.query.ts # Tauri command wrappers
-│   │   ├── resources.types.ts # TypeScript interfaces
-│   │   └── resources.utils.ts
-│   ├── settings/              # Settings page
-│   │   ├── components/
-│   │   ├── settings.atoms.ts
-│   │   ├── settings.query.ts
-│   │   └── settings.types.ts
-│   └── ui/                    # Shared UI components
-│       ├── components/        # Button, Card, GameSection, etc.
-│       ├── ui.animations.ts
-│       └── ui.styles.ts       # tailwind-variants utilities
-├── routes/                    # TanStack Router file-based routes
-│   ├── __root.tsx            # Root layout (providers)
-│   ├── index.tsx             # Dashboard page
-│   └── settings.tsx          # Settings page
-├── router.tsx                 # Router configuration
-└── routeTree.gen.ts          # Auto-generated route tree
+frontend/
+├── messages/                      # Frontend i18n source messages (inlang)
+│   └── en.json                   # English UI strings
+├── project.inlang/               # inlang project configuration
+│   └── settings.json             # Locale config, plugin settings
+├── src/
+│   ├── modules/                  # Feature modules
+│   │   ├── atoms.ts             # Global atom container (AtomsContainer class)
+│   │   ├── core/                # Cross-cutting concerns
+│   │   │   ├── core.atoms.ts   # Tick system, resources query, event listeners
+│   │   │   ├── core.config.ts  # Config query atom
+│   │   │   └── core.queryClient.ts # TanStack Query client setup
+│   │   ├── games/               # Per-game UI
+│   │   │   ├── games.constants.ts
+│   │   │   ├── games.types.ts
+│   │   │   ├── genshin/         # Genshin components + atoms
+│   │   │   ├── hsr/             # HSR components + atoms
+│   │   │   ├── zzz/             # ZZZ components + atoms
+│   │   │   └── wuwa/            # Wuwa components + atoms
+│   │   ├── resources/           # Shared resource display
+│   │   │   ├── components/      # StaminaCard, CooldownCard, etc.
+│   │   │   ├── resources.hooks.ts
+│   │   │   ├── resources.query.ts # Tauri command wrappers
+│   │   │   ├── resources.types.ts # TypeScript interfaces
+│   │   │   └── resources.utils.ts
+│   │   ├── settings/            # Settings page
+│   │   │   ├── components/      # Form sections, NotificationSection, NotificationResourceRow
+│   │   │   ├── settings.atoms.ts
+│   │   │   ├── settings.query.ts
+│   │   │   └── settings.types.ts
+│   │   └── ui/                  # Shared UI components
+│   │       ├── components/      # Button, Card, GameSection, etc.
+│   │       ├── ui.animations.ts
+│   │       └── ui.styles.ts     # tailwind-variants utilities
+│   ├── paraglide/               # Auto-generated compiled i18n (do not edit)
+│   │   ├── messages.js          # Re-exports all message functions
+│   │   ├── messages/            # Per-locale compiled messages
+│   │   │   └── en.js
+│   │   ├── runtime.js           # Locale detection and switching runtime
+│   │   ├── registry.js          # Message registry for tooling
+│   │   └── server.js            # SSR support (unused in Tauri)
+│   ├── routes/                  # TanStack Router file-based routes
+│   │   ├── __root.tsx          # Root layout (providers)
+│   │   ├── index.tsx           # Dashboard page
+│   │   └── settings.tsx        # Settings page
+│   ├── router.tsx               # Router configuration
+│   └── routeTree.gen.ts        # Auto-generated route tree
+└── package.json                 # Dependencies, pnpm scripts
 ```
 
 ### Module Structure Convention
@@ -218,6 +245,7 @@ See [frontend-components.md](../standards/frontend/frontend-components.md) for n
 3. **Register in app**: Update `storekeeper-app-tauri/src/clients.rs` factory functions
 4. **Add frontend**: Create `frontend/src/modules/games/{name}/` with section component and atoms
 5. **Update dashboard**: Add section to `frontend/src/routes/index.tsx`
+6. **Add locale strings**: Add game/resource names to both `locales/en.json` (backend) and `frontend/messages/en.json` (frontend)
 
 No changes required to registry logic, polling system, or state management — they work with `DynGameClient` trait objects.
 
