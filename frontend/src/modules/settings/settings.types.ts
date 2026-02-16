@@ -1,3 +1,10 @@
+import type {
+  GenshinResourceType,
+  HsrResourceType,
+  WuwaResourceType,
+  ZzzResourceType,
+} from "@/modules/games/games.constants";
+
 // =============================================================================
 // Configuration Types (matching Rust AppConfig - snake_case)
 // =============================================================================
@@ -8,6 +15,7 @@ export interface GeneralConfig {
   start_minimized: boolean;
   log_level: string;
   language: string;
+  autostart: boolean;
 }
 
 /** Per-resource notification configuration */
@@ -18,48 +26,31 @@ export interface ResourceNotificationConfig {
   cooldown_minutes: number;
 }
 
-/** Known resource type tags per game */
-export type GenshinResourceType =
-  | "resin"
-  | "parametric_transformer"
-  | "realm_currency"
-  | "expeditions";
-export type HsrResourceType = "trailblaze_power";
-export type ZzzResourceType = "battery";
-export type WuwaResourceType = "waveplates";
-
-/** Genshin Impact configuration */
-export interface GenshinConfig {
+/** Common configuration for HoYoLab games */
+export interface HoyolabGameConfig {
   enabled: boolean;
   uid: string;
   region?: string;
   tracked_resources?: string[];
   auto_claim_daily_rewards: boolean;
   auto_claim_time?: string;
+  notifications?: Partial<Record<string, ResourceNotificationConfig>>;
+}
+
+/** Genshin Impact configuration */
+export interface GenshinConfig extends HoyolabGameConfig {
   notifications?: Partial<
     Record<GenshinResourceType, ResourceNotificationConfig>
   >;
 }
 
 /** Honkai: Star Rail configuration */
-export interface HsrConfig {
-  enabled: boolean;
-  uid: string;
-  region?: string;
-  tracked_resources?: string[];
-  auto_claim_daily_rewards: boolean;
-  auto_claim_time?: string;
+export interface HsrConfig extends HoyolabGameConfig {
   notifications?: Partial<Record<HsrResourceType, ResourceNotificationConfig>>;
 }
 
 /** Zenless Zone Zero configuration */
-export interface ZzzConfig {
-  enabled: boolean;
-  uid: string;
-  region?: string;
-  tracked_resources?: string[];
-  auto_claim_daily_rewards: boolean;
-  auto_claim_time?: string;
+export interface ZzzConfig extends HoyolabGameConfig {
   notifications?: Partial<Record<ZzzResourceType, ResourceNotificationConfig>>;
 }
 
@@ -79,6 +70,9 @@ export interface GamesConfig {
   zenless_zone_zero?: ZzzConfig;
   wuthering_waves?: WuwaConfig;
 }
+
+/** Config keys for HoYoLab games only */
+export type HoyolabConfigKey = Exclude<keyof GamesConfig, "wuthering_waves">;
 
 /** Main application configuration (config.toml) */
 export interface AppConfig {

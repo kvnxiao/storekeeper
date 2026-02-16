@@ -23,6 +23,13 @@ export const WuwaResource = {
   Waveplates: "waveplates",
 } as const;
 
+/** Extracted resource type unions per game */
+export type GenshinResourceType =
+  (typeof GenshinResource)[keyof typeof GenshinResource];
+export type HsrResourceType = (typeof HsrResource)[keyof typeof HsrResource];
+export type ZzzResourceType = (typeof ZzzResource)[keyof typeof ZzzResource];
+export type WuwaResourceType = (typeof WuwaResource)[keyof typeof WuwaResource];
+
 /** Resource types that are stamina-based (support value-threshold notifications) */
 export const STAMINA_RESOURCE_TYPES: ReadonlySet<string> = new Set([
   GenshinResource.Resin,

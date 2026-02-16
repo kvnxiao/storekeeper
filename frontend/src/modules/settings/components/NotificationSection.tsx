@@ -2,6 +2,7 @@ import {
   getResourceDisplayName,
   STAMINA_RESOURCE_TYPES,
 } from "@/modules/games/games.constants";
+import type { GameId } from "@/modules/games/games.types";
 import {
   NotificationResourceRow,
   type ResourceLimits,
@@ -10,7 +11,7 @@ import type { ResourceNotificationConfig } from "@/modules/settings/settings.typ
 import * as m from "@/paraglide/messages";
 
 interface NotificationSectionProps {
-  gameId: string;
+  gameId: GameId;
   resourceTypes: readonly string[];
   notifications:
     | Partial<Record<string, ResourceNotificationConfig>>

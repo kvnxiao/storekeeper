@@ -187,6 +187,9 @@ log_level = "info"
 # Language/locale for the application (default: "en")
 language = "en"
 
+# Automatically start the app when the system boots (default: false)
+autostart = false
+
 # =============================================================================
 # GAME CONFIGURATION
 # =============================================================================
@@ -281,6 +284,10 @@ pub struct GeneralConfig {
     /// Language/locale for the application (e.g. "en", "zh-CN").
     #[serde(default = "default_language")]
     pub language: String,
+
+    /// Whether to automatically start the app at system login.
+    #[serde(default)]
+    pub autostart: bool,
 }
 
 impl Default for GeneralConfig {
@@ -290,6 +297,7 @@ impl Default for GeneralConfig {
             start_minimized: true,
             log_level: default_log_level(),
             language: default_language(),
+            autostart: false,
         }
     }
 }

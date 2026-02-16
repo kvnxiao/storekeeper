@@ -47,6 +47,7 @@
   "settings_general_log_info": "Info",
   "settings_general_log_debug": "Debug",
   "settings_general_log_trace": "Trace",
+  "settings_general_autostart": "Launch at system startup",
   "settings_general_open_config": "Open Config Folder",
 
   "settings_game_enable_tracking": "Enable {title} tracking",

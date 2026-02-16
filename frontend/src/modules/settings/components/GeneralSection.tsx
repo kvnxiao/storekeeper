@@ -46,6 +46,17 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
       >
         {m.settings_general_start_minimized()}
       </Switch>
+      <Switch
+        isSelected={config.autostart}
+        onChange={(isSelected) =>
+          onChange({
+            ...config,
+            autostart: isSelected,
+          })
+        }
+      >
+        {m.settings_general_autostart()}
+      </Switch>
       <Select
         label={m.settings_general_log_level()}
         selectedKey={config.log_level}

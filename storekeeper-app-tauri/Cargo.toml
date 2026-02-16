@@ -13,6 +13,7 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 # Tauri
 tauri = { workspace = true, features = ["tray-icon", "image-ico", "image-png"] }
+tauri-plugin-autostart.workspace = true
 tauri-plugin-notification.workspace = true
 
 # Workspace crates

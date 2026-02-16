@@ -17,6 +17,7 @@ mod tray;
 
 use anyhow::{Context, Result};
 use tauri::{Manager, RunEvent};
+use tauri_plugin_autostart::ManagerExt;
 use tokio_util::sync::CancellationToken;
 use tracing_subscriber::EnvFilter;
 
@@ -38,25 +39,39 @@ pub fn run() -> Result<()> {
     init_tracing();
 
     let app = tauri::Builder::default()
+        .plugin(tauri_plugin_autostart::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             // Initialize application state with config and game clients
             let app_state = state::AppState::with_config();
 
+            // Read config values needed for setup
+            let (language, should_autostart) = tauri::async_runtime::block_on(async {
+                let inner = app_state.inner.read().await;
+                (
+                    inner.config.general.language.clone(),
+                    inner.config.general.autostart,
+                )
+            });
+
             // Initialize i18n with language from config
-            {
-                let language = tauri::async_runtime::block_on(async {
-                    let inner = app_state.inner.read().await;
-                    inner.config.general.language.clone()
-                });
-                if let Err(e) = i18n::init(&language) {
-                    tracing::warn!(error = %e, "Failed to initialize i18n, falling back to defaults");
-                    // Try English as fallback
-                    let _ = i18n::init("en");
-                }
+            if let Err(e) = i18n::init(&language) {
+                tracing::warn!(error = %e, "Failed to initialize i18n, falling back to defaults");
+                let _ = i18n::init("en");
             }
 
             app.manage(app_state);
+
+            // Sync autostart state from config
+            let autolaunch = app.autolaunch();
+            let autostart_result = if should_autostart {
+                autolaunch.enable()
+            } else {
+                autolaunch.disable()
+            };
+            if let Err(e) = autostart_result {
+                tracing::warn!(error = %e, "Failed to sync autostart state");
+            }
 
             // Create cancellation token for background tasks
             let cancel_token = CancellationToken::new();

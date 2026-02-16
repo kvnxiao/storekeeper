@@ -4,6 +4,7 @@ import { atomEffect } from "jotai-effect";
 import { atomWithMutation, atomWithQuery } from "jotai-tanstack-query";
 import { configQueryAtom } from "@/modules/core/core.config";
 import { queryClient } from "@/modules/core/core.queryClient";
+import { GameId } from "@/modules/games/games.types";
 import {
   refreshResourcesMutationOptions,
   resourcesQueryOptions,
@@ -153,13 +154,15 @@ export class CoreAtoms {
 
   readonly enabledGames = atom((get) => {
     const { data: config } = get(configQueryAtom);
-    const enabled = new Set<string>();
-    if (config?.games.genshin_impact?.enabled) enabled.add("GENSHIN_IMPACT");
+    const enabled = new Set<GameId>();
+    if (config?.games.genshin_impact?.enabled)
+      enabled.add(GameId.GenshinImpact);
     if (config?.games.honkai_star_rail?.enabled)
-      enabled.add("HONKAI_STAR_RAIL");
+      enabled.add(GameId.HonkaiStarRail);
     if (config?.games.zenless_zone_zero?.enabled)
-      enabled.add("ZENLESS_ZONE_ZERO");
-    if (config?.games.wuthering_waves?.enabled) enabled.add("WUTHERING_WAVES");
+      enabled.add(GameId.ZenlessZoneZero);
+    if (config?.games.wuthering_waves?.enabled)
+      enabled.add(GameId.WutheringWaves);
     return enabled;
   });
 

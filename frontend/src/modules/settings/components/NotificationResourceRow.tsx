@@ -1,6 +1,7 @@
 import { BellAlertIcon } from "@heroicons/react/20/solid";
 import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useState } from "react";
+import type { GameId } from "@/modules/games/games.types";
 import type { ResourceNotificationConfig } from "@/modules/settings/settings.types";
 import { Button } from "@/modules/ui/components/Button";
 import { NumberField } from "@/modules/ui/components/NumberField";
@@ -24,7 +25,7 @@ export interface ResourceLimits {
 }
 
 interface NotificationResourceRowProps {
-  gameId: string;
+  gameId: GameId;
   resourceType: string;
   label: string;
   config: ResourceNotificationConfig | undefined;

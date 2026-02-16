@@ -13,7 +13,7 @@ import {
   HsrResource,
   ZzzResource,
 } from "@/modules/games/games.constants";
-import type { GameId } from "@/modules/games/games.types";
+import { GameId } from "@/modules/games/games.types";
 import {
   type AllResources,
   isStaminaResource,
@@ -26,7 +26,7 @@ import type { ResourceLimits } from "@/modules/settings/components/NotificationR
 import { WuwaSection } from "@/modules/settings/components/WuwaSection";
 import type {
   AppConfig,
-  GamesConfig,
+  HoyolabConfigKey,
   SecretsConfig,
   WuwaConfig,
 } from "@/modules/settings/settings.types";
@@ -61,13 +61,13 @@ function getResourceLimitsForGame(
 
 const HOYOLAB_GAMES: {
   gameId: GameId;
-  configKey: keyof GamesConfig;
+  configKey: HoyolabConfigKey;
   title: () => string;
   description: () => string;
   resourceTypes: readonly string[];
 }[] = [
   {
-    gameId: "GENSHIN_IMPACT",
+    gameId: GameId.GenshinImpact,
     configKey: "genshin_impact",
     title: m.game_genshin_impact,
     description: m.settings_game_configure_genshin,
@@ -79,14 +79,14 @@ const HOYOLAB_GAMES: {
     ],
   },
   {
-    gameId: "HONKAI_STAR_RAIL",
+    gameId: GameId.HonkaiStarRail,
     configKey: "honkai_star_rail",
     title: m.game_honkai_star_rail,
     description: m.settings_game_configure_hsr,
     resourceTypes: [HsrResource.TrailblazePower],
   },
   {
-    gameId: "ZENLESS_ZONE_ZERO",
+    gameId: GameId.ZenlessZoneZero,
     configKey: "zenless_zone_zero",
     title: m.game_zenless_zone_zero,
     description: m.settings_game_configure_zzz,
@@ -121,13 +121,19 @@ const SettingsPage: React.FC = () => {
   const { data: resources } = useAtomValue(atoms.core.resourcesQuery);
   const resourceLimits = useMemo(
     () => ({
-      GENSHIN_IMPACT: getResourceLimitsForGame(resources, "GENSHIN_IMPACT"),
-      HONKAI_STAR_RAIL: getResourceLimitsForGame(resources, "HONKAI_STAR_RAIL"),
+      GENSHIN_IMPACT: getResourceLimitsForGame(resources, GameId.GenshinImpact),
+      HONKAI_STAR_RAIL: getResourceLimitsForGame(
+        resources,
+        GameId.HonkaiStarRail,
+      ),
       ZENLESS_ZONE_ZERO: getResourceLimitsForGame(
         resources,
-        "ZENLESS_ZONE_ZERO",
+        GameId.ZenlessZoneZero,
       ),
-      WUTHERING_WAVES: getResourceLimitsForGame(resources, "WUTHERING_WAVES"),
+      WUTHERING_WAVES: getResourceLimitsForGame(
+        resources,
+        GameId.WutheringWaves,
+      ),
     }),
     [resources],
   );

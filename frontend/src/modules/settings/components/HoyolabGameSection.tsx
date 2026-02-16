@@ -1,22 +1,16 @@
+import type { GameId } from "@/modules/games/games.types";
 import type { ResourceLimits } from "@/modules/settings/components/NotificationResourceRow";
 import { NotificationSection } from "@/modules/settings/components/NotificationSection";
 import { Section } from "@/modules/settings/components/Section";
-import type { ResourceNotificationConfig } from "@/modules/settings/settings.types";
+import type { HoyolabGameConfig } from "@/modules/settings/settings.types";
 import { Switch } from "@/modules/ui/components/Switch";
 import { TextField } from "@/modules/ui/components/TextField";
 import * as m from "@/paraglide/messages";
 
-interface HoyolabGameConfig {
-  enabled: boolean;
-  uid: string;
-  auto_claim_daily_rewards: boolean;
-  notifications?: Partial<Record<string, ResourceNotificationConfig>>;
-}
-
 interface HoyolabGameSectionProps {
   title: string;
   description: string;
-  gameId: string;
+  gameId: GameId;
   resourceTypes: readonly string[];
   config: HoyolabGameConfig | undefined;
   resourceLimits?: Partial<Record<string, ResourceLimits>>;
