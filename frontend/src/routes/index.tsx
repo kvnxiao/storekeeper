@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useAtomValue } from "jotai";
 import { AnimatePresence, motion } from "motion/react";
 import { atoms } from "@/modules/atoms";
+import { GameId } from "@/modules/games/games.types";
 import { GenshinSection } from "@/modules/games/genshin/components/GenshinSection";
 import { HsrSection } from "@/modules/games/hsr/components/HsrSection";
 import { WuwaSection } from "@/modules/games/wuwa/components/WuwaSection";
@@ -24,10 +25,10 @@ const DashboardPage: React.FC = () => {
   // Sync Paraglide locale from backend config on startup
   useAtomValue(atoms.core.localeSync);
 
-  const hasGenshin = enabledGames.has("GENSHIN_IMPACT");
-  const hasHsr = enabledGames.has("HONKAI_STAR_RAIL");
-  const hasZzz = enabledGames.has("ZENLESS_ZONE_ZERO");
-  const hasWuwa = enabledGames.has("WUTHERING_WAVES");
+  const hasGenshin = enabledGames.has(GameId.GenshinImpact);
+  const hasHsr = enabledGames.has(GameId.HonkaiStarRail);
+  const hasZzz = enabledGames.has(GameId.ZenlessZoneZero);
+  const hasWuwa = enabledGames.has(GameId.WutheringWaves);
   const hasAnyGames = hasGenshin || hasHsr || hasZzz || hasWuwa;
 
   return (

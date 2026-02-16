@@ -1,6 +1,7 @@
 import type { CoreAtoms } from "@/modules/core/core.atoms";
-import { createResourceSelector } from "@/modules/games/games.atoms";
+import { atomResourceSelector } from "@/modules/games/games.atoms";
 import { ZzzResource } from "@/modules/games/games.constants";
+import { GameId } from "@/modules/games/games.types";
 
 // =============================================================================
 // ZzzAtoms Class
@@ -9,9 +10,9 @@ import { ZzzResource } from "@/modules/games/games.constants";
 export class ZzzAtoms {
   constructor(readonly core: CoreAtoms) {}
 
-  readonly battery = createResourceSelector(
+  readonly battery = atomResourceSelector(
     () => this.core,
-    "ZENLESS_ZONE_ZERO",
+    GameId.ZenlessZoneZero,
     ZzzResource.Battery,
   );
 }

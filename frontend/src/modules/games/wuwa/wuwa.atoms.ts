@@ -1,6 +1,7 @@
 import type { CoreAtoms } from "@/modules/core/core.atoms";
-import { createResourceSelector } from "@/modules/games/games.atoms";
+import { atomResourceSelector } from "@/modules/games/games.atoms";
 import { WuwaResource } from "@/modules/games/games.constants";
+import { GameId } from "@/modules/games/games.types";
 
 // =============================================================================
 // WuwaAtoms Class
@@ -9,9 +10,9 @@ import { WuwaResource } from "@/modules/games/games.constants";
 export class WuwaAtoms {
   constructor(readonly core: CoreAtoms) {}
 
-  readonly waveplates = createResourceSelector(
+  readonly waveplates = atomResourceSelector(
     () => this.core,
-    "WUTHERING_WAVES",
+    GameId.WutheringWaves,
     WuwaResource.Waveplates,
   );
 }

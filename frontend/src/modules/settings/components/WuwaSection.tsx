@@ -1,4 +1,5 @@
 import { WuwaResource } from "@/modules/games/games.constants";
+import { GameId } from "@/modules/games/games.types";
 import type { ResourceLimits } from "@/modules/settings/components/NotificationResourceRow";
 import { NotificationSection } from "@/modules/settings/components/NotificationSection";
 import { Section } from "@/modules/settings/components/Section";
@@ -55,7 +56,7 @@ export const WuwaSection: React.FC<WuwaSectionProps> = ({
             placeholder={m.settings_wuwa_player_id_placeholder()}
           />
           <NotificationSection
-            gameId="WUTHERING_WAVES"
+            gameId={GameId.WutheringWaves}
             resourceTypes={RESOURCE_TYPES}
             notifications={config?.notifications}
             resourceLimits={resourceLimits}
