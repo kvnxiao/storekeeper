@@ -92,6 +92,8 @@ impl HttpClientBuilder {
 
         reqwest::Client::builder()
             .default_headers(self.headers)
+            .connect_timeout(Duration::from_secs(10))
+            .timeout(Duration::from_secs(30))
             .build()
             .map_err(ClientError::HttpRequest)
     }

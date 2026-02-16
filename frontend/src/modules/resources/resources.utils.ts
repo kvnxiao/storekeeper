@@ -19,6 +19,8 @@ export function formatTimeRemaining(
   if (!datetime) return m.time_remaining_full();
 
   const targetMs = new Date(datetime).getTime();
+  if (Number.isNaN(targetMs)) return m.time_remaining_full();
+
   const diffMs = targetMs - nowMs;
 
   if (diffMs <= 0) return m.time_remaining_full();
@@ -47,6 +49,7 @@ export function isPastDateTime(
 ): boolean {
   if (!datetime) return true;
   const targetMs = new Date(datetime).getTime();
+  if (Number.isNaN(targetMs)) return true;
   return targetMs <= nowMs;
 }
 

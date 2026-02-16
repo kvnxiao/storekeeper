@@ -1,5 +1,6 @@
-import { atom } from "jotai";
 import type { CoreAtoms } from "@/modules/core/core.atoms";
+import { createResourceSelector } from "@/modules/games/games.atoms";
+import { HsrResource } from "@/modules/games/games.constants";
 
 // =============================================================================
 // HsrAtoms Class
@@ -8,12 +9,9 @@ import type { CoreAtoms } from "@/modules/core/core.atoms";
 export class HsrAtoms {
   constructor(readonly core: CoreAtoms) {}
 
-  readonly trailblazePower = atom((get) => {
-    const { data } = get(this.core.resourcesQuery);
-    return (
-      data?.games?.HONKAI_STAR_RAIL?.find(
-        (r) => r.type === "trailblaze_power",
-      ) ?? null
-    );
-  });
+  readonly trailblazePower = createResourceSelector(
+    this.core,
+    "HONKAI_STAR_RAIL",
+    HsrResource.TrailblazePower,
+  );
 }

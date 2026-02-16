@@ -1,5 +1,7 @@
 import { atom } from "jotai";
 import type { CoreAtoms } from "@/modules/core/core.atoms";
+import { createResourceSelector } from "@/modules/games/games.atoms";
+import { GenshinResource } from "@/modules/games/games.constants";
 import type { ExpeditionResource } from "@/modules/resources/resources.types";
 import { isPastDateTime } from "@/modules/resources/resources.utils";
 
@@ -10,34 +12,29 @@ import { isPastDateTime } from "@/modules/resources/resources.utils";
 export class GenshinAtoms {
   constructor(readonly core: CoreAtoms) {}
 
-  readonly resin = atom((get) => {
-    const { data } = get(this.core.resourcesQuery);
-    return data?.games?.GENSHIN_IMPACT?.find((r) => r.type === "resin") ?? null;
-  });
+  readonly resin = createResourceSelector(
+    this.core,
+    "GENSHIN_IMPACT",
+    GenshinResource.Resin,
+  );
 
-  readonly parametricTransformer = atom((get) => {
-    const { data } = get(this.core.resourcesQuery);
-    return (
-      data?.games?.GENSHIN_IMPACT?.find(
-        (r) => r.type === "parametric_transformer",
-      ) ?? null
-    );
-  });
+  readonly parametricTransformer = createResourceSelector(
+    this.core,
+    "GENSHIN_IMPACT",
+    GenshinResource.ParametricTransformer,
+  );
 
-  readonly realmCurrency = atom((get) => {
-    const { data } = get(this.core.resourcesQuery);
-    return (
-      data?.games?.GENSHIN_IMPACT?.find((r) => r.type === "realm_currency") ??
-      null
-    );
-  });
+  readonly realmCurrency = createResourceSelector(
+    this.core,
+    "GENSHIN_IMPACT",
+    GenshinResource.RealmCurrency,
+  );
 
-  readonly expeditions = atom((get) => {
-    const { data } = get(this.core.resourcesQuery);
-    return (
-      data?.games?.GENSHIN_IMPACT?.find((r) => r.type === "expeditions") ?? null
-    );
-  });
+  readonly expeditions = createResourceSelector(
+    this.core,
+    "GENSHIN_IMPACT",
+    GenshinResource.Expeditions,
+  );
 
   readonly expeditionsReady = atom((get) => {
     get(this.core.tick);

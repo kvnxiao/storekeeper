@@ -5,6 +5,7 @@
 mod clients;
 mod commands;
 mod daily_reward_registry;
+mod error;
 mod events;
 pub mod i18n;
 mod notification;

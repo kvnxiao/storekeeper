@@ -1,7 +1,10 @@
 import { useAtomValue } from "jotai";
 import { motion, useReducedMotion } from "motion/react";
 import { atoms } from "@/modules/atoms";
-import { getResourceDisplayName } from "@/modules/games/games.constants";
+import {
+  GenshinResource,
+  getResourceDisplayName,
+} from "@/modules/games/games.constants";
 import { CooldownCard } from "@/modules/resources/components/CooldownCard";
 import { isExpeditionResource } from "@/modules/resources/resources.types";
 import {
@@ -20,7 +23,7 @@ export const ExpeditionsCard: React.FC = () => {
   const resource = useAtomValue(atoms.games.genshin.expeditions);
   const allDone = useAtomValue(atoms.games.genshin.expeditionsReady);
   const isRefreshing = useAtomValue(atoms.core.isRefreshing);
-  const resourceName = getResourceDisplayName("expeditions");
+  const resourceName = getResourceDisplayName(GenshinResource.Expeditions);
 
   const data =
     resource && isExpeditionResource(resource.data)

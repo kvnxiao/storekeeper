@@ -81,7 +81,7 @@ export class CoreAtoms {
 
     return () => {
       for (const p of unlistenPromises) {
-        void p.then((fn) => fn());
+        void p.then((fn) => fn()).catch(() => {});
       }
     };
   });
@@ -120,7 +120,7 @@ export class CoreAtoms {
 
     return () => {
       for (const p of unlistenPromises) {
-        void p.then((fn) => fn());
+        void p.then((fn) => fn()).catch(() => {});
       }
     };
   });

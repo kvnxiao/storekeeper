@@ -7,6 +7,7 @@ use storekeeper_core::{AppConfig, GameId, SecretsConfig};
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_notification::NotificationExt;
 
+use crate::error::{CommandError, ErrorCode};
 use crate::i18n;
 use crate::notification;
 use crate::polling;
@@ -14,40 +15,42 @@ use crate::state::{AllDailyRewardStatus, AllResources, AppState};
 
 /// Gets all cached resources.
 #[tauri::command]
-pub async fn get_all_resources(state: State<'_, AppState>) -> Result<AllResources, String> {
+pub async fn get_all_resources(state: State<'_, AppState>) -> Result<AllResources, CommandError> {
     Ok(state.get_resources().await)
 }
 
 /// Refreshes resources from all configured games.
 #[tauri::command]
-pub async fn refresh_resources(app_handle: AppHandle) -> Result<AllResources, String> {
-    polling::refresh_now(&app_handle).await
+pub async fn refresh_resources(app_handle: AppHandle) -> Result<AllResources, CommandError> {
+    polling::refresh_now(&app_handle)
+        .await
+        .map_err(CommandError::internal)
 }
 
 /// Gets the current application configuration.
 #[tauri::command]
-pub async fn get_config() -> Result<AppConfig, String> {
-    AppConfig::load().map_err(|e| e.to_string())
+pub async fn get_config() -> Result<AppConfig, CommandError> {
+    Ok(AppConfig::load()?)
 }
 
 /// Saves the application configuration.
 #[tauri::command]
-pub async fn save_config(config: AppConfig) -> Result<(), String> {
-    config.save().map_err(|e| e.to_string())?;
+pub async fn save_config(config: AppConfig) -> Result<(), CommandError> {
+    config.save()?;
     tracing::info!("Configuration saved successfully");
     Ok(())
 }
 
 /// Gets the current secrets configuration.
 #[tauri::command]
-pub async fn get_secrets() -> Result<SecretsConfig, String> {
-    SecretsConfig::load().map_err(|e| e.to_string())
+pub async fn get_secrets() -> Result<SecretsConfig, CommandError> {
+    Ok(SecretsConfig::load()?)
 }
 
 /// Saves the secrets configuration.
 #[tauri::command]
-pub async fn save_secrets(secrets: SecretsConfig) -> Result<(), String> {
-    secrets.save().map_err(|e| e.to_string())?;
+pub async fn save_secrets(secrets: SecretsConfig) -> Result<(), CommandError> {
+    secrets.save()?;
     tracing::info!("Secrets saved successfully");
     Ok(())
 }
@@ -56,11 +59,14 @@ pub async fn save_secrets(secrets: SecretsConfig) -> Result<(), String> {
 ///
 /// This should be called after saving config/secrets to apply the changes.
 #[tauri::command]
-pub async fn reload_config(app_handle: AppHandle) -> Result<(), String> {
+pub async fn reload_config(app_handle: AppHandle) -> Result<(), CommandError> {
     let state = app_handle.state::<AppState>();
 
     // Reload config and reinitialize game clients
-    state.reload_config().await;
+    state
+        .reload_config()
+        .await
+        .map_err(CommandError::internal)?;
 
     // Update locale from new config
     let language = {
@@ -84,12 +90,12 @@ pub async fn reload_config(app_handle: AppHandle) -> Result<(), String> {
 
 /// Opens the configuration folder in the system file manager.
 #[tauri::command]
-pub fn open_config_folder() -> Result<(), String> {
-    let config_dir = storekeeper_core::AppConfig::config_dir().map_err(|e| e.to_string())?;
+pub fn open_config_folder() -> Result<(), CommandError> {
+    let config_dir = storekeeper_core::AppConfig::config_dir()?;
 
     // Create directory if it doesn't exist
     if !config_dir.exists() {
-        std::fs::create_dir_all(&config_dir).map_err(|e| e.to_string())?;
+        std::fs::create_dir_all(&config_dir)?;
     }
 
     // Open in file manager
@@ -97,24 +103,21 @@ pub fn open_config_folder() -> Result<(), String> {
     {
         std::process::Command::new("explorer")
             .arg(&config_dir)
-            .spawn()
-            .map_err(|e| e.to_string())?;
+            .spawn()?;
     }
 
     #[cfg(target_os = "macos")]
     {
         std::process::Command::new("open")
             .arg(&config_dir)
-            .spawn()
-            .map_err(|e| e.to_string())?;
+            .spawn()?;
     }
 
     #[cfg(target_os = "linux")]
     {
         std::process::Command::new("xdg-open")
             .arg(&config_dir)
-            .spawn()
-            .map_err(|e| e.to_string())?;
+            .spawn()?;
     }
 
     Ok(())
@@ -128,7 +131,7 @@ pub fn open_config_folder() -> Result<(), String> {
 #[tauri::command]
 pub async fn get_daily_reward_status(
     state: State<'_, AppState>,
-) -> Result<AllDailyRewardStatus, String> {
+) -> Result<AllDailyRewardStatus, CommandError> {
     Ok(state.get_daily_reward_status().await)
 }
 
@@ -136,7 +139,7 @@ pub async fn get_daily_reward_status(
 #[tauri::command]
 pub async fn refresh_daily_reward_status(
     state: State<'_, AppState>,
-) -> Result<AllDailyRewardStatus, String> {
+) -> Result<AllDailyRewardStatus, CommandError> {
     let status = state.fetch_all_daily_reward_status().await;
     state.set_daily_reward_status(status.clone()).await;
     Ok(status)
@@ -148,7 +151,7 @@ pub async fn refresh_daily_reward_status(
 #[tauri::command]
 pub async fn claim_daily_rewards(
     state: State<'_, AppState>,
-) -> Result<HashMap<GameId, serde_json::Value>, String> {
+) -> Result<HashMap<GameId, serde_json::Value>, CommandError> {
     tracing::info!("Manual daily reward claim requested");
     let results = state.claim_all_daily_rewards().await;
 
@@ -164,9 +167,12 @@ pub async fn claim_daily_rewards(
 pub async fn claim_daily_reward_for_game(
     game_id: GameId,
     state: State<'_, AppState>,
-) -> Result<serde_json::Value, String> {
+) -> Result<serde_json::Value, CommandError> {
     tracing::info!(game_id = ?game_id, "Manual daily reward claim requested for specific game");
-    let result = state.claim_daily_reward_for_game(game_id).await?;
+    let result = state
+        .claim_daily_reward_for_game(game_id)
+        .await
+        .map_err(CommandError::internal)?;
 
     // Refresh status for this game after claiming
     if let Ok(game_status) = state.get_daily_reward_status_for_game(game_id).await {
@@ -184,8 +190,11 @@ pub async fn claim_daily_reward_for_game(
 pub async fn get_daily_reward_status_for_game(
     game_id: GameId,
     state: State<'_, AppState>,
-) -> Result<serde_json::Value, String> {
-    state.get_daily_reward_status_for_game(game_id).await
+) -> Result<serde_json::Value, CommandError> {
+    state
+        .get_daily_reward_status_for_game(game_id)
+        .await
+        .map_err(CommandError::internal)
 }
 
 // ============================================================================
@@ -199,7 +208,7 @@ pub async fn send_preview_notification(
     resource_type: String,
     app_handle: AppHandle,
     state: State<'_, AppState>,
-) -> Result<(), String> {
+) -> Result<(), CommandError> {
     let resources = state.get_resources().await;
     let notification_configs = state.get_game_notification_config(game_id).await;
     let game_name = notification::game_display_name(game_id);
@@ -252,7 +261,10 @@ pub async fn send_preview_notification(
         .title(&title)
         .body(&body)
         .show()
-        .map_err(|e| e.to_string())
+        .map_err(|e| CommandError {
+            code: ErrorCode::NotificationError,
+            message: e.to_string(),
+        })
 }
 
 // ============================================================================
