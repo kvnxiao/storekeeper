@@ -8,6 +8,7 @@ export interface GeneralConfig {
   start_minimized: boolean;
   log_level: string;
   language: string;
+  autostart: boolean;
 }
 
 /** Per-resource notification configuration */

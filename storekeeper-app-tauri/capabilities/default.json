@@ -14,6 +14,7 @@
     "notification:allow-show",
     "notification:allow-request-permission",
     "notification:allow-is-permission-granted",
-    "core:tray:default"
+    "core:tray:default",
+    "autostart:default"
   ]
 }

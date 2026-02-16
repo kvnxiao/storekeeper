@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use chrono::Utc;
 use storekeeper_core::{AppConfig, GameId, SecretsConfig};
 use tauri::{AppHandle, Manager, State};
+use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_notification::NotificationExt;
 
 use crate::error::{CommandError, ErrorCode};
@@ -80,6 +81,21 @@ pub async fn reload_config(app_handle: AppHandle) -> Result<(), CommandError> {
     // Rebuild tray menu with new locale strings
     if let Err(e) = crate::tray::build_tray_menu(&app_handle) {
         tracing::warn!(error = %e, "Failed to rebuild tray menu");
+    }
+
+    // Sync autostart state from config
+    let autostart_enabled = {
+        let inner = state.inner.read().await;
+        inner.config.general.autostart
+    };
+    let autolaunch = app_handle.autolaunch();
+    let autostart_result = if autostart_enabled {
+        autolaunch.enable()
+    } else {
+        autolaunch.disable()
+    };
+    if let Err(e) = autostart_result {
+        tracing::warn!(error = %e, "Failed to sync autostart state");
     }
 
     // Trigger an immediate refresh to fetch resources with new config
