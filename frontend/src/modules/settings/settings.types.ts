@@ -14,7 +14,7 @@ export interface GeneralConfig {
   poll_interval_secs: number;
   start_minimized: boolean;
   log_level: string;
-  language: string;
+  language: string | null;
   autostart: boolean;
 }
 

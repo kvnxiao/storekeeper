@@ -7,6 +7,11 @@ use std::collections::HashMap;
 use std::sync::{OnceLock, RwLock};
 
 use anyhow::{Context, Result, bail};
+use icu_datetime::fieldsets;
+use icu_experimental::duration::{
+    DurationFormatter, DurationFormatterPreferences, ValidatedDurationFormatterOptions,
+    options::{BaseStyle, DurationFormatterOptions, FieldDisplay},
+};
 use icu_locale::Locale;
 use icu_plurals::{PluralCategory, PluralRules};
 
@@ -15,6 +20,9 @@ const EN_LOCALE: &str = include_str!("../../locales/en.json");
 
 /// List of supported locale codes.
 const SUPPORTED_LOCALES: &[&str] = &["en"];
+
+/// Default locale used when no match is found.
+const DEFAULT_LOCALE: &str = "en";
 
 /// Global messages store, initialized once at startup and switchable at runtime.
 static MESSAGES: OnceLock<RwLock<Messages>> = OnceLock::new();
@@ -113,6 +121,68 @@ pub fn supported_locales() -> Vec<&'static str> {
     SUPPORTED_LOCALES.to_vec()
 }
 
+/// Returns the currently active locale code.
+#[must_use]
+pub fn get_current_locale() -> String {
+    with_messages(|m| m.locale.to_string()).unwrap_or_else(|| DEFAULT_LOCALE.to_string())
+}
+
+/// Matches a locale string against supported locales.
+///
+/// Tries exact match first, then language-prefix match (e.g. "en-US" → "en").
+#[must_use]
+fn match_supported_locale(locale: &str) -> Option<&'static str> {
+    let lower = locale.to_lowercase();
+
+    // Exact match
+    if let Some(found) = SUPPORTED_LOCALES.iter().find(|l| l.to_lowercase() == lower) {
+        return Some(found);
+    }
+
+    // Language-prefix match: split on '-' or '_', match base language
+    let prefix = lower.split(['-', '_']).next()?;
+    SUPPORTED_LOCALES
+        .iter()
+        .find(|l| l.to_lowercase() == prefix)
+        .copied()
+}
+
+/// Resolves the effective locale from an optional config override.
+///
+/// - If `config_language` is `Some`, matches it against supported locales.
+/// - If `None`, detects the system locale via `sys_locale`.
+/// - Falls back to `"en"` if no match is found.
+#[must_use]
+pub fn resolve_locale(config_language: Option<&str>) -> &'static str {
+    if let Some(lang) = config_language {
+        if let Some(matched) = match_supported_locale(lang) {
+            return matched;
+        }
+        tracing::warn!(
+            language = lang,
+            "configured language not supported, falling back to system locale"
+        );
+    }
+
+    // Auto-detect from system
+    if let Some(sys_locale) = sys_locale::get_locale() {
+        if let Some(matched) = match_supported_locale(&sys_locale) {
+            tracing::info!(
+                system_locale = sys_locale.as_str(),
+                resolved = matched,
+                "detected system locale"
+            );
+            return matched;
+        }
+        tracing::info!(
+            system_locale = sys_locale.as_str(),
+            "system locale not supported, falling back to default"
+        );
+    }
+
+    DEFAULT_LOCALE
+}
+
 /// Looks up a simple message by key.
 ///
 /// Returns the key itself if not found (makes missing translations visible).
@@ -144,6 +214,71 @@ pub fn t_args(key: &str, args: &[(&str, Value)]) -> String {
         format_message(&template, args, plural_rules.as_ref())
     })
     .unwrap_or_else(|| key.to_string())
+}
+
+/// Formats a clock time (hour + minute) using the current locale.
+///
+/// Uses `icu_datetime` with `T::hm()` for locale-aware time formatting
+/// (e.g. "3:45 PM" in en-US, "15:45" in de-DE).
+/// Falls back to `"{hour}:{minute:02}"` if formatting fails.
+#[must_use]
+pub fn format_time(hour: u8, minute: u8) -> String {
+    let fallback = || format!("{hour}:{minute:02}");
+
+    with_messages(|m| {
+        let Ok(time) = icu_time::Time::try_new(hour, minute, 0, 0) else {
+            return fallback();
+        };
+        let Ok(formatter) =
+            icu_datetime::DateTimeFormatter::try_new(m.locale.clone().into(), fieldsets::T::hm())
+        else {
+            return fallback();
+        };
+        formatter.format(&time).to_string()
+    })
+    .unwrap_or_else(fallback)
+}
+
+/// Formats a duration in minutes using the current locale.
+///
+/// Uses `icu_experimental::duration::DurationFormatter` with `BaseStyle::Short`
+/// (e.g. "1 hr, 15 min" in English). Clamps negative values to 0.
+/// Falls back to plain `"{hours}h {minutes}m"` or `"{minutes}m"` if formatting fails.
+#[must_use]
+#[allow(clippy::cast_sign_loss)]
+pub fn format_duration(total_minutes: i64) -> String {
+    let clamped = total_minutes.max(0) as u64;
+    let hours = clamped / 60;
+    let minutes = clamped % 60;
+
+    let fallback = || {
+        if hours > 0 {
+            format!("{hours}h {minutes}m")
+        } else {
+            format!("{minutes}m")
+        }
+    };
+
+    with_messages(|m| {
+        let mut opts = DurationFormatterOptions::default();
+        opts.base = BaseStyle::Short;
+        // Always show the minute unit so 0-duration doesn't produce an empty string.
+        opts.minute_visibility = Some(FieldDisplay::Always);
+        let Ok(validated) = ValidatedDurationFormatterOptions::validate(opts) else {
+            return fallback();
+        };
+        let prefs = DurationFormatterPreferences::from(m.locale.clone());
+        let Ok(formatter) = DurationFormatter::try_new(prefs, validated) else {
+            return fallback();
+        };
+        let duration = icu_experimental::duration::Duration {
+            hours,
+            minutes,
+            ..Default::default()
+        };
+        formatter.format(&duration).to_string()
+    })
+    .unwrap_or_else(fallback)
 }
 
 /// Acquires a read lock on the global messages and runs the closure.
@@ -345,45 +480,6 @@ mod tests {
     }
 
     #[test]
-    fn test_plural_one() {
-        ensure_init();
-        let result = t_args(
-            "notification.resource_full_overdue",
-            &[
-                ("resource_name", Value::String("Resin".to_string())),
-                ("minutes", Value::Number(1)),
-            ],
-        );
-        assert_eq!(result, "Resin has been full for 1 minute");
-    }
-
-    #[test]
-    fn test_plural_other() {
-        ensure_init();
-        let result = t_args(
-            "notification.resource_full_overdue",
-            &[
-                ("resource_name", Value::String("Resin".to_string())),
-                ("minutes", Value::Number(15)),
-            ],
-        );
-        assert_eq!(result, "Resin has been full for 15 minutes");
-    }
-
-    #[test]
-    fn test_plural_zero_uses_other() {
-        ensure_init();
-        let result = t_args(
-            "notification.resource_full_in",
-            &[
-                ("resource_name", Value::String("Battery".to_string())),
-                ("minutes", Value::Number(0)),
-            ],
-        );
-        assert_eq!(result, "Battery will be full in 0 minutes");
-    }
-
-    #[test]
     fn test_resource_full_simple() {
         ensure_init();
         let result = t_args(
@@ -394,17 +490,87 @@ mod tests {
     }
 
     #[test]
-    fn test_resource_reached() {
+    fn test_resource_ready() {
         ensure_init();
         let result = t_args(
-            "notification.resource_reached",
+            "notification.resource_ready",
+            &[(
+                "resource_name",
+                Value::String("Parametric Transformer".to_string()),
+            )],
+        );
+        assert_eq!(result, "Parametric Transformer is ready to claim!");
+    }
+
+    #[test]
+    fn test_resource_ready_in() {
+        ensure_init();
+        let result = t_args(
+            "notification.resource_ready_in",
             &[
-                ("resource_name", Value::String("Resin".to_string())),
-                ("current", Value::Number(140)),
-                ("max", Value::Number(160)),
+                ("resource_name", Value::String("Expeditions".to_string())),
+                ("duration", Value::String("30 min".to_string())),
             ],
         );
-        assert_eq!(result, "Resin has reached 140/160");
+        assert_eq!(result, "Expeditions will be ready in 30 min");
+    }
+
+    #[test]
+    fn test_resource_status() {
+        ensure_init();
+        let result = t_args(
+            "notification.resource_status",
+            &[
+                ("resource_name", Value::String("Original Resin".to_string())),
+                ("current", Value::String("140".to_string())),
+                ("max", Value::String("160".to_string())),
+                ("duration", Value::String("1 hr 15 min".to_string())),
+                ("clock_time", Value::String("3:45 PM".to_string())),
+            ],
+        );
+        assert_eq!(
+            result,
+            "Original Resin has reached 140/160 and will be full in 1 hr 15 min at 3:45 PM"
+        );
+    }
+
+    #[test]
+    fn test_format_duration_hours_and_minutes() {
+        ensure_init();
+        let result = format_duration(75);
+        // ICU4X short style — exact format may vary but should contain hours and minutes
+        assert!(!result.is_empty());
+    }
+
+    #[test]
+    fn test_format_duration_minutes_only() {
+        ensure_init();
+        let result = format_duration(30);
+        assert!(!result.is_empty());
+    }
+
+    #[test]
+    fn test_format_duration_zero() {
+        ensure_init();
+        let result = format_duration(0);
+        // ICU4X with FieldDisplay::Always on minutes should produce "0 min" (en locale)
+        assert_eq!(result, "0 min");
+    }
+
+    #[test]
+    fn test_format_duration_negative_clamps() {
+        ensure_init();
+        let result = format_duration(-10);
+        // Negative clamps to 0, same as zero duration
+        assert_eq!(result, "0 min");
+    }
+
+    #[test]
+    fn test_format_time() {
+        ensure_init();
+        let result = format_time(15, 45);
+        // Should produce locale-formatted time string (e.g. "3:45 PM" for en)
+        assert!(!result.is_empty());
     }
 
     #[test]

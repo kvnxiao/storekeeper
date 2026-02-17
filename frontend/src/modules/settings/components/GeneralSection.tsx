@@ -58,6 +58,23 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
         {m.settings_general_autostart()}
       </Switch>
       <Select
+        label={m.settings_general_language()}
+        selectedKey={config.language ?? "auto"}
+        onSelectionChange={(key) =>
+          onChange({
+            ...config,
+            language: key === "auto" ? null : String(key),
+          })
+        }
+      >
+        {/* biome-ignore lint/correctness/useUniqueElementIds: React Aria SelectItem id is a key, not a DOM id */}
+        <SelectItem id="auto">
+          {m.settings_general_language_system_default()}
+        </SelectItem>
+        {/* biome-ignore lint/correctness/useUniqueElementIds: React Aria SelectItem id is a key, not a DOM id */}
+        <SelectItem id="en">English</SelectItem>
+      </Select>
+      <Select
         label={m.settings_general_log_level()}
         selectedKey={config.log_level}
         onSelectionChange={(key) =>

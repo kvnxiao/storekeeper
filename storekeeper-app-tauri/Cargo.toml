@@ -45,6 +45,12 @@ anyhow.workspace = true
 # Internationalization (ICU4X)
 icu_locale.workspace = true
 icu_plurals.workspace = true
+icu_datetime.workspace = true
+icu_experimental.workspace = true
+icu_time.workspace = true
+
+# System locale detection
+sys-locale.workspace = true
 
 # Logging
 tracing.workspace = true

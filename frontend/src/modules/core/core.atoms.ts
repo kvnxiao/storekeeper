@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { atom } from "jotai";
 import { atomEffect } from "jotai-effect";
@@ -13,7 +14,7 @@ import type {
   AllResources,
   GameResourcePayload,
 } from "@/modules/resources/resources.types";
-import { getLocale, isLocale, setLocale } from "@/paraglide/runtime";
+import { isLocale, setLocale } from "@/paraglide/runtime";
 
 // =============================================================================
 // CoreAtoms Class
@@ -170,13 +171,12 @@ export class CoreAtoms {
   // Locale sync - syncs Paraglide locale from backend config on startup
   // ---------------------------------------------------------------------------
 
-  private readonly localeSyncEffect = atomEffect((get) => {
-    const { data: config } = get(configQueryAtom);
-    if (!config) return;
-    const language = config.general.language;
-    if (isLocale(language) && language !== getLocale()) {
-      setLocale(language, { reload: false });
-    }
+  private readonly localeSyncEffect = atomEffect(() => {
+    void invoke<string>("get_effective_locale").then((effectiveLocale) => {
+      if (isLocale(effectiveLocale)) {
+        setLocale(effectiveLocale, { reload: false });
+      }
+    });
   });
 
   readonly localeSync = atom((get) => {
