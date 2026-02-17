@@ -127,6 +127,31 @@ m.settings_failed_to_load({ error: err.message })
 
 **Why**: Translators need to see the full sentence to translate correctly. Word order varies by language.
 
+### Locale Endonyms Live in Code, Not in Message Files
+
+**Status**: Already followed
+
+Locale display names (endonyms) like "English", "日本語", "Deutsch" are **not translatable** — they are always shown in their native script regardless of the active UI locale. They must be defined as a static code mapping, not as message keys in locale JSON files.
+
+**Do**:
+```typescript
+// frontend/src/modules/i18n/locale-names.ts
+export const LOCALE_ENDONYMS: Record<string, string> = {
+  en: "English",
+  ja: "日本語",
+};
+```
+
+**Don't**:
+```json
+{
+  "settings_general_language_english": "English",
+  "settings_general_language_japanese": "日本語"
+}
+```
+
+**Why**: Endonyms are identity labels, not translations. Putting "English" in a locale JSON implies it should be translated (e.g. into "Anglais" in French), which is wrong. The `LOCALE_ENDONYMS` map in `frontend/src/modules/i18n/locale-names.ts` is the single source of truth.
+
 ### Keep Messages Flat
 
 **Status**: Already followed
@@ -156,9 +181,10 @@ m.settings_failed_to_load({ error: err.message })
 
 1. Add the locale code to `frontend/project.inlang/settings.json` → `locales` array
 2. Create `frontend/messages/{locale}.json` with all keys translated
-3. Add the locale code to `SUPPORTED_LOCALES` in `storekeeper-app-tauri/src/i18n.rs`
-4. Create `locales/{locale}.json` with backend-specific translations
-5. Register the new locale file in the `load_messages()` match arm in `i18n.rs`
+3. Add the locale's endonym to `LOCALE_ENDONYMS` in `frontend/src/modules/i18n/locale-names.ts`
+4. Add the locale code to `SUPPORTED_LOCALES` in `storekeeper-app-tauri/src/i18n.rs`
+5. Create `locales/{locale}.json` with backend-specific translations
+6. Register the new locale file in the `load_messages()` match arm in `i18n.rs`
 
 ## Backend vs Frontend Messages
 

@@ -49,7 +49,6 @@
   "settings_general_log_trace": "Trace",
   "settings_general_language": "Language",
   "settings_general_language_system_default": "System Default",
-  "settings_general_language_english": "English",
   "settings_general_autostart": "Launch at system startup",
   "settings_general_open_config": "Open Config Folder",
 

@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { LOCALE_ENDONYMS } from "@/modules/i18n/locale-names";
 import { Section } from "@/modules/settings/components/Section";
 import type { GeneralConfig } from "@/modules/settings/settings.types";
 import { Button } from "@/modules/ui/components/Button";
@@ -71,8 +72,11 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
         <SelectItem id="auto">
           {m.settings_general_language_system_default()}
         </SelectItem>
-        {/* biome-ignore lint/correctness/useUniqueElementIds: React Aria SelectItem id is a key, not a DOM id */}
-        <SelectItem id="en">{m.settings_general_language_english()}</SelectItem>
+        {Object.entries(LOCALE_ENDONYMS).map(([code, name]) => (
+          <SelectItem key={code} id={code}>
+            {name}
+          </SelectItem>
+        ))}
       </Select>
       <Select
         label={m.settings_general_log_level()}
