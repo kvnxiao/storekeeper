@@ -1,5 +1,5 @@
 import type { CoreAtoms } from "@/modules/core/core.atoms";
-import { atomResourceSelector } from "@/modules/games/games.atoms";
+import { atomResourceSelector } from "@/modules/games/atomResourceSelector";
 import { HsrResource } from "@/modules/games/games.constants";
 import { GameId } from "@/modules/games/games.types";
 

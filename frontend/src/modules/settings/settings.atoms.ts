@@ -3,7 +3,7 @@ import { deepEqual } from "fast-equals";
 import { atom } from "jotai";
 import { atomEffect } from "jotai-effect";
 import { atomWithMutation, atomWithQuery } from "jotai-tanstack-query";
-import { configQueryAtom } from "@/modules/core/core.config";
+import { CoreAtoms } from "@/modules/core/core.atoms";
 import {
   reloadConfigMutationOptions,
   saveConfigMutationOptions,
@@ -26,7 +26,7 @@ export class SettingsAtoms {
   // ---------------------------------------------------------------------------
 
   /** Config query from core (re-exported for convenience) */
-  readonly configQuery = configQueryAtom;
+  readonly configQuery = CoreAtoms.configQueryAtom;
 
   /** Fetch secrets from backend */
   readonly secretsQuery = atomWithQuery(() => secretsQueryOptions());

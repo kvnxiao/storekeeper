@@ -29,7 +29,7 @@ const inputStyle = tv({
     "w-full rounded-lg bg-white px-3 py-1.5 text-sm",
     "text-zinc-950 placeholder:text-zinc-500 dark:bg-zinc-800/50 dark:text-white dark:placeholder:text-zinc-400",
     "shadow-sm ring-1 ring-zinc-950/10 dark:ring-white/10",
-    "outline-none focus:ring-2 focus:ring-blue-500",
+    "outline-none focus-visible:ring-2 focus-visible:ring-ring",
     "disabled:bg-zinc-100 disabled:text-zinc-400 disabled:ring-zinc-950/5",
     "dark:disabled:bg-zinc-900 dark:disabled:text-zinc-500",
     "invalid:ring-red-500",
@@ -96,9 +96,9 @@ export const TextField: React.FC<TextFieldProps> = ({
             className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300"
           >
             {revealed ? (
-              <EyeSlashIcon className="h-4 w-4" />
+              <EyeSlashIcon aria-hidden="true" className="size-4" />
             ) : (
-              <EyeIcon className="h-4 w-4" />
+              <EyeIcon aria-hidden="true" className="size-4" />
             )}
           </AriaButton>
         )}

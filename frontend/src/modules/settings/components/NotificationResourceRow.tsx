@@ -60,6 +60,15 @@ export const NotificationResourceRow: React.FC<
     { id: "value", label: m.settings_notification_at_value() },
   ] as const;
 
+  let cooldownDescription: string;
+  if (config?.cooldown_minutes === 0) {
+    cooldownDescription = m.settings_notification_once();
+  } else if (isStaminaResource) {
+    cooldownDescription = m.settings_notification_renotify_stamina();
+  } else {
+    cooldownDescription = m.settings_notification_renotify_cooldown();
+  }
+
   const handleToggle = useCallback(
     (isSelected: boolean) => {
       if (isSelected) {
@@ -128,7 +137,9 @@ export const NotificationResourceRow: React.FC<
           onPress={() => void handlePreview()}
           isPending={isPreviewing}
         >
-          {!isPreviewing && <BellAlertIcon className="h-4 w-4" />}
+          {!isPreviewing && (
+            <BellAlertIcon aria-hidden="true" className="size-4" />
+          )}
         </Button>
       </div>
       {enabled && config && (
@@ -191,13 +202,7 @@ export const NotificationResourceRow: React.FC<
             )}
             <NumberField
               label={m.settings_notification_cooldown()}
-              description={
-                config.cooldown_minutes === 0
-                  ? m.settings_notification_once()
-                  : isStaminaResource
-                    ? m.settings_notification_renotify_stamina()
-                    : m.settings_notification_renotify_cooldown()
-              }
+              description={cooldownDescription}
               value={config.cooldown_minutes}
               onChange={(value) =>
                 onChange({ ...config, cooldown_minutes: value })

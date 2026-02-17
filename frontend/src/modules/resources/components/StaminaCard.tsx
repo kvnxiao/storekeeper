@@ -3,6 +3,7 @@ import { TimeRemaining } from "@/modules/resources/components/TimeRemaining";
 import { useFormattedTime } from "@/modules/resources/resources.hooks";
 import type { StaminaResource } from "@/modules/resources/resources.types";
 import { ProgressBar } from "@/modules/ui/components/ProgressBar";
+import { cn } from "@/modules/ui/ui.styles";
 import * as m from "@/paraglide/messages";
 
 interface StaminaCardProps {
@@ -46,7 +47,10 @@ export const StaminaCard: React.FC<StaminaCardProps> = ({
 
   return (
     <div
-      className={`rounded-lg bg-zinc-50 p-2 transition-transform hover:translate-x-0.5 dark:bg-zinc-700 ${isRefreshing ? "mask-shimmer" : ""}`}
+      className={cn(
+        "rounded-lg bg-zinc-50 p-2 transition-transform hover:translate-x-0.5 dark:bg-zinc-700",
+        isRefreshing && "mask-shimmer",
+      )}
     >
       <div className="flex items-center gap-2">
         <ResourceIcon src={iconPath} size="md" />

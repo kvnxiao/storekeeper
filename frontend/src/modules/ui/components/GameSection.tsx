@@ -6,10 +6,23 @@ import {
   DisclosurePanel,
   Heading,
 } from "react-aria-components";
+import { tv } from "tailwind-variants";
 import {
   cardContainerVariants,
   springTransition,
 } from "@/modules/ui/ui.animations";
+
+const disclosureStyle = tv({
+  base: "overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-zinc-950/5 dark:bg-zinc-800 dark:ring-white/10",
+});
+
+const triggerStyle = tv({
+  base: [
+    "flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left transition-colors",
+    "hover:bg-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+    "dark:hover:bg-zinc-700",
+  ],
+});
 
 interface GameSectionProps {
   title: string;
@@ -27,13 +40,10 @@ export const GameSection: React.FC<GameSectionProps> = ({
     <Disclosure
       isExpanded={isExpanded}
       onExpandedChange={setIsExpanded}
-      className="overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-zinc-950/5 dark:bg-zinc-800 dark:ring-white/10"
+      className={disclosureStyle()}
     >
       <Heading>
-        <Button
-          slot="trigger"
-          className="flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left transition-colors hover:bg-zinc-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-zinc-700"
-        >
+        <Button slot="trigger" className={triggerStyle()}>
           <span className="text-base font-semibold text-zinc-950 dark:text-white">
             {title}
           </span>

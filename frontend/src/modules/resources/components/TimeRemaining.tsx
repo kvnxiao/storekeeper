@@ -1,4 +1,5 @@
 import { Button, TooltipTrigger } from "react-aria-components";
+import { tv } from "tailwind-variants";
 import { Tooltip } from "@/modules/ui/components/Tooltip";
 import { cn } from "@/modules/ui/ui.styles";
 
@@ -10,8 +11,12 @@ interface TimeRemainingProps {
   plain?: boolean;
 }
 
-const interactiveStyles =
-  "rounded bg-zinc-100 px-1 text-zinc-700 transition-colors hover:bg-zinc-200 dark:bg-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-600";
+const interactiveStyle = tv({
+  base: [
+    "rounded bg-zinc-100 px-1 text-zinc-700 transition-colors",
+    "hover:bg-zinc-200 dark:bg-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-600",
+  ],
+});
 
 export const TimeRemaining: React.FC<TimeRemainingProps> = ({
   relativeTime,
@@ -20,12 +25,12 @@ export const TimeRemaining: React.FC<TimeRemainingProps> = ({
   plain = false,
 }) => {
   if (!absoluteTime) {
-    return <time className={cn(className)}>{relativeTime}</time>;
+    return <time className={className}>{relativeTime}</time>;
   }
 
   return (
     <TooltipTrigger delay={300}>
-      <Button className={cn(!plain && interactiveStyles, className)}>
+      <Button className={cn(!plain && interactiveStyle(), className)}>
         {relativeTime}
       </Button>
       <Tooltip>{absoluteTime}</Tooltip>

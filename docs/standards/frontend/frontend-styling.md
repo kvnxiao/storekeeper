@@ -59,6 +59,16 @@ import { cn } from "@/modules/ui/ui.styles";
 2. **Handles undefined/null**: `cn("flex", undefined, "gap-2")` → `"flex gap-2"`
 3. **Consistent API**: Same pattern everywhere in the codebase
 
+> **Exception**: When passing through a single `className` prop with no merging, use it directly — `cn()` adds no value:
+>
+> ```tsx
+> // Unnecessary: cn() with a single argument
+> <div className={cn(className)}>
+>
+> // Preferred: pass through directly
+> <div className={className}>
+> ```
+
 ### With composeRenderProps
 
 When using React Aria's `composeRenderProps`, use `cn` for the callback:
@@ -183,7 +193,7 @@ Use the `touch-target` utility for interactive elements smaller than 44px:
 
 ## Checklist
 
-- [ ] Use `cn()` for all dynamic class concatenation
+- [ ] Use `cn()` for dynamic class concatenation (skip for single pass-through `className`)
 - [ ] Use semantic color tokens over raw Tailwind colors
 - [ ] Define styles with `tv()` function
 - [ ] Use descriptive variant names, not booleans

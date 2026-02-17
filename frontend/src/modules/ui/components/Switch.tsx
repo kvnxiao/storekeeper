@@ -26,7 +26,7 @@ const trackStyle = tv({
 
 const handleStyle = tv({
   base: [
-    "h-4 w-4 rounded-full bg-white shadow-xs transition duration-200 ease-in-out",
+    "size-4 rounded-full bg-white shadow-xs transition duration-200 ease-in-out",
     "outline outline-1 -outline-offset-1 outline-transparent",
     "dark:bg-zinc-900",
     "translate-x-0 group-selected:translate-x-3",
