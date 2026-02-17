@@ -141,12 +141,10 @@ mod tests {
         let deserialized: GenshinResource =
             serde_json::from_str(&json).expect("should deserialize");
 
-        let GenshinResource::Resin(resource) = deserialized else {
-            unreachable!("Expected Resin variant after deserializing Resin")
-        };
-        assert_eq!(resource.current, 120);
-        assert_eq!(resource.max, 160);
-        assert_eq!(resource.regen_rate_seconds, 480);
+        assert!(
+            matches!(&deserialized, GenshinResource::Resin(r) if r.current == 120 && r.max == 160 && r.regen_rate_seconds == 480),
+            "Expected Resin(120/160/480), got {deserialized:?}"
+        );
     }
 
     #[test]
@@ -156,12 +154,10 @@ mod tests {
         let deserialized: GenshinResource =
             serde_json::from_str(&json).expect("should deserialize");
 
-        let GenshinResource::ParametricTransformer(resource) = deserialized else {
-            unreachable!(
-                "Expected ParametricTransformer variant after deserializing ParametricTransformer"
-            )
-        };
-        assert!(resource.is_ready);
+        assert!(
+            matches!(&deserialized, GenshinResource::ParametricTransformer(r) if r.is_ready),
+            "Expected ParametricTransformer(is_ready=true), got {deserialized:?}"
+        );
     }
 
     #[test]
@@ -172,11 +168,10 @@ mod tests {
         let deserialized: GenshinResource =
             serde_json::from_str(&json).expect("should deserialize");
 
-        let GenshinResource::RealmCurrency(resource) = deserialized else {
-            unreachable!("Expected RealmCurrency variant after deserializing RealmCurrency")
-        };
-        assert_eq!(resource.current, 1000);
-        assert_eq!(resource.max, 2400);
+        assert!(
+            matches!(&deserialized, GenshinResource::RealmCurrency(r) if r.current == 1000 && r.max == 2400),
+            "Expected RealmCurrency(1000/2400), got {deserialized:?}"
+        );
     }
 
     #[test]
@@ -186,11 +181,10 @@ mod tests {
         let deserialized: GenshinResource =
             serde_json::from_str(&json).expect("should deserialize");
 
-        let GenshinResource::Expeditions(resource) = deserialized else {
-            unreachable!("Expected Expeditions variant after deserializing Expeditions")
-        };
-        assert_eq!(resource.current_expeditions, 3);
-        assert_eq!(resource.max_expeditions, 5);
+        assert!(
+            matches!(&deserialized, GenshinResource::Expeditions(r) if r.current_expeditions == 3 && r.max_expeditions == 5),
+            "Expected Expeditions(3/5), got {deserialized:?}"
+        );
     }
 
     // =========================================================================
@@ -213,10 +207,9 @@ mod tests {
         let resource = GenshinResource::Resin(StaminaResource::new(120, 160, Local::now(), 480));
         let cloned = resource.clone();
 
-        let GenshinResource::Resin(r) = cloned else {
-            unreachable!("Clone should preserve Resin variant")
-        };
-        assert_eq!(r.current, 120);
-        assert_eq!(r.max, 160);
+        assert!(
+            matches!(&cloned, GenshinResource::Resin(r) if r.current == 120 && r.max == 160),
+            "Clone should preserve Resin variant, got {cloned:?}"
+        );
     }
 }

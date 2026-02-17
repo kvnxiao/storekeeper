@@ -2,11 +2,11 @@
 
 use std::collections::HashMap;
 
-use futures::future::join_all;
-use storekeeper_core::{ApiProvider, DynGameClient, GameId};
+use storekeeper_core::{DynGameClient, GameId};
 use tauri::{AppHandle, Emitter};
 
 use crate::events::{AppEvent, GameResourcePayload};
+use crate::provider_batch;
 
 /// Registry that holds type-erased game clients.
 ///
@@ -46,94 +46,33 @@ impl GameClientRegistry {
         !self.clients.is_empty()
     }
 
-    /// Fetches resources from clients for a specific API provider sequentially.
-    ///
-    /// This avoids rate limiting by fetching one game at a time for the same provider.
-    /// Emits a per-game event after each successful fetch.
-    async fn fetch_provider(
-        &self,
-        provider: ApiProvider,
-        app_handle: &AppHandle,
-    ) -> Vec<(
-        GameId,
-        Result<serde_json::Value, Box<dyn std::error::Error + Send + Sync>>,
-    )> {
-        let mut results = Vec::new();
-
-        for (game_id, client) in &self.clients {
-            if game_id.api_provider() == provider {
-                let result = client.fetch_resources_json().await;
-
-                if let Ok(ref resources) = result {
-                    let payload = GameResourcePayload {
-                        game_id: *game_id,
-                        data: resources.clone(),
-                    };
-                    let _ = app_handle.emit(AppEvent::GameResourceUpdated.as_str(), &payload);
-                }
-
-                results.push((*game_id, result));
-            }
-        }
-
-        results
-    }
-
     /// Fetches resources from all registered clients with rate limit awareness.
     ///
     /// Games are grouped by API provider:
     /// - Games using the same provider are fetched sequentially to avoid rate limits
     /// - Different providers are fetched in parallel for efficiency
     ///
+    /// Emits a per-game event after each successful fetch.
     /// Returns a map from game ID to the JSON-serialized resources.
     /// Clients that fail to fetch are logged and skipped.
     pub async fn fetch_all(&self, app_handle: &AppHandle) -> HashMap<GameId, serde_json::Value> {
-        if self.clients.is_empty() {
-            return HashMap::new();
-        }
+        provider_batch::batch_by_provider(&self.clients, |game_id, client| {
+            let app_handle = app_handle.clone();
+            Box::pin(async move {
+                let result = client.fetch_resources_json().await;
 
-        // Determine which providers have clients registered
-        let mut providers = Vec::new();
-        if self
-            .clients
-            .keys()
-            .any(|id| id.api_provider() == ApiProvider::HoYoLab)
-        {
-            providers.push(ApiProvider::HoYoLab);
-        }
-        if self
-            .clients
-            .keys()
-            .any(|id| id.api_provider() == ApiProvider::Kuro)
-        {
-            providers.push(ApiProvider::Kuro);
-        }
-
-        // Fetch each provider's games in parallel, but games within a provider sequentially
-        let provider_futures: Vec<_> = providers
-            .iter()
-            .map(|provider| self.fetch_provider(*provider, app_handle))
-            .collect();
-
-        let all_results = join_all(provider_futures).await;
-
-        // Collect all results into the map
-        let mut map = HashMap::new();
-        for provider_results in all_results {
-            for (game_id, result) in provider_results {
-                match result {
-                    Ok(resources) => {
-                        tracing::debug!(game_id = ?game_id, "Successfully fetched resources");
-                        map.insert(game_id, resources);
-                    }
-                    Err(e) => {
-                        tracing::warn!(game_id = ?game_id, error = %e, "Failed to fetch resources");
-                    }
+                if let Ok(ref resources) = result {
+                    let payload = GameResourcePayload {
+                        game_id,
+                        data: resources,
+                    };
+                    let _ = app_handle.emit(AppEvent::GameResourceUpdated.as_str(), &payload);
                 }
-            }
-        }
 
-        map
+                (game_id, result)
+            })
+        })
+        .await
     }
 }
 
@@ -145,14 +84,18 @@ impl Default for GameClientRegistry {
 
 #[cfg(test)]
 mod tests {
+    use std::future::Future;
+    use std::pin::Pin;
+
     use super::*;
-    use async_trait::async_trait;
+
+    type BoxError = Box<dyn std::error::Error + Send + Sync>;
+    type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
     struct MockGameClient {
         id: GameId,
     }
 
-    #[async_trait]
     impl DynGameClient for MockGameClient {
         fn game_id(&self) -> GameId {
             self.id
@@ -162,16 +105,12 @@ mod tests {
             "Mock Game"
         }
 
-        async fn fetch_resources_json(
-            &self,
-        ) -> Result<serde_json::Value, Box<dyn std::error::Error + Send + Sync>> {
-            Ok(serde_json::json!({"mock": true}))
+        fn fetch_resources_json(&self) -> BoxFuture<'_, Result<serde_json::Value, BoxError>> {
+            Box::pin(async { Ok(serde_json::json!({"mock": true})) })
         }
 
-        async fn is_authenticated_dyn(
-            &self,
-        ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
-            Ok(true)
+        fn is_authenticated_dyn(&self) -> BoxFuture<'_, Result<bool, BoxError>> {
+            Box::pin(async { Ok(true) })
         }
     }
 

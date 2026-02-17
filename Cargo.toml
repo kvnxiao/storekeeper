@@ -53,21 +53,18 @@ governor = "0.8"
 # Crypto
 md-5 = "0.10"
 
-# Internationalization (ICU4X) — pinned to git for https://github.com/unicode-org/icu4x/pull/7616
-icu_locale = { git = "https://github.com/unicode-org/icu4x", branch = "release/2.1" }
-icu_plurals = { git = "https://github.com/unicode-org/icu4x", branch = "release/2.1" }
-icu_datetime = { git = "https://github.com/unicode-org/icu4x", branch = "release/2.1" }
-icu_experimental = { git = "https://github.com/unicode-org/icu4x", branch = "release/2.1" }
-icu_time = { git = "https://github.com/unicode-org/icu4x", branch = "release/2.1" }
+# Internationalization (ICU4X) — pinned to rev that includes re-export fix (PR #7616)
+icu_locale = { git = "https://github.com/unicode-org/icu4x", rev = "bd6b9179" }
+icu_plurals = { git = "https://github.com/unicode-org/icu4x", rev = "bd6b9179" }
+icu_datetime = { git = "https://github.com/unicode-org/icu4x", rev = "bd6b9179" }
+icu_experimental = { git = "https://github.com/unicode-org/icu4x", rev = "bd6b9179" }
+icu_time = { git = "https://github.com/unicode-org/icu4x", rev = "bd6b9179" }
 
 # System locale detection
 sys-locale = "0.3"
 
 # Enum utilities
 strum = { version = "0.27", features = ["derive"] }
-
-# Async trait (for GameClient trait)
-async-trait = "0.1"
 
 # Async utilities (for join_all)
 futures = "0.3"
@@ -80,17 +77,18 @@ reqwest-retry = "0.8"
 rand = "0.8"
 
 # Workspace crates (for inter-crate dependencies)
-storekeeper-core = { path = "storekeeper-core" }
-storekeeper-client-core = { path = "storekeeper-client-core" }
-storekeeper-client-hoyolab = { path = "storekeeper-client-hoyolab" }
-storekeeper-client-kuro = { path = "storekeeper-client-kuro" }
-storekeeper-game-genshin = { path = "storekeeper-game-genshin" }
-storekeeper-game-hsr = { path = "storekeeper-game-hsr" }
-storekeeper-game-zzz = { path = "storekeeper-game-zzz" }
-storekeeper-game-wuwa = { path = "storekeeper-game-wuwa" }
+storekeeper-core = { path = "storekeeper-core", version = "0.1.0" }
+storekeeper-client-core = { path = "storekeeper-client-core", version = "0.1.0" }
+storekeeper-client-hoyolab = { path = "storekeeper-client-hoyolab", version = "0.1.0" }
+storekeeper-client-kuro = { path = "storekeeper-client-kuro", version = "0.1.0" }
+storekeeper-game-genshin = { path = "storekeeper-game-genshin", version = "0.1.0" }
+storekeeper-game-hsr = { path = "storekeeper-game-hsr", version = "0.1.0" }
+storekeeper-game-zzz = { path = "storekeeper-game-zzz", version = "0.1.0" }
+storekeeper-game-wuwa = { path = "storekeeper-game-wuwa", version = "0.1.0" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
+missing_docs = "warn"
 
 [workspace.lints.clippy]
 # Deny all warnings - treat them as errors

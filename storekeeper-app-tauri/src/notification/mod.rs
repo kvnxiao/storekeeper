@@ -16,10 +16,34 @@ pub(crate) use resource_extractor::extract_resource_info;
 pub use tracker::NotificationTracker;
 
 use chrono::Utc;
+use storekeeper_core::GameId;
+use storekeeper_core::config::{GamesConfig, ResourceNotificationConfig};
 use tauri::{AppHandle, Manager};
 use tokio_util::sync::CancellationToken;
 
 use crate::state::AppState;
+
+use self::resource_extractor::ResourceInfo;
+
+/// Resolves a resource JSON object into its notification config and extracted
+/// timing info, returning `None` if the resource is missing fields, has no
+/// config, or notifications are disabled.
+fn resolve_notifiable_resource<'a>(
+    resource_obj: &'a serde_json::Value,
+    games_config: &'a GamesConfig,
+    game_id: GameId,
+) -> Option<(&'a str, &'a ResourceNotificationConfig, ResourceInfo)> {
+    let type_tag = resource_obj
+        .get("type")
+        .and_then(serde_json::Value::as_str)?;
+    let config = games_config.notification_config(game_id, type_tag)?;
+    if !config.enabled {
+        return None;
+    }
+    let data = resource_obj.get("data")?;
+    let resource_info = extract_resource_info(type_tag, data)?;
+    Some((type_tag, config, resource_info))
+}
 
 /// Starts the background notification checker.
 ///
@@ -47,55 +71,55 @@ pub fn start_notification_checker(app_handle: AppHandle, cancel_token: Cancellat
 pub(crate) async fn check_and_notify(app_handle: &AppHandle) {
     let state = app_handle.state::<AppState>();
     let now = Utc::now();
-
-    // Read resources + notification configs (read lock, released after this block)
     let resources = state.get_resources().await;
-    let mut game_configs = Vec::new();
-    for (game_id, resources_json) in &resources.games {
-        let configs = state.get_game_notification_config(*game_id).await;
-        if !configs.is_empty() {
-            game_configs.push((*game_id, configs, resources_json));
-        }
-    }
 
-    // Single write lock for all tracker mutations
-    let mut inner = state.inner.write().await;
-    for (game_id, notification_configs, resources_json) in &game_configs {
+    // Snapshot configs so the checker loop does not hold state locks while formatting/sending.
+    let games_config = {
+        let inner = state.inner.read().await;
+        inner.config.games.clone()
+    };
+
+    for (game_id, resources_json) in &resources.games {
+        if !games_config.has_notification_configs(*game_id) {
+            continue;
+        }
+
         let Some(resource_array) = resources_json.as_array() else {
             continue;
         };
 
         for resource_obj in resource_array {
-            let Some(type_tag) = resource_obj.get("type").and_then(serde_json::Value::as_str)
+            let Some((type_tag, config, resource_info)) =
+                resolve_notifiable_resource(resource_obj, &games_config, *game_id)
             else {
                 continue;
             };
 
-            let Some(config) = notification_configs.get(type_tag) else {
-                continue;
+            let should_notify = {
+                let mut inner = state.inner.write().await;
+                inner.notification_tracker.should_notify(
+                    *game_id,
+                    type_tag,
+                    config,
+                    &resource_info,
+                    now,
+                )
             };
 
-            if !config.enabled {
+            if !should_notify {
                 continue;
             }
 
-            let Some(data) = resource_obj.get("data") else {
-                continue;
-            };
-
-            let Some(resource_info) = extract_resource_info(data) else {
-                continue;
-            };
-
-            checker::check_resource_and_notify(
+            if checker::send_resource_notification(
                 app_handle,
-                &mut inner.notification_tracker,
                 *game_id,
                 type_tag,
                 &resource_info,
-                config,
                 now,
-            );
+            ) {
+                let mut inner = state.inner.write().await;
+                inner.notification_tracker.record(*game_id, type_tag, now);
+            }
         }
     }
 }

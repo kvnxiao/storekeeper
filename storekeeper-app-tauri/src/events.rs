@@ -32,11 +32,11 @@ impl AppEvent {
 /// Payload for per-game resource update events.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct GameResourcePayload {
+pub struct GameResourcePayload<'a> {
     /// The game that was updated.
     pub game_id: GameId,
     /// The resource data for this game.
-    pub data: serde_json::Value,
+    pub data: &'a serde_json::Value,
 }
 
 #[cfg(test)]
@@ -100,9 +100,10 @@ mod tests {
 
     #[test]
     fn payload_serializes_camel_case() {
+        let data = serde_json::json!({"stamina": 160});
         let payload = GameResourcePayload {
             game_id: GameId::GenshinImpact,
-            data: serde_json::json!({"stamina": 160}),
+            data: &data,
         };
         let json = serde_json::to_value(&payload).expect("should serialize");
         assert!(

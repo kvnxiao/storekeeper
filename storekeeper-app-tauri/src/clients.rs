@@ -1,5 +1,9 @@
 //! Game client initialization for the registry.
 
+use storekeeper_client_hoyolab::{
+    GENSHIN_DAILY_REWARD, HSR_DAILY_REWARD, HoyolabClient, HoyolabDailyRewardClient,
+    HoyolabDailyRewardConfig, ZZZ_DAILY_REWARD,
+};
 use storekeeper_client_kuro::load_oauth_from_cache;
 use storekeeper_core::{AppConfig, DynDailyRewardClient, DynGameClient, Region, SecretsConfig};
 use storekeeper_game_genshin::GenshinClient;
@@ -10,12 +14,119 @@ use storekeeper_game_zzz::ZzzClient;
 use crate::daily_reward_registry::DailyRewardRegistry;
 use crate::registry::GameClientRegistry;
 
+type RegionDetector = fn(&str) -> std::result::Result<Region, storekeeper_core::Error>;
+type HoyolabGameFactory = fn(HoyolabClient, &str, Region) -> Box<dyn DynGameClient>;
+
+struct EnabledHoyolabGame<'a> {
+    uid: &'a str,
+    region_override: Option<Region>,
+    detect_region: RegionDetector,
+    create_client: HoyolabGameFactory,
+    game_name: &'static str,
+}
+
+struct DailyRewardSpec {
+    enabled: bool,
+    config: &'static HoyolabDailyRewardConfig,
+    game_name: &'static str,
+}
+
+fn enabled_hoyolab_games(config: &AppConfig) -> Vec<EnabledHoyolabGame<'_>> {
+    let mut games = Vec::new();
+
+    if let Some(c) = config.games.genshin_impact.as_ref().filter(|c| c.enabled) {
+        games.push(EnabledHoyolabGame {
+            uid: &c.uid,
+            region_override: c.region,
+            detect_region: Region::from_genshin_uid,
+            create_client: |h, uid, region| Box::new(GenshinClient::new(h, uid, region)),
+            game_name: "Genshin Impact",
+        });
+    }
+
+    if let Some(c) = config.games.honkai_star_rail.as_ref().filter(|c| c.enabled) {
+        games.push(EnabledHoyolabGame {
+            uid: &c.uid,
+            region_override: c.region,
+            detect_region: Region::from_hsr_uid,
+            create_client: |h, uid, region| Box::new(HsrClient::new(h, uid, region)),
+            game_name: "Honkai: Star Rail",
+        });
+    }
+
+    if let Some(c) = config
+        .games
+        .zenless_zone_zero
+        .as_ref()
+        .filter(|c| c.enabled)
+    {
+        games.push(EnabledHoyolabGame {
+            uid: &c.uid,
+            region_override: c.region,
+            detect_region: Region::from_zzz_uid,
+            create_client: |h, uid, region| Box::new(ZzzClient::new(h, uid, region)),
+            game_name: "Zenless Zone Zero",
+        });
+    }
+
+    games
+}
+
+fn daily_reward_specs(config: &AppConfig) -> [DailyRewardSpec; 3] {
+    [
+        DailyRewardSpec {
+            enabled: config
+                .games
+                .genshin_impact
+                .as_ref()
+                .is_some_and(|c| c.enabled),
+            config: &GENSHIN_DAILY_REWARD,
+            game_name: "Genshin Impact",
+        },
+        DailyRewardSpec {
+            enabled: config
+                .games
+                .honkai_star_rail
+                .as_ref()
+                .is_some_and(|c| c.enabled),
+            config: &HSR_DAILY_REWARD,
+            game_name: "Honkai: Star Rail",
+        },
+        DailyRewardSpec {
+            enabled: config
+                .games
+                .zenless_zone_zero
+                .as_ref()
+                .is_some_and(|c| c.enabled),
+            config: &ZZZ_DAILY_REWARD,
+            game_name: "Zenless Zone Zero",
+        },
+    ]
+}
+
+/// Registers a HoYoLab-based game client if enabled and region can be resolved.
+fn register_hoyolab_game(
+    registry: &mut GameClientRegistry,
+    hoyolab: &HoyolabClient,
+    uid: &str,
+    region_override: Option<Region>,
+    detect_region: impl FnOnce(&str) -> std::result::Result<Region, storekeeper_core::Error>,
+    create_client: impl FnOnce(HoyolabClient, &str, Region) -> Box<dyn DynGameClient>,
+    game_name: &str,
+) {
+    let region = region_override.or_else(|| detect_region(uid).ok());
+    if let Some(region) = region {
+        let client = create_client(hoyolab.clone(), uid, region);
+        tracing::info!(uid = %uid, region = ?region, "{game_name} client registered");
+        registry.register(client);
+    }
+}
+
 /// Creates a `GameClientRegistry` from configuration and secrets.
 ///
-/// This function creates type-erased game clients that can be stored
-/// in a single registry for dynamic dispatch.
+/// HoYoLab-based game clients share a single `HoyolabClient` instance to
+/// avoid redundant HTTP client allocations.
 #[must_use]
-#[allow(clippy::too_many_lines)]
 pub fn create_registry(config: &AppConfig, secrets: &SecretsConfig) -> GameClientRegistry {
     tracing::info!("Creating game client registry from configuration");
     let mut registry = GameClientRegistry::new();
@@ -26,62 +137,22 @@ pub fn create_registry(config: &AppConfig, secrets: &SecretsConfig) -> GameClien
         let ltuid = secrets.hoyolab.ltuid();
         let ltoken = secrets.hoyolab.ltoken();
 
-        // Genshin Impact
-        if let Some(ref genshin_config) = config.games.genshin_impact {
-            if genshin_config.enabled {
-                let region = genshin_config
-                    .region
-                    .or_else(|| Region::from_genshin_uid(&genshin_config.uid).ok());
-                if let Some(region) = region {
-                    if let Ok(client) =
-                        GenshinClient::new(ltuid, ltoken, &genshin_config.uid, region)
-                    {
-                        tracing::info!(
-                            uid = %genshin_config.uid,
-                            region = ?region,
-                            "Genshin Impact client registered"
-                        );
-                        registry.register(Box::new(client) as Box<dyn DynGameClient>);
-                    }
+        match HoyolabClient::new(ltuid, ltoken) {
+            Ok(hoyolab) => {
+                for game in enabled_hoyolab_games(config) {
+                    register_hoyolab_game(
+                        &mut registry,
+                        &hoyolab,
+                        game.uid,
+                        game.region_override,
+                        game.detect_region,
+                        game.create_client,
+                        game.game_name,
+                    );
                 }
             }
-        }
-
-        // Honkai: Star Rail
-        if let Some(ref hsr_config) = config.games.honkai_star_rail {
-            if hsr_config.enabled {
-                let region = hsr_config
-                    .region
-                    .or_else(|| Region::from_hsr_uid(&hsr_config.uid).ok());
-                if let Some(region) = region {
-                    if let Ok(client) = HsrClient::new(ltuid, ltoken, &hsr_config.uid, region) {
-                        tracing::info!(
-                            uid = %hsr_config.uid,
-                            region = ?region,
-                            "Honkai: Star Rail client registered"
-                        );
-                        registry.register(Box::new(client) as Box<dyn DynGameClient>);
-                    }
-                }
-            }
-        }
-
-        // Zenless Zone Zero
-        if let Some(ref zzz_config) = config.games.zenless_zone_zero {
-            if zzz_config.enabled {
-                let region = zzz_config
-                    .region
-                    .or_else(|| Region::from_zzz_uid(&zzz_config.uid).ok());
-                if let Some(region) = region {
-                    if let Ok(client) = ZzzClient::new(ltuid, ltoken, &zzz_config.uid, region) {
-                        tracing::info!(
-                            uid = %zzz_config.uid,
-                            region = ?region,
-                            "Zenless Zone Zero client registered"
-                        );
-                        registry.register(Box::new(client) as Box<dyn DynGameClient>);
-                    }
-                }
+            Err(e) => {
+                tracing::warn!("Failed to create shared HoYoLab client: {e}");
             }
         }
     } else {
@@ -137,11 +208,9 @@ pub fn create_registry(config: &AppConfig, secrets: &SecretsConfig) -> GameClien
 
 /// Creates a `DailyRewardRegistry` from configuration and secrets.
 ///
-/// This function creates type-erased daily reward clients that can be stored
-/// in a single registry for dynamic dispatch. Only HoYoLab games are supported
-/// for daily rewards.
+/// Daily reward clients share a single `HoyolabClient` and differ only by
+/// their endpoint configuration.
 #[must_use]
-#[allow(clippy::too_many_lines)]
 pub fn create_daily_reward_registry(
     config: &AppConfig,
     secrets: &SecretsConfig,
@@ -149,72 +218,29 @@ pub fn create_daily_reward_registry(
     tracing::info!("Creating daily reward registry from configuration");
     let mut registry = DailyRewardRegistry::new();
 
-    // Only HoYoLab games support daily rewards
-    if secrets.hoyolab.is_configured() {
-        tracing::debug!("HoYoLab credentials found, initializing daily reward clients");
-        let ltuid = secrets.hoyolab.ltuid();
-        let ltoken = secrets.hoyolab.ltoken();
-
-        // Genshin Impact
-        if let Some(ref genshin_config) = config.games.genshin_impact {
-            if genshin_config.enabled {
-                let region = genshin_config
-                    .region
-                    .or_else(|| Region::from_genshin_uid(&genshin_config.uid).ok());
-                if let Some(region) = region {
-                    if let Ok(client) =
-                        GenshinClient::new(ltuid, ltoken, &genshin_config.uid, region)
-                    {
-                        tracing::info!(
-                            uid = %genshin_config.uid,
-                            region = ?region,
-                            "Genshin Impact daily reward client registered"
-                        );
-                        registry.register(Box::new(client) as Box<dyn DynDailyRewardClient>);
-                    }
-                }
-            }
-        }
-
-        // Honkai: Star Rail
-        if let Some(ref hsr_config) = config.games.honkai_star_rail {
-            if hsr_config.enabled {
-                let region = hsr_config
-                    .region
-                    .or_else(|| Region::from_hsr_uid(&hsr_config.uid).ok());
-                if let Some(region) = region {
-                    if let Ok(client) = HsrClient::new(ltuid, ltoken, &hsr_config.uid, region) {
-                        tracing::info!(
-                            uid = %hsr_config.uid,
-                            region = ?region,
-                            "Honkai: Star Rail daily reward client registered"
-                        );
-                        registry.register(Box::new(client) as Box<dyn DynDailyRewardClient>);
-                    }
-                }
-            }
-        }
-
-        // Zenless Zone Zero
-        if let Some(ref zzz_config) = config.games.zenless_zone_zero {
-            if zzz_config.enabled {
-                let region = zzz_config
-                    .region
-                    .or_else(|| Region::from_zzz_uid(&zzz_config.uid).ok());
-                if let Some(region) = region {
-                    if let Ok(client) = ZzzClient::new(ltuid, ltoken, &zzz_config.uid, region) {
-                        tracing::info!(
-                            uid = %zzz_config.uid,
-                            region = ?region,
-                            "Zenless Zone Zero daily reward client registered"
-                        );
-                        registry.register(Box::new(client) as Box<dyn DynDailyRewardClient>);
-                    }
-                }
-            }
-        }
-    } else {
+    if !secrets.hoyolab.is_configured() {
         tracing::debug!("HoYoLab credentials not configured, skipping daily reward clients");
+        return registry;
+    }
+
+    let ltuid = secrets.hoyolab.ltuid();
+    let ltoken = secrets.hoyolab.ltoken();
+
+    let hoyolab = match HoyolabClient::new(ltuid, ltoken) {
+        Ok(client) => client,
+        Err(e) => {
+            tracing::warn!("Failed to create HoYoLab client for daily rewards: {e}");
+            return registry;
+        }
+    };
+
+    for spec in daily_reward_specs(config)
+        .into_iter()
+        .filter(|spec| spec.enabled)
+    {
+        let client = HoyolabDailyRewardClient::new(hoyolab.clone(), spec.config);
+        tracing::info!("{} daily reward client registered", spec.game_name);
+        registry.register(Box::new(client) as Box<dyn DynDailyRewardClient>);
     }
 
     tracing::info!(

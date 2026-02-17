@@ -1,6 +1,5 @@
 //! Wuthering Waves game client implementation.
 
-use async_trait::async_trait;
 use chrono::{DateTime, Local};
 use serde::Deserialize;
 use storekeeper_client_kuro::KuroClient;
@@ -65,21 +64,15 @@ impl WuwaClient {
         self.kuro
             .query_role(&self.player_id, self.region.wuwa_region())
             .await
-            .map_err(Error::KuroApi)
     }
 }
 
-#[async_trait]
 impl GameClient for WuwaClient {
     type Resource = WuwaResource;
     type Error = Error;
 
     fn game_id(&self) -> GameId {
         GameId::WutheringWaves
-    }
-
-    fn game_name(&self) -> &'static str {
-        GameId::WutheringWaves.display_name()
     }
 
     async fn fetch_resources(&self) -> Result<Vec<Self::Resource>> {
@@ -104,6 +97,5 @@ impl GameClient for WuwaClient {
         self.kuro
             .check_auth(&self.player_id, self.region.wuwa_region())
             .await
-            .map_err(Error::KuroApi)
     }
 }

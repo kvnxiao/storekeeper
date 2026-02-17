@@ -1,13 +1,10 @@
 //! Genshin Impact game client implementation.
 
-use async_trait::async_trait;
 use chrono::{DateTime, Local, TimeDelta};
 use serde::{Deserialize, Deserializer};
-use storekeeper_client_hoyolab::{HoyolabClient, Method};
+use storekeeper_client_hoyolab::HoyolabClient;
 use storekeeper_core::{
-    ClaimResult, CooldownResource, DailyReward, DailyRewardClient, DailyRewardInfo,
-    DailyRewardStatus, ExpeditionResource, GameClient, GameId, Region, StaminaResource,
-    serde_utils,
+    CooldownResource, ExpeditionResource, GameClient, GameId, Region, StaminaResource, serde_utils,
 };
 
 use crate::error::{Error, Result};
@@ -19,15 +16,6 @@ const RESIN_REGEN_SECONDS: u32 = 480;
 /// Realm currency regeneration rate varies by trust rank, assume max trust rank
 /// "Fit for a King" which is 30 coins per hour.
 const REALM_REGEN_SECONDS: u32 = 120;
-
-/// Daily reward base URL for Genshin Impact (overseas).
-const GENSHIN_REWARD_URL: &str = "https://sg-hk4e-api.hoyolab.com/event/sol";
-
-/// Act ID for Genshin Impact daily rewards.
-const GENSHIN_ACT_ID: &str = "e202102251931481";
-
-/// Sign game header value for Genshin Impact.
-const GENSHIN_SIGN_GAME: &str = "hk4e";
 
 // ============================================================================
 // Daily Note API Response Structures
@@ -129,32 +117,6 @@ impl<'de> Deserialize<'de> for TransformerInfo {
     }
 }
 
-// ============================================================================
-// Daily Reward API Response Structures
-// ============================================================================
-
-/// API response for daily reward info (`/info` endpoint).
-#[derive(Debug, Deserialize)]
-struct RewardInfoResponse {
-    is_sign: bool,
-    total_sign_day: u32,
-}
-
-/// API response for monthly rewards list (`/home` endpoint).
-#[derive(Debug, Deserialize)]
-struct RewardHomeResponse {
-    awards: Vec<RewardItem>,
-}
-
-/// Individual reward item in the monthly rewards list.
-#[derive(Debug, Deserialize)]
-struct RewardItem {
-    name: String,
-    #[serde(alias = "cnt")]
-    count: u32,
-    icon: String,
-}
-
 /// Genshin Impact game client.
 #[derive(Debug, Clone)]
 pub struct GenshinClient {
@@ -164,23 +126,14 @@ pub struct GenshinClient {
 }
 
 impl GenshinClient {
-    /// Creates a new Genshin Impact client.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the HoYoLab client cannot be created.
-    pub fn new(
-        ltuid: impl Into<String>,
-        ltoken: impl Into<String>,
-        uid: impl Into<String>,
-        region: Region,
-    ) -> Result<Self> {
-        let hoyolab = HoyolabClient::new(ltuid, ltoken)?;
-        Ok(Self {
+    /// Creates a new Genshin Impact client using a shared `HoyolabClient`.
+    #[must_use]
+    pub fn new(hoyolab: HoyolabClient, uid: impl Into<String>, region: Region) -> Self {
+        Self {
             hoyolab,
             uid: uid.into(),
             region,
-        })
+        }
     }
 
     /// Fetches the daily note data from the API.
@@ -192,11 +145,56 @@ impl GenshinClient {
             self.uid
         );
 
-        self.hoyolab.get(&url).await.map_err(Error::HoyolabApi)
+        self.hoyolab.get(&url).await
     }
 }
 
-#[async_trait]
+fn build_resources(note: &DailyNoteResponse, now: DateTime<Local>) -> Vec<GenshinResource> {
+    let mut resources = Vec::with_capacity(4);
+
+    // Resin
+    resources.push(GenshinResource::Resin(StaminaResource::new(
+        note.current_resin,
+        note.max_resin,
+        note.resin_recovery_time,
+        RESIN_REGEN_SECONDS,
+    )));
+
+    // Realm Currency
+    resources.push(GenshinResource::RealmCurrency(StaminaResource::new(
+        note.current_home_coin,
+        note.max_home_coin,
+        note.home_coin_recovery_time,
+        REALM_REGEN_SECONDS,
+    )));
+
+    // Parametric Transformer
+    if let Some(ref transformer) = note.transformer {
+        if transformer.obtained {
+            let cooldown = CooldownResource::new(transformer.ready_at <= now, transformer.ready_at);
+            resources.push(GenshinResource::ParametricTransformer(cooldown));
+        }
+    }
+
+    // Expeditions - find the earliest finish time
+    let earliest_finish = note
+        .expeditions
+        .iter()
+        .map(|expedition| expedition.remained_time)
+        .min();
+    if earliest_finish.is_none() && note.current_expedition_num > 0 {
+        tracing::warn!("Genshin reported active expeditions but expedition list is empty");
+    }
+    let earliest_finish = earliest_finish.unwrap_or(now);
+    resources.push(GenshinResource::Expeditions(ExpeditionResource::new(
+        note.current_expedition_num,
+        note.max_expedition_num,
+        earliest_finish,
+    )));
+
+    resources
+}
+
 impl GameClient for GenshinClient {
     type Resource = GenshinResource;
     type Error = Error;
@@ -205,54 +203,10 @@ impl GameClient for GenshinClient {
         GameId::GenshinImpact
     }
 
-    fn game_name(&self) -> &'static str {
-        GameId::GenshinImpact.display_name()
-    }
-
     async fn fetch_resources(&self) -> Result<Vec<Self::Resource>> {
         tracing::info!(game = "Genshin Impact", "Fetching game resources");
         let note = self.fetch_daily_note().await?;
-        let mut resources = Vec::new();
-
-        // Resin
-        resources.push(GenshinResource::Resin(StaminaResource::new(
-            note.current_resin,
-            note.max_resin,
-            note.resin_recovery_time,
-            RESIN_REGEN_SECONDS,
-        )));
-
-        // Realm Currency
-        resources.push(GenshinResource::RealmCurrency(StaminaResource::new(
-            note.current_home_coin,
-            note.max_home_coin,
-            note.home_coin_recovery_time,
-            REALM_REGEN_SECONDS,
-        )));
-
-        // Parametric Transformer
-        if let Some(ref transformer) = note.transformer {
-            if transformer.obtained {
-                let cooldown = CooldownResource::new(
-                    transformer.ready_at <= Local::now(),
-                    transformer.ready_at,
-                );
-                resources.push(GenshinResource::ParametricTransformer(cooldown));
-            }
-        }
-
-        // Expeditions - find the earliest finish time
-        let earliest_finish = note
-            .expeditions
-            .iter()
-            .map(|e| e.remained_time)
-            .min()
-            .unwrap_or_else(Local::now);
-        resources.push(GenshinResource::Expeditions(ExpeditionResource::new(
-            note.current_expedition_num,
-            note.max_expedition_num,
-            earliest_finish,
-        )));
+        let resources = build_resources(&note, Local::now());
 
         tracing::info!(
             resin = note.current_resin,
@@ -266,136 +220,144 @@ impl GameClient for GenshinClient {
     }
 
     async fn is_authenticated(&self) -> Result<bool> {
-        self.hoyolab.check_auth().await.map_err(Error::HoyolabApi)
+        self.hoyolab.check_auth().await
     }
 }
 
-// ============================================================================
-// Daily Reward Client Implementation
-// ============================================================================
+#[cfg(test)]
+mod tests {
+    use chrono::TimeDelta;
+    use serde_json::json;
 
-impl GenshinClient {
-    /// Builds a daily reward URL with the given endpoint.
-    fn reward_url(endpoint: &str) -> String {
-        format!("{GENSHIN_REWARD_URL}/{endpoint}?act_id={GENSHIN_ACT_ID}&lang=en-us")
-    }
+    use super::*;
 
-    /// Returns the headers required for daily reward requests.
-    fn reward_headers() -> [(&'static str, &'static str); 2] {
-        [
-            ("x-rpc-signgame", GENSHIN_SIGN_GAME),
-            ("referer", "https://act.hoyolab.com/"),
-        ]
-    }
-}
-
-#[async_trait]
-impl DailyRewardClient for GenshinClient {
-    type Error = Error;
-
-    fn game_id(&self) -> GameId {
-        GameId::GenshinImpact
-    }
-
-    async fn get_reward_info(&self) -> Result<DailyRewardInfo> {
-        tracing::debug!(game = "Genshin Impact", "Fetching daily reward info");
-
-        let url = Self::reward_url("info");
-        let headers = Self::reward_headers();
-
-        let response: RewardInfoResponse = self
-            .hoyolab
-            .request_with_headers::<RewardInfoResponse, ()>(Method::GET, &url, None, &headers)
-            .await
-            .map_err(Error::HoyolabApi)?;
-
-        Ok(DailyRewardInfo::new(
-            response.is_sign,
-            response.total_sign_day,
-        ))
-    }
-
-    async fn get_monthly_rewards(&self) -> Result<Vec<DailyReward>> {
-        tracing::debug!(game = "Genshin Impact", "Fetching monthly rewards");
-
-        let url = Self::reward_url("home");
-        let headers = Self::reward_headers();
-
-        let response: RewardHomeResponse = self
-            .hoyolab
-            .request_with_headers::<RewardHomeResponse, ()>(Method::GET, &url, None, &headers)
-            .await
-            .map_err(Error::HoyolabApi)?;
-
-        let rewards = response
-            .awards
-            .into_iter()
-            .map(|item| DailyReward::new(item.name, item.count, item.icon))
-            .collect();
-
-        Ok(rewards)
-    }
-
-    async fn get_reward_status(&self) -> Result<DailyRewardStatus> {
-        tracing::debug!(game = "Genshin Impact", "Fetching daily reward status");
-
-        // Fetch info and rewards concurrently
-        let (info, rewards) = tokio::try_join!(self.get_reward_info(), self.get_monthly_rewards())?;
-
-        // Determine today's reward index
-        // If already signed: total_sign_day - 1 (0-indexed, what was claimed)
-        // If not signed: total_sign_day (what will be claimed next)
-        let today_index = if info.is_signed {
-            info.total_sign_day.saturating_sub(1) as usize
-        } else {
-            info.total_sign_day as usize
-        };
-
-        let today_reward = rewards.get(today_index).cloned();
-
-        Ok(DailyRewardStatus::new(info, today_reward, rewards))
-    }
-
-    async fn claim_daily_reward(&self) -> Result<ClaimResult> {
-        tracing::info!(game = "Genshin Impact", "Claiming daily reward");
-
-        // Check current status first
-        let pre_info = self.get_reward_info().await?;
-        if pre_info.is_signed {
-            tracing::debug!(game = "Genshin Impact", "Daily reward already claimed");
-            let status = self.get_reward_status().await?;
-            return Ok(ClaimResult::already_claimed(
-                status.today_reward,
-                status.info,
-            ));
+    fn make_note(
+        transformer: Option<TransformerInfo>,
+        expeditions: Vec<ExpeditionInfo>,
+        current_expeditions: u32,
+    ) -> DailyNoteResponse {
+        let now = Local::now();
+        DailyNoteResponse {
+            current_resin: 100,
+            max_resin: 160,
+            resin_recovery_time: now + TimeDelta::try_hours(8).expect("valid delta"),
+            current_home_coin: 1200,
+            max_home_coin: 2400,
+            home_coin_recovery_time: now + TimeDelta::try_hours(4).expect("valid delta"),
+            current_expedition_num: current_expeditions,
+            max_expedition_num: 5,
+            expeditions,
+            transformer,
         }
+    }
 
-        // Perform the claim
-        let url = Self::reward_url("sign");
-        let headers = Self::reward_headers();
+    #[test]
+    fn transformer_deserialize_reached_sets_ready_at_now() {
+        let before = Local::now();
+        let transformer: TransformerInfo = serde_json::from_value(json!({
+            "obtained": true,
+            "recovery_time": {
+                "Day": 0,
+                "Hour": 0,
+                "Minute": 0,
+                "Second": 0,
+                "reached": true
+            }
+        }))
+        .expect("deserialize transformer");
+        let after = Local::now();
 
-        let _: serde_json::Value = self
-            .hoyolab
-            .request_with_headers::<serde_json::Value, ()>(Method::POST, &url, None, &headers)
-            .await
-            .map_err(Error::HoyolabApi)?;
+        assert!(transformer.obtained);
+        assert!(transformer.ready_at >= before && transformer.ready_at <= after);
+    }
 
-        // Fetch updated status to get reward details
-        let status = self.get_reward_status().await?;
+    #[test]
+    fn transformer_deserialize_positive_duration_adds_delta() {
+        let transformer: TransformerInfo = serde_json::from_value(json!({
+            "obtained": true,
+            "recovery_time": {
+                "Day": 0,
+                "Hour": 0,
+                "Minute": 1,
+                "Second": 30,
+                "reached": false
+            }
+        }))
+        .expect("deserialize transformer");
 
-        tracing::info!(
-            game = "Genshin Impact",
-            reward_name = ?status.today_reward.as_ref().map_or("Unknown", |r| r.name.as_str()),
-            "Daily reward claimed successfully"
+        let seconds_until_ready = (transformer.ready_at - Local::now()).num_seconds();
+        assert!(
+            (85..=95).contains(&seconds_until_ready),
+            "Expected ~90s until ready, got {seconds_until_ready}s"
+        );
+    }
+
+    #[test]
+    fn transformer_deserialize_zero_duration_falls_back_to_now() {
+        let before = Local::now();
+        let transformer: TransformerInfo = serde_json::from_value(json!({
+            "obtained": true,
+            "recovery_time": {
+                "Day": 0,
+                "Hour": 0,
+                "Minute": 0,
+                "Second": 0,
+                "reached": false
+            }
+        }))
+        .expect("deserialize transformer");
+        let after = Local::now();
+
+        assert!(transformer.ready_at >= before && transformer.ready_at <= after);
+    }
+
+    #[test]
+    fn build_resources_omits_transformer_when_not_obtained() {
+        let now = Local::now();
+        let note = make_note(
+            Some(TransformerInfo {
+                obtained: false,
+                ready_at: now + TimeDelta::try_hours(10).expect("valid delta"),
+            }),
+            vec![ExpeditionInfo {
+                remained_time: now + TimeDelta::try_minutes(20).expect("valid delta"),
+                avatar_side_icon: "icon".to_string(),
+                status: ExpeditionStatus::Ongoing,
+            }],
+            1,
         );
 
-        // The today_reward now points to what was just claimed
-        match status.today_reward {
-            Some(reward) => Ok(ClaimResult::success(reward, status.info)),
-            None => Ok(ClaimResult::error(
-                "Claim succeeded but reward details unavailable",
-                status.info,
-            )),
-        }
+        let resources = build_resources(&note, now);
+        let has_transformer = resources
+            .iter()
+            .any(|resource| matches!(resource, GenshinResource::ParametricTransformer(_)));
+        assert!(
+            !has_transformer,
+            "Not-obtained transformer should be excluded"
+        );
+    }
+
+    #[test]
+    fn build_resources_uses_now_when_expeditions_are_missing() {
+        let now = Local::now();
+        let note = make_note(None, Vec::new(), 2);
+        let resources = build_resources(&note, now);
+
+        let expedition = resources.iter().find_map(|resource| match resource {
+            GenshinResource::Expeditions(expedition) => Some(expedition),
+            _ => None,
+        });
+
+        assert!(
+            expedition.is_some(),
+            "Expeditions resource should always be present"
+        );
+        let expedition = expedition.expect("expedition resource should exist");
+        assert_eq!(expedition.current_expeditions, 2);
+        assert_eq!(expedition.max_expeditions, 5);
+        assert_eq!(
+            expedition.earliest_finish_at, now,
+            "When expedition list is empty, fallback should use provided current time"
+        );
     }
 }

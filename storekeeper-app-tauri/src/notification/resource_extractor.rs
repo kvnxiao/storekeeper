@@ -48,41 +48,43 @@ impl ResourceInfo {
 
 /// Extracts completion timing from a resource data object.
 ///
-/// Attempts typed deserialization in order: StaminaResource, CooldownResource,
-/// ExpeditionResource. Falls back to `None` if none match.
-pub(crate) fn extract_resource_info(data: &serde_json::Value) -> Option<ResourceInfo> {
-    if let Ok(stamina) = serde_json::from_value::<StaminaResource>(data.clone()) {
-        return Some(ResourceInfo {
-            completion_at: stamina.full_at.with_timezone(&Utc),
-            is_complete: stamina.is_full(),
-            current: Some(u64::from(stamina.current)),
-            max: Some(u64::from(stamina.max)),
-            regen_rate_seconds: Some(u64::from(stamina.regen_rate_seconds)),
-        });
+/// Uses `resource_type` to deserialize into exactly one expected shape.
+pub(crate) fn extract_resource_info(
+    resource_type: &str,
+    data: &serde_json::Value,
+) -> Option<ResourceInfo> {
+    match resource_type {
+        "parametric_transformer" => serde_json::from_value::<CooldownResource>(data.clone())
+            .ok()
+            .map(|cooldown| ResourceInfo {
+                completion_at: cooldown.ready_at.with_timezone(&Utc),
+                is_complete: cooldown.is_ready,
+                current: None,
+                max: None,
+                regen_rate_seconds: None,
+            }),
+        "expeditions" => serde_json::from_value::<ExpeditionResource>(data.clone())
+            .ok()
+            .map(|expedition| {
+                let completion_at = expedition.earliest_finish_at.with_timezone(&Utc);
+                ResourceInfo {
+                    completion_at,
+                    is_complete: completion_at <= Utc::now(),
+                    current: None,
+                    max: None,
+                    regen_rate_seconds: None,
+                }
+            }),
+        _ => serde_json::from_value::<StaminaResource>(data.clone())
+            .ok()
+            .map(|stamina| ResourceInfo {
+                completion_at: stamina.full_at.with_timezone(&Utc),
+                is_complete: stamina.is_full(),
+                current: Some(u64::from(stamina.current)),
+                max: Some(u64::from(stamina.max)),
+                regen_rate_seconds: Some(u64::from(stamina.regen_rate_seconds)),
+            }),
     }
-
-    if let Ok(cooldown) = serde_json::from_value::<CooldownResource>(data.clone()) {
-        return Some(ResourceInfo {
-            completion_at: cooldown.ready_at.with_timezone(&Utc),
-            is_complete: cooldown.is_ready,
-            current: None,
-            max: None,
-            regen_rate_seconds: None,
-        });
-    }
-
-    if let Ok(expedition) = serde_json::from_value::<ExpeditionResource>(data.clone()) {
-        let completion_at = expedition.earliest_finish_at.with_timezone(&Utc);
-        return Some(ResourceInfo {
-            completion_at,
-            is_complete: completion_at <= Utc::now(),
-            current: None,
-            max: None,
-            regen_rate_seconds: None,
-        });
-    }
-
-    None
 }
 
 #[cfg(test)]
@@ -101,7 +103,7 @@ mod tests {
             "regenRateSeconds": 480
         });
 
-        let info = extract_resource_info(&data).expect("should extract stamina resource");
+        let info = extract_resource_info("resin", &data).expect("should extract stamina resource");
         assert!(!info.is_complete);
         assert!((info.completion_at - future).num_seconds().abs() < 2);
     }
@@ -116,7 +118,8 @@ mod tests {
             "regenRateSeconds": 480
         });
 
-        let info = extract_resource_info(&data).expect("should extract full stamina resource");
+        let info =
+            extract_resource_info("resin", &data).expect("should extract full stamina resource");
         assert!(info.is_complete);
     }
 
@@ -128,7 +131,8 @@ mod tests {
             "readyAt": past.to_rfc3339()
         });
 
-        let info = extract_resource_info(&data).expect("should extract cooldown resource");
+        let info = extract_resource_info("parametric_transformer", &data)
+            .expect("should extract cooldown resource");
         assert!(info.is_complete);
     }
 
@@ -140,7 +144,8 @@ mod tests {
             "readyAt": future.to_rfc3339()
         });
 
-        let info = extract_resource_info(&data).expect("should extract cooldown resource");
+        let info = extract_resource_info("parametric_transformer", &data)
+            .expect("should extract cooldown resource");
         assert!(!info.is_complete);
     }
 
@@ -153,7 +158,8 @@ mod tests {
             "earliestFinishAt": past.to_rfc3339()
         });
 
-        let info = extract_resource_info(&data).expect("should extract expedition resource");
+        let info = extract_resource_info("expeditions", &data)
+            .expect("should extract expedition resource");
         assert!(info.is_complete);
     }
 
@@ -166,7 +172,8 @@ mod tests {
             "earliestFinishAt": future.to_rfc3339()
         });
 
-        let info = extract_resource_info(&data).expect("should extract expedition resource");
+        let info = extract_resource_info("expeditions", &data)
+            .expect("should extract expedition resource");
         assert!(!info.is_complete);
     }
 
@@ -176,7 +183,7 @@ mod tests {
             "someUnknownField": 42
         });
 
-        assert!(extract_resource_info(&data).is_none());
+        assert!(extract_resource_info("unknown_resource", &data).is_none());
     }
 
     // =========================================================================

@@ -4,9 +4,11 @@ use std::time::Duration;
 
 use rand::Rng;
 
-/// Default retry configuration constants.
+/// Default maximum number of retry attempts.
 pub const DEFAULT_MAX_RETRIES: u32 = 3;
+/// Default base delay in milliseconds for exponential backoff.
 pub const DEFAULT_BASE_DELAY_MS: u64 = 500;
+/// Default maximum delay in milliseconds (cap for exponential growth).
 pub const DEFAULT_MAX_DELAY_MS: u64 = 30_000;
 
 /// Configuration for retry behavior.

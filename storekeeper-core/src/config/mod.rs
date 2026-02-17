@@ -9,11 +9,14 @@ pub mod games;
 pub mod notification;
 pub mod secrets;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
 use crate::error::{Error, Result};
+use crate::resource_types::{
+    GenshinResourceType, HsrResourceType, WuwaResourceType, ZzzResourceType,
+};
 
 // Re-exports: keep the same public surface as the original single-file module.
 pub use claim_time::{ClaimTime, DEFAULT_AUTO_CLAIM_TIME, next_claim_datetime_utc};
@@ -69,7 +72,7 @@ impl AppConfig {
     /// # Errors
     ///
     /// Returns an error if the config file cannot be read or parsed.
-    pub fn load_from_path(path: &PathBuf) -> Result<Self> {
+    pub fn load_from_path(path: &Path) -> Result<Self> {
         if !path.exists() {
             return Err(Error::ConfigNotFound {
                 path: path.display().to_string(),
@@ -120,7 +123,7 @@ impl AppConfig {
     /// # Errors
     ///
     /// Returns an error if the config file cannot be written.
-    pub fn save_to_path(&self, path: &PathBuf) -> Result<()> {
+    pub fn save_to_path(&self, path: &Path) -> Result<()> {
         // Ensure the directory exists
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
@@ -314,6 +317,209 @@ pub struct GamesConfig {
 
     /// Wuthering Waves configuration.
     pub wuthering_waves: Option<WuwaConfig>,
+}
+
+impl GamesConfig {
+    fn genshin_notification_for<'a>(
+        cfg: &'a GenshinConfig,
+        resource_type: &str,
+    ) -> Option<&'a ResourceNotificationConfig> {
+        let resource = match resource_type {
+            "resin" => GenshinResourceType::Resin,
+            "parametric_transformer" => GenshinResourceType::ParametricTransformer,
+            "realm_currency" => GenshinResourceType::RealmCurrency,
+            "expeditions" => GenshinResourceType::Expeditions,
+            _ => return None,
+        };
+        cfg.notifications.get(&resource)
+    }
+
+    fn hsr_notification_for<'a>(
+        cfg: &'a HsrConfig,
+        resource_type: &str,
+    ) -> Option<&'a ResourceNotificationConfig> {
+        let resource = match resource_type {
+            "trailblaze_power" => HsrResourceType::TrailblazePower,
+            _ => return None,
+        };
+        cfg.notifications.get(&resource)
+    }
+
+    fn zzz_notification_for<'a>(
+        cfg: &'a ZzzConfig,
+        resource_type: &str,
+    ) -> Option<&'a ResourceNotificationConfig> {
+        let resource = match resource_type {
+            "battery" => ZzzResourceType::Battery,
+            _ => return None,
+        };
+        cfg.notifications.get(&resource)
+    }
+
+    fn wuwa_notification_for<'a>(
+        cfg: &'a WuwaConfig,
+        resource_type: &str,
+    ) -> Option<&'a ResourceNotificationConfig> {
+        let resource = match resource_type {
+            "waveplates" => WuwaResourceType::Waveplates,
+            _ => return None,
+        };
+        cfg.notifications.get(&resource)
+    }
+
+    /// Converts a typed notification map to string-keyed map for the notification system.
+    fn stringify_notification_map<K: AsRef<str>>(
+        notifications: &std::collections::HashMap<K, ResourceNotificationConfig>,
+    ) -> std::collections::HashMap<String, ResourceNotificationConfig> {
+        notifications
+            .iter()
+            .map(|(k, v)| (k.as_ref().to_string(), v.clone()))
+            .collect()
+    }
+
+    /// Notification configs for a game, with string keys for the notification system.
+    ///
+    /// Converts typed resource keys to strings via `AsRef<str>`.
+    #[must_use]
+    pub fn notification_configs(
+        &self,
+        game_id: crate::GameId,
+    ) -> std::collections::HashMap<String, ResourceNotificationConfig> {
+        use crate::GameId;
+
+        match game_id {
+            GameId::GenshinImpact => self
+                .genshin_impact
+                .as_ref()
+                .map(|c| Self::stringify_notification_map(&c.notifications))
+                .unwrap_or_default(),
+            GameId::HonkaiStarRail => self
+                .honkai_star_rail
+                .as_ref()
+                .map(|c| Self::stringify_notification_map(&c.notifications))
+                .unwrap_or_default(),
+            GameId::ZenlessZoneZero => self
+                .zenless_zone_zero
+                .as_ref()
+                .map(|c| Self::stringify_notification_map(&c.notifications))
+                .unwrap_or_default(),
+            GameId::WutheringWaves => self
+                .wuthering_waves
+                .as_ref()
+                .map(|c| Self::stringify_notification_map(&c.notifications))
+                .unwrap_or_default(),
+        }
+    }
+
+    /// Returns true if a game has any notification configs defined.
+    #[must_use]
+    pub fn has_notification_configs(&self, game_id: crate::GameId) -> bool {
+        use crate::GameId;
+
+        match game_id {
+            GameId::GenshinImpact => self
+                .genshin_impact
+                .as_ref()
+                .is_some_and(|c| !c.notifications.is_empty()),
+            GameId::HonkaiStarRail => self
+                .honkai_star_rail
+                .as_ref()
+                .is_some_and(|c| !c.notifications.is_empty()),
+            GameId::ZenlessZoneZero => self
+                .zenless_zone_zero
+                .as_ref()
+                .is_some_and(|c| !c.notifications.is_empty()),
+            GameId::WutheringWaves => self
+                .wuthering_waves
+                .as_ref()
+                .is_some_and(|c| !c.notifications.is_empty()),
+        }
+    }
+
+    /// Gets notification config for a game/resource pair without allocating a map.
+    #[must_use]
+    pub fn notification_config(
+        &self,
+        game_id: crate::GameId,
+        resource_type: &str,
+    ) -> Option<&ResourceNotificationConfig> {
+        use crate::GameId;
+
+        match game_id {
+            GameId::GenshinImpact => self
+                .genshin_impact
+                .as_ref()
+                .and_then(|c| Self::genshin_notification_for(c, resource_type)),
+            GameId::HonkaiStarRail => self
+                .honkai_star_rail
+                .as_ref()
+                .and_then(|c| Self::hsr_notification_for(c, resource_type)),
+            GameId::ZenlessZoneZero => self
+                .zenless_zone_zero
+                .as_ref()
+                .and_then(|c| Self::zzz_notification_for(c, resource_type)),
+            GameId::WutheringWaves => self
+                .wuthering_waves
+                .as_ref()
+                .and_then(|c| Self::wuwa_notification_for(c, resource_type)),
+        }
+    }
+
+    /// Whether a game is enabled in config.
+    #[must_use]
+    pub fn is_enabled(&self, game_id: crate::GameId) -> bool {
+        use crate::GameId;
+
+        match game_id {
+            GameId::GenshinImpact => self.genshin_impact.as_ref().is_some_and(|c| c.enabled),
+            GameId::HonkaiStarRail => self.honkai_star_rail.as_ref().is_some_and(|c| c.enabled),
+            GameId::ZenlessZoneZero => self.zenless_zone_zero.as_ref().is_some_and(|c| c.enabled),
+            GameId::WutheringWaves => self.wuthering_waves.as_ref().is_some_and(|c| c.enabled),
+        }
+    }
+
+    /// Whether auto-claim is enabled for a game.
+    ///
+    /// Wuthering Waves does not support daily rewards, so always returns `false`.
+    #[must_use]
+    pub fn auto_claim_enabled(&self, game_id: crate::GameId) -> bool {
+        use crate::GameId;
+
+        match game_id {
+            GameId::GenshinImpact => self
+                .genshin_impact
+                .as_ref()
+                .is_some_and(|c| c.enabled && c.auto_claim_daily_rewards),
+            GameId::HonkaiStarRail => self
+                .honkai_star_rail
+                .as_ref()
+                .is_some_and(|c| c.enabled && c.auto_claim_daily_rewards),
+            GameId::ZenlessZoneZero => self
+                .zenless_zone_zero
+                .as_ref()
+                .is_some_and(|c| c.enabled && c.auto_claim_daily_rewards),
+            GameId::WutheringWaves => false,
+        }
+    }
+
+    /// Auto-claim time for a game.
+    #[must_use]
+    pub fn auto_claim_time(&self, game_id: crate::GameId) -> Option<ClaimTime> {
+        use crate::GameId;
+
+        match game_id {
+            GameId::GenshinImpact => self.genshin_impact.as_ref().and_then(|c| c.auto_claim_time),
+            GameId::HonkaiStarRail => self
+                .honkai_star_rail
+                .as_ref()
+                .and_then(|c| c.auto_claim_time),
+            GameId::ZenlessZoneZero => self
+                .zenless_zone_zero
+                .as_ref()
+                .and_then(|c| c.auto_claim_time),
+            GameId::WutheringWaves => None,
+        }
+    }
 }
 
 // ============================================================================

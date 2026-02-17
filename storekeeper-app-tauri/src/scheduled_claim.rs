@@ -4,9 +4,10 @@ use std::collections::HashMap;
 use std::future::Future;
 use std::time::Duration;
 
+use anyhow::Context;
 use chrono::Utc;
 use storekeeper_client_core::retry::RetryConfig;
-use storekeeper_core::{ClaimTime, GameId, next_claim_datetime_utc};
+use storekeeper_core::{ClaimTime, DailyRewardStatus, GameId, next_claim_datetime_utc};
 use tauri::{AppHandle, Emitter, Manager};
 use tokio_util::sync::CancellationToken;
 
@@ -34,15 +35,10 @@ pub fn start_scheduled_claims(app_handle: AppHandle, cancel_token: CancellationT
 
             if auto_claim_games.is_empty() {
                 tracing::debug!("No games with auto-claim enabled, sleeping for 60 seconds");
-                tokio::select! {
-                    () = cancel_token.cancelled() => {
-                        tracing::info!("Scheduled claims cancelled (no auto-claim games)");
-                        break;
-                    }
-                    () = tokio::time::sleep(Duration::from_secs(60)) => {
-                        continue;
-                    }
+                if sleep_or_cancel(&cancel_token, Duration::from_secs(60)).await {
+                    break;
                 }
+                continue;
             }
 
             // Find the earliest next claim time across all games
@@ -51,15 +47,10 @@ pub fn start_scheduled_claims(app_handle: AppHandle, cancel_token: CancellationT
             else {
                 // No games need claiming right now, sleep and retry
                 tracing::debug!("No games need claiming, sleeping for 60 seconds");
-                tokio::select! {
-                    () = cancel_token.cancelled() => {
-                        tracing::info!("Scheduled claims cancelled");
-                        break;
-                    }
-                    () = tokio::time::sleep(Duration::from_secs(60)) => {
-                        continue;
-                    }
+                if sleep_or_cancel(&cancel_token, Duration::from_secs(60)).await {
+                    break;
                 }
+                continue;
             };
 
             tracing::info!(
@@ -69,62 +60,12 @@ pub fn start_scheduled_claims(app_handle: AppHandle, cancel_token: CancellationT
             );
 
             // Wait until claim time or cancellation
-            tokio::select! {
-                () = cancel_token.cancelled() => {
-                    tracing::info!("Scheduled claims cancelled");
-                    break;
-                }
-                () = tokio::time::sleep(sleep_duration) => {
-                    // Claim rewards for all games that are due
-                    let mut results = HashMap::new();
-
-                    for game_id in &games_to_claim {
-                        // Check if auto-claim is still enabled for this game
-                        if !state.should_auto_claim_game(*game_id).await {
-                            tracing::debug!(game_id = ?game_id, "Skipping auto-claim (disabled in config)");
-                            continue;
-                        }
-
-                        tracing::info!(game_id = ?game_id, "Auto-claiming daily reward");
-
-                        // Use transactional claim (status check first)
-                        match claim_with_status_check(&state, *game_id).await {
-                            Ok(true) => {
-                                tracing::info!(game_id = ?game_id, "Auto-claim successful");
-                                // Fetch fresh status for the result
-                                if let Ok(status) = state.get_daily_reward_status_for_game(*game_id).await {
-                                    results.insert(*game_id, status);
-                                }
-                            }
-                            Ok(false) => {
-                                tracing::debug!(game_id = ?game_id, "Already claimed (per API)");
-                            }
-                            Err(e) => {
-                                tracing::error!(game_id = ?game_id, error = %e, "Auto-claim failed");
-                            }
-                        }
-
-                        // Small delay between games to avoid rate limiting
-                        tokio::time::sleep(Duration::from_millis(500)).await;
-                    }
-
-                    if !results.is_empty() {
-                        // Refresh the status cache after claiming
-                        let status = state.fetch_all_daily_reward_status().await;
-                        state.set_daily_reward_status(status).await;
-
-                        // Emit event to frontend
-                        if let Err(e) = app_handle.emit(AppEvent::DailyRewardClaimed.as_str(), &results) {
-                            tracing::warn!(error = %e, "Failed to emit daily reward claimed event");
-                        }
-
-                        tracing::info!(
-                            games_claimed = results.len(),
-                            "Auto-claim complete"
-                        );
-                    }
-                }
+            if sleep_or_cancel(&cancel_token, sleep_duration).await {
+                break;
             }
+
+            // Claim rewards for all games that are due
+            claim_games_and_emit(&state, &app_handle, &games_to_claim).await;
         }
     });
 }
@@ -143,21 +84,25 @@ async fn run_startup_claims(state: &AppState, app_handle: &AppHandle) {
         return;
     }
 
+    let game_ids: Vec<GameId> = auto_claim_games.into_iter().map(|(id, _)| id).collect();
+    claim_games_and_emit(state, app_handle, &game_ids).await;
+}
+
+/// Claims rewards for the given games and emits results to the frontend.
+async fn claim_games_and_emit(state: &AppState, app_handle: &AppHandle, game_ids: &[GameId]) {
     let mut results = HashMap::new();
 
-    for (game_id, _claim_time) in auto_claim_games {
-        // Check if auto-claim is enabled for this game
+    for &game_id in game_ids {
         if !state.should_auto_claim_game(game_id).await {
+            tracing::debug!(game_id = ?game_id, "Skipping auto-claim (disabled in config)");
             continue;
         }
 
-        tracing::info!(game_id = ?game_id, "Checking if startup claim needed");
+        tracing::info!(game_id = ?game_id, "Auto-claiming daily reward");
 
-        // Attempt claim with status check and retry
         match claim_with_status_check(state, game_id).await {
             Ok(true) => {
-                tracing::info!(game_id = ?game_id, "Startup auto-claim successful");
-                // Fetch fresh status for the result
+                tracing::info!(game_id = ?game_id, "Auto-claim successful");
                 if let Ok(status) = state.get_daily_reward_status_for_game(game_id).await {
                     results.insert(game_id, status);
                 }
@@ -166,7 +111,7 @@ async fn run_startup_claims(state: &AppState, app_handle: &AppHandle) {
                 tracing::debug!(game_id = ?game_id, "Already claimed today (per API)");
             }
             Err(e) => {
-                tracing::error!(game_id = ?game_id, error = %e, "Startup auto-claim failed");
+                tracing::error!(game_id = ?game_id, error = %e, "Auto-claim failed");
             }
         }
 
@@ -175,34 +120,44 @@ async fn run_startup_claims(state: &AppState, app_handle: &AppHandle) {
     }
 
     if !results.is_empty() {
-        // Refresh the status cache after claiming
         let status = state.fetch_all_daily_reward_status().await;
         state.set_daily_reward_status(status).await;
 
-        // Emit event to frontend
         if let Err(e) = app_handle.emit(AppEvent::DailyRewardClaimed.as_str(), &results) {
             tracing::warn!(error = %e, "Failed to emit daily reward claimed event");
         }
 
-        tracing::info!(games_claimed = results.len(), "Startup auto-claim complete");
+        tracing::info!(games_claimed = results.len(), "Auto-claim complete");
+    }
+}
+
+/// Sleeps for the given duration or until the token is cancelled.
+///
+/// Returns `true` if cancelled, `false` if the sleep completed.
+async fn sleep_or_cancel(cancel_token: &CancellationToken, duration: Duration) -> bool {
+    tokio::select! {
+        () = cancel_token.cancelled() => {
+            tracing::info!("Scheduled claims cancelled");
+            true
+        }
+        () = tokio::time::sleep(duration) => {
+            false
+        }
     }
 }
 
 /// Checks status and claims if not already claimed today.
 ///
 /// Returns `Ok(true)` if claimed, `Ok(false)` if already claimed, `Err` on failure.
-async fn claim_with_status_check(state: &AppState, game_id: GameId) -> Result<bool, String> {
+async fn claim_with_status_check(state: &AppState, game_id: GameId) -> anyhow::Result<bool> {
     // Step 1: Check status first
     let status = fetch_status_with_retry(state, game_id).await?;
 
-    // Step 2: Check if already claimed
-    let is_signed = status
-        .get("info")
-        .and_then(|i| i.get("is_signed"))
-        .and_then(serde_json::Value::as_bool)
-        .unwrap_or(false);
+    // Step 2: Check if already claimed via typed deserialization
+    let reward_status: DailyRewardStatus =
+        serde_json::from_value(status).context("failed to deserialize daily reward status")?;
 
-    if is_signed {
+    if reward_status.info.is_signed {
         return Ok(false); // Already claimed
     }
 
@@ -216,7 +171,7 @@ async fn claim_with_status_check(state: &AppState, game_id: GameId) -> Result<bo
 async fn fetch_status_with_retry(
     state: &AppState,
     game_id: GameId,
-) -> Result<serde_json::Value, String> {
+) -> anyhow::Result<serde_json::Value> {
     retry_with_backoff(
         || state.get_daily_reward_status_for_game(game_id),
         "fetch status",
@@ -229,7 +184,7 @@ async fn fetch_status_with_retry(
 async fn claim_reward_with_retry(
     state: &AppState,
     game_id: GameId,
-) -> Result<serde_json::Value, String> {
+) -> anyhow::Result<serde_json::Value> {
     retry_with_backoff(
         || state.claim_daily_reward_for_game(game_id),
         "claim reward",
@@ -243,10 +198,10 @@ async fn retry_with_backoff<F, Fut>(
     mut operation: F,
     operation_name: &str,
     game_id: GameId,
-) -> Result<serde_json::Value, String>
+) -> anyhow::Result<serde_json::Value>
 where
     F: FnMut() -> Fut,
-    Fut: Future<Output = Result<serde_json::Value, String>>,
+    Fut: Future<Output = anyhow::Result<serde_json::Value>>,
 {
     let config = RetryConfig::default(); // 3 retries, 500ms base, 30s max
     let mut attempt = 0;
@@ -272,19 +227,30 @@ where
     }
 }
 
-/// Determines if an error is retryable (network-related).
-fn is_retryable_error(error: &str) -> bool {
-    let patterns = [
-        "timeout",
-        "connection",
-        "network",
-        "dns",
-        "reset",
-        "refused",
-        "unreachable",
-    ];
-    let lower = error.to_lowercase();
-    patterns.iter().any(|p| lower.contains(p))
+/// Determines if an error is retryable by inspecting the error chain.
+///
+/// Walks the `anyhow` error chain looking for `reqwest` errors that indicate
+/// transient network issues (timeouts, connection errors, etc.).
+fn is_retryable_error(error: &anyhow::Error) -> bool {
+    // Walk the error chain for typed reqwest errors
+    for cause in error.chain() {
+        if let Some(reqwest_err) = cause.downcast_ref::<reqwest::Error>() {
+            if reqwest_err.is_timeout() || reqwest_err.is_connect() || reqwest_err.is_request() {
+                return true;
+            }
+        }
+    }
+
+    // Fallback: pattern-match on the display string for errors that don't
+    // preserve typed info through the chain
+    let msg = error.to_string().to_lowercase();
+    msg.contains("timeout")
+        || msg.contains("connection")
+        || msg.contains("network")
+        || msg.contains("refused")
+        || msg.contains("dns")
+        || msg.contains("reset")
+        || msg.contains("unreachable")
 }
 
 /// Calculates the next claim time and which games to claim.
@@ -345,79 +311,66 @@ mod tests {
     use super::*;
 
     // =========================================================================
-    // is_retryable_error — positive cases (each keyword)
+    // is_retryable_error tests
     // =========================================================================
 
     #[test]
-    fn retryable_timeout() {
-        assert!(is_retryable_error("request timeout"));
+    fn retryable_dns_in_message() {
+        let err = anyhow::anyhow!("dns resolution failed");
+        assert!(is_retryable_error(&err));
     }
 
     #[test]
-    fn retryable_connection() {
-        assert!(is_retryable_error("connection refused by host"));
+    fn retryable_reset_in_message() {
+        let err = anyhow::anyhow!("connection reset by peer");
+        assert!(is_retryable_error(&err));
     }
 
     #[test]
-    fn retryable_network() {
-        assert!(is_retryable_error("network error"));
+    fn retryable_unreachable_in_message() {
+        let err = anyhow::anyhow!("host unreachable");
+        assert!(is_retryable_error(&err));
     }
 
     #[test]
-    fn retryable_dns() {
-        assert!(is_retryable_error("dns resolution failed"));
+    fn retryable_timeout_in_message() {
+        let err = anyhow::anyhow!("request timeout");
+        assert!(is_retryable_error(&err));
     }
 
     #[test]
-    fn retryable_reset() {
-        assert!(is_retryable_error("connection reset by peer"));
+    fn retryable_connection_in_message() {
+        let err = anyhow::anyhow!("connection dropped");
+        assert!(is_retryable_error(&err));
     }
 
     #[test]
-    fn retryable_refused() {
-        assert!(is_retryable_error("connection refused"));
+    fn retryable_network_in_message() {
+        let err = anyhow::anyhow!("temporary network issue");
+        assert!(is_retryable_error(&err));
     }
 
     #[test]
-    fn retryable_unreachable() {
-        assert!(is_retryable_error("host unreachable"));
+    fn retryable_refused_in_message() {
+        let err = anyhow::anyhow!("connection refused by host");
+        assert!(is_retryable_error(&err));
     }
-
-    // =========================================================================
-    // is_retryable_error — case insensitivity
-    // =========================================================================
-
-    #[test]
-    fn retryable_case_insensitive_uppercase() {
-        assert!(is_retryable_error("CONNECTION TIMEOUT"));
-    }
-
-    #[test]
-    fn retryable_case_insensitive_mixed() {
-        assert!(is_retryable_error("Network Error: DNS lookup failed"));
-    }
-
-    // =========================================================================
-    // is_retryable_error — negative cases
-    // =========================================================================
 
     #[test]
     fn not_retryable_auth_error() {
-        assert!(!is_retryable_error("authentication failed: invalid token"));
+        let err = anyhow::anyhow!("authentication failed: invalid token");
+        assert!(!is_retryable_error(&err));
     }
 
     #[test]
     fn not_retryable_rate_limit() {
-        assert!(!is_retryable_error("rate limit exceeded"));
+        let err = anyhow::anyhow!("rate limit exceeded");
+        assert!(!is_retryable_error(&err));
     }
 
     #[test]
-    fn not_retryable_invalid_cookie() {
-        assert!(!is_retryable_error("invalid cookie"));
-    }
-
-    #[test]
-    fn not_retryable_empty_string() {
-        assert!(!is_retryable_error(""));
+    fn not_retryable_empty() {
+        let err = anyhow::anyhow!("");
+        assert!(!is_retryable_error(&err));
     }
 }

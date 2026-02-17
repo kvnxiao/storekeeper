@@ -2,12 +2,12 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
+use anyhow::Context;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use storekeeper_core::{
-    AppConfig, ClaimTime, GameId, ResourceNotificationConfig, SecretsConfig, ensure_configs_exist,
-};
+use storekeeper_core::{AppConfig, ClaimTime, GameId, SecretsConfig, ensure_configs_exist};
 
 use crate::notification::NotificationTracker;
 
@@ -52,14 +52,11 @@ pub struct StateData {
     /// Cached resources from all games.
     pub resources: AllResources,
 
-    /// Whether a refresh is currently in progress.
-    pub refreshing: bool,
-
     /// Registry-based game clients.
-    pub registry: GameClientRegistry,
+    pub registry: Arc<GameClientRegistry>,
 
     /// Daily reward client registry.
-    pub daily_reward_registry: DailyRewardRegistry,
+    pub daily_reward_registry: Arc<DailyRewardRegistry>,
 
     /// Cached daily reward status.
     pub daily_reward_status: AllDailyRewardStatus,
@@ -76,6 +73,7 @@ pub struct StateData {
 pub struct AppState {
     /// Inner state protected by async RwLock.
     pub inner: Arc<RwLock<StateData>>,
+    refreshing: Arc<AtomicBool>,
 }
 
 impl AppState {
@@ -84,6 +82,7 @@ impl AppState {
     pub fn new() -> Self {
         Self {
             inner: Arc::new(RwLock::new(StateData::default())),
+            refreshing: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -98,8 +97,14 @@ impl AppState {
             tracing::warn!("Failed to ensure config files exist: {e}");
         }
 
-        let config = AppConfig::load().unwrap_or_default();
-        let secrets = SecretsConfig::load().unwrap_or_default();
+        let config = AppConfig::load().unwrap_or_else(|e| {
+            tracing::warn!("Failed to load config, using defaults: {e}");
+            AppConfig::default()
+        });
+        let secrets = SecretsConfig::load().unwrap_or_else(|e| {
+            tracing::warn!("Failed to load secrets, using defaults: {e}");
+            SecretsConfig::default()
+        });
 
         let registry = create_registry(&config, &secrets);
         let daily_reward_registry = create_daily_reward_registry(&config, &secrets);
@@ -107,13 +112,13 @@ impl AppState {
         Self {
             inner: Arc::new(RwLock::new(StateData {
                 resources: AllResources::default(),
-                refreshing: false,
-                registry,
-                daily_reward_registry,
+                registry: Arc::new(registry),
+                daily_reward_registry: Arc::new(daily_reward_registry),
                 daily_reward_status: AllDailyRewardStatus::default(),
                 config,
                 notification_tracker: NotificationTracker::default(),
             })),
+            refreshing: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -129,24 +134,30 @@ impl AppState {
         state.resources = resources;
     }
 
-    /// Checks if a refresh is in progress.
-    pub async fn is_refreshing(&self) -> bool {
-        let state = self.inner.read().await;
-        state.refreshing
+    /// Attempts to mark refresh as started.
+    ///
+    /// Returns `true` if this call acquired the refresh slot.
+    #[must_use]
+    pub fn try_start_refresh(&self) -> bool {
+        self.refreshing
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .is_ok()
     }
 
-    /// Sets the refreshing flag.
-    pub async fn set_refreshing(&self, refreshing: bool) {
-        let mut state = self.inner.write().await;
-        state.refreshing = refreshing;
+    /// Marks refresh as finished.
+    pub fn finish_refresh(&self) {
+        self.refreshing.store(false, Ordering::Release);
     }
 
     /// Fetches resources from all configured game clients using the registry.
     ///
     /// Emits per-game update events via the app handle as each game completes.
     pub async fn fetch_all_resources(&self, app_handle: &tauri::AppHandle) -> AllResources {
-        let state = self.inner.read().await;
-        let games = state.registry.fetch_all(app_handle).await;
+        let registry = {
+            let state = self.inner.read().await;
+            Arc::clone(&state.registry)
+        };
+        let games = registry.fetch_all(app_handle).await;
         AllResources {
             games,
             last_updated: Some(Utc::now()),
@@ -161,8 +172,11 @@ impl AppState {
 
     /// Returns whether any game clients are configured.
     pub async fn has_clients(&self) -> bool {
-        let state = self.inner.read().await;
-        state.registry.has_any()
+        let registry = {
+            let state = self.inner.read().await;
+            Arc::clone(&state.registry)
+        };
+        registry.has_any()
     }
 
     // ========================================================================
@@ -183,8 +197,11 @@ impl AppState {
 
     /// Fetches daily reward status from all configured games.
     pub async fn fetch_all_daily_reward_status(&self) -> AllDailyRewardStatus {
-        let state = self.inner.read().await;
-        let games = state.daily_reward_registry.get_all_status().await;
+        let daily_reward_registry = {
+            let state = self.inner.read().await;
+            Arc::clone(&state.daily_reward_registry)
+        };
+        let games = daily_reward_registry.get_all_status().await;
         AllDailyRewardStatus {
             games,
             last_checked: Some(Utc::now()),
@@ -193,8 +210,11 @@ impl AppState {
 
     /// Claims daily rewards from all configured games.
     pub async fn claim_all_daily_rewards(&self) -> HashMap<GameId, serde_json::Value> {
-        let state = self.inner.read().await;
-        state.daily_reward_registry.claim_all().await
+        let daily_reward_registry = {
+            let state = self.inner.read().await;
+            Arc::clone(&state.daily_reward_registry)
+        };
+        daily_reward_registry.claim_all().await
     }
 
     /// Claims daily reward for a specific game.
@@ -205,9 +225,12 @@ impl AppState {
     pub async fn claim_daily_reward_for_game(
         &self,
         game_id: GameId,
-    ) -> Result<serde_json::Value, String> {
-        let state = self.inner.read().await;
-        state.daily_reward_registry.claim_for_game(game_id).await
+    ) -> anyhow::Result<serde_json::Value> {
+        let daily_reward_registry = {
+            let state = self.inner.read().await;
+            Arc::clone(&state.daily_reward_registry)
+        };
+        daily_reward_registry.claim_for_game(game_id).await
     }
 
     /// Gets the daily reward status for a specific game.
@@ -218,12 +241,12 @@ impl AppState {
     pub async fn get_daily_reward_status_for_game(
         &self,
         game_id: GameId,
-    ) -> Result<serde_json::Value, String> {
-        let state = self.inner.read().await;
-        state
-            .daily_reward_registry
-            .get_status_for_game(game_id)
-            .await
+    ) -> anyhow::Result<serde_json::Value> {
+        let daily_reward_registry = {
+            let state = self.inner.read().await;
+            Arc::clone(&state.daily_reward_registry)
+        };
+        daily_reward_registry.get_status_for_game(game_id).await
     }
 
     /// Gets the list of games that have auto-claim enabled.
@@ -231,25 +254,11 @@ impl AppState {
     /// Returns a list of `(GameId, Option<ClaimTime>)` pairs.
     pub async fn get_auto_claim_games(&self) -> Vec<(GameId, Option<ClaimTime>)> {
         let state = self.inner.read().await;
-        let mut games = Vec::new();
-
-        if let Some(ref cfg) = state.config.games.genshin_impact {
-            if cfg.enabled && cfg.auto_claim_daily_rewards {
-                games.push((GameId::GenshinImpact, cfg.auto_claim_time));
-            }
-        }
-        if let Some(ref cfg) = state.config.games.honkai_star_rail {
-            if cfg.enabled && cfg.auto_claim_daily_rewards {
-                games.push((GameId::HonkaiStarRail, cfg.auto_claim_time));
-            }
-        }
-        if let Some(ref cfg) = state.config.games.zenless_zone_zero {
-            if cfg.enabled && cfg.auto_claim_daily_rewards {
-                games.push((GameId::ZenlessZoneZero, cfg.auto_claim_time));
-            }
-        }
-
-        games
+        GameId::all()
+            .iter()
+            .filter(|id| state.config.games.auto_claim_enabled(**id))
+            .map(|id| (*id, state.config.games.auto_claim_time(*id)))
+            .collect()
     }
 
     /// Checks if auto-claim is enabled for a specific game.
@@ -259,75 +268,13 @@ impl AppState {
     /// that is determined by fetching status from the API.
     pub async fn should_auto_claim_game(&self, game_id: GameId) -> bool {
         let state = self.inner.read().await;
-
-        // Check if the game has auto-claim enabled
-        let auto_claim_enabled = match game_id {
-            GameId::GenshinImpact => state
-                .config
-                .games
-                .genshin_impact
-                .as_ref()
-                .is_some_and(|c| c.enabled && c.auto_claim_daily_rewards),
-            GameId::HonkaiStarRail => state
-                .config
-                .games
-                .honkai_star_rail
-                .as_ref()
-                .is_some_and(|c| c.enabled && c.auto_claim_daily_rewards),
-            GameId::ZenlessZoneZero => state
-                .config
-                .games
-                .zenless_zone_zero
-                .as_ref()
-                .is_some_and(|c| c.enabled && c.auto_claim_daily_rewards),
-            GameId::WutheringWaves => false, // Kuro games don't support daily rewards
-        };
-
-        if !auto_claim_enabled {
-            return false;
-        }
-
-        // Check if the game is registered in the daily reward registry
-        state.daily_reward_registry.has_game(game_id)
+        state.config.games.auto_claim_enabled(game_id)
+            && state.daily_reward_registry.has_game(game_id)
     }
 
     // ========================================================================
     // Notification Methods
     // ========================================================================
-
-    /// Gets the notification config for a specific game.
-    pub async fn get_game_notification_config(
-        &self,
-        game_id: GameId,
-    ) -> HashMap<String, ResourceNotificationConfig> {
-        let state = self.inner.read().await;
-        match game_id {
-            GameId::GenshinImpact => state
-                .config
-                .games
-                .genshin_impact
-                .as_ref()
-                .map_or_else(HashMap::new, |c| c.notifications.clone()),
-            GameId::HonkaiStarRail => state
-                .config
-                .games
-                .honkai_star_rail
-                .as_ref()
-                .map_or_else(HashMap::new, |c| c.notifications.clone()),
-            GameId::ZenlessZoneZero => state
-                .config
-                .games
-                .zenless_zone_zero
-                .as_ref()
-                .map_or_else(HashMap::new, |c| c.notifications.clone()),
-            GameId::WutheringWaves => state
-                .config
-                .games
-                .wuthering_waves
-                .as_ref()
-                .map_or_else(HashMap::new, |c| c.notifications.clone()),
-        }
-    }
 
     /// Reloads configuration and reinitializes game clients.
     ///
@@ -338,10 +285,10 @@ impl AppState {
     /// # Errors
     ///
     /// Returns an error if config or secrets files cannot be loaded.
-    pub async fn reload_config(&self) -> Result<(), String> {
+    pub async fn reload_config(&self) -> anyhow::Result<()> {
         // Build all new state outside the write lock
-        let config = AppConfig::load().map_err(|e| format!("Failed to load config: {e}"))?;
-        let secrets = SecretsConfig::load().map_err(|e| format!("Failed to load secrets: {e}"))?;
+        let config = AppConfig::load().context("failed to load config")?;
+        let secrets = SecretsConfig::load().context("failed to load secrets")?;
 
         let registry = create_registry(&config, &secrets);
         let daily_reward_registry = create_daily_reward_registry(&config, &secrets);
@@ -349,8 +296,8 @@ impl AppState {
         // Swap atomically under write lock
         let mut state = self.inner.write().await;
         state.config = config;
-        state.registry = registry;
-        state.daily_reward_registry = daily_reward_registry;
+        state.registry = Arc::new(registry);
+        state.daily_reward_registry = Arc::new(daily_reward_registry);
         state.notification_tracker.clear_all();
 
         tracing::info!("Configuration reloaded successfully");

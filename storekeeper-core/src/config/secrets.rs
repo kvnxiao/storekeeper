@@ -1,6 +1,6 @@
 //! Secrets configuration for sensitive credentials.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
@@ -34,7 +34,7 @@ impl SecretsConfig {
     /// # Errors
     ///
     /// Returns an error if the secrets file cannot be read or parsed.
-    pub fn load_from_path(path: &PathBuf) -> Result<Self> {
+    pub fn load_from_path(path: &Path) -> Result<Self> {
         if !path.exists() {
             return Err(Error::ConfigNotFound {
                 path: path.display().to_string(),
@@ -52,10 +52,7 @@ impl SecretsConfig {
     ///
     /// Returns an error if the config directory cannot be determined.
     pub fn secrets_path() -> Result<PathBuf> {
-        let config_dir = dirs::config_dir().ok_or_else(|| Error::ConfigNotFound {
-            path: "config directory".to_string(),
-        })?;
-        Ok(config_dir.join("storekeeper").join("secrets.toml"))
+        Ok(super::AppConfig::config_dir()?.join("secrets.toml"))
     }
 
     /// Saves the secrets to the default secrets file location.
@@ -73,7 +70,7 @@ impl SecretsConfig {
     /// # Errors
     ///
     /// Returns an error if the secrets file cannot be written.
-    pub fn save_to_path(&self, path: &PathBuf) -> Result<()> {
+    pub fn save_to_path(&self, path: &Path) -> Result<()> {
         // Ensure the directory exists
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
