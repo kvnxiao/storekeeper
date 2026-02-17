@@ -69,7 +69,7 @@ const HOYOLAB_GAMES: {
   {
     gameId: GameId.GenshinImpact,
     configKey: "genshin_impact",
-    title: m.game_genshin_impact,
+    title: m.game_genshin_name,
     description: m.settings_game_configure_genshin,
     resourceTypes: [
       GenshinResource.Resin,
@@ -81,14 +81,14 @@ const HOYOLAB_GAMES: {
   {
     gameId: GameId.HonkaiStarRail,
     configKey: "honkai_star_rail",
-    title: m.game_honkai_star_rail,
+    title: m.game_hsr_name,
     description: m.settings_game_configure_hsr,
     resourceTypes: [HsrResource.TrailblazePower],
   },
   {
     gameId: GameId.ZenlessZoneZero,
     configKey: "zenless_zone_zero",
-    title: m.game_zenless_zone_zero,
+    title: m.game_zzz_name,
     description: m.settings_game_configure_zzz,
     resourceTypes: [ZzzResource.Battery],
   },

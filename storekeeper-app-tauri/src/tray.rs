@@ -19,9 +19,9 @@ use crate::i18n;
 /// Returns an error if the menu items or menu cannot be created,
 /// or if the tray icon is not found.
 pub fn build_tray_menu(app: &AppHandle) -> Result<()> {
-    let refresh_label = i18n::t("tray.refresh_now");
-    let open_config_label = i18n::t("tray.open_config_folder");
-    let quit_label = i18n::t("tray.quit");
+    let refresh_label = i18n::t("tray_refresh_now");
+    let open_config_label = i18n::t("tray_open_config_folder");
+    let quit_label = i18n::t("tray_quit");
 
     let refresh = MenuItem::with_id(app, "refresh", &refresh_label, true, None::<&str>)
         .context("failed to create 'Refresh Now' menu item")?;

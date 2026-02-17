@@ -8,11 +8,11 @@ use crate::i18n;
 use super::resource_extractor::ResourceInfo;
 
 /// Maps resource type tags to localized display names via i18n lookup.
-pub(crate) fn resource_display_name(game_id: GameId, resource_type: &str) -> String {
-    let key = format!("game.{}.resource.{resource_type}", game_id.short_id());
+pub(crate) fn resource_display_name(resource_type: &str) -> String {
+    let key = format!("resource_{resource_type}");
     let result = i18n::t(&key);
     if result == key {
-        i18n::t("resource.unknown")
+        i18n::t("resource_unknown")
     } else {
         result
     }
@@ -20,7 +20,7 @@ pub(crate) fn resource_display_name(game_id: GameId, resource_type: &str) -> Str
 
 /// Returns the localized game display name via i18n lookup.
 pub(crate) fn game_display_name(game_id: GameId) -> String {
-    let key = format!("game.{}.name", game_id.short_id());
+    let key = format!("game_{}_name", game_id.short_id());
     i18n::t(&key)
 }
 
@@ -29,20 +29,16 @@ pub(crate) fn game_display_name(game_id: GameId) -> String {
 /// Differentiates between stamina resources (have `max`) and cooldown/expedition
 /// resources (no `max`). Stamina resources show current/max + duration + clock time;
 /// cooldown resources show "ready" or "ready in {duration}".
+///
+/// The resource name is intentionally omitted — the notification title already
+/// contains both the game name and resource name.
 #[allow(clippy::cast_possible_wrap)]
-pub(crate) fn build_notification_body(
-    resource_name: &str,
-    info: &ResourceInfo,
-    now: DateTime<Utc>,
-) -> String {
+pub(crate) fn build_notification_body(info: &ResourceInfo, now: DateTime<Utc>) -> String {
     let is_stamina = info.max.is_some();
 
     if is_stamina {
         if info.is_complete {
-            return i18n::t_args(
-                "notification.resource_full",
-                &[("resource_name", i18n::Value::from(resource_name))],
-            );
+            return i18n::t("notification_stamina_full");
         }
 
         let current = info
@@ -54,34 +50,34 @@ pub(crate) fn build_notification_body(
         let local_time = info.completion_at.with_timezone(&Local);
         let hour = u8::try_from(local_time.hour()).unwrap_or(0);
         let minute = u8::try_from(local_time.minute()).unwrap_or(0);
-        let clock_time = i18n::format_time(hour, minute);
+        let local_time = i18n::format_time(hour, minute);
 
         i18n::t_args(
-            "notification.resource_status",
+            "notification_stamina_progress",
             &[
-                ("resource_name", i18n::Value::from(resource_name)),
                 ("current", i18n::Value::from(current)),
                 ("max", i18n::Value::from(max)),
                 ("duration", i18n::Value::from(duration)),
-                ("clock_time", i18n::Value::from(clock_time)),
+                ("local_time", i18n::Value::from(local_time)),
             ],
         )
     } else {
         if info.is_complete {
-            return i18n::t_args(
-                "notification.resource_ready",
-                &[("resource_name", i18n::Value::from(resource_name))],
-            );
+            return i18n::t("notification_cooldown_complete");
         }
 
         let mins_remaining = (info.completion_at - now).num_minutes();
         let duration = i18n::format_duration(mins_remaining);
+        let local_time = info.completion_at.with_timezone(&Local);
+        let hour = u8::try_from(local_time.hour()).unwrap_or(0);
+        let minute = u8::try_from(local_time.minute()).unwrap_or(0);
+        let local_time = i18n::format_time(hour, minute);
 
         i18n::t_args(
-            "notification.resource_ready_in",
+            "notification_cooldown_remaining",
             &[
-                ("resource_name", i18n::Value::from(resource_name)),
                 ("duration", i18n::Value::from(duration)),
+                ("local_time", i18n::Value::from(local_time)),
             ],
         )
     }
@@ -106,43 +102,25 @@ mod tests {
     #[test]
     fn test_display_names() {
         ensure_init();
+        assert_eq!(resource_display_name("resin"), "Original Resin");
         assert_eq!(
-            resource_display_name(GameId::GenshinImpact, "resin"),
-            "Original Resin"
-        );
-        assert_eq!(
-            resource_display_name(GameId::GenshinImpact, "parametric_transformer"),
+            resource_display_name("parametric_transformer"),
             "Parametric Transformer"
         );
+        assert_eq!(resource_display_name("realm_currency"), "Realm Currency");
+        assert_eq!(resource_display_name("expeditions"), "Expeditions");
         assert_eq!(
-            resource_display_name(GameId::GenshinImpact, "realm_currency"),
-            "Realm Currency"
-        );
-        assert_eq!(
-            resource_display_name(GameId::GenshinImpact, "expeditions"),
-            "Expeditions"
-        );
-        assert_eq!(
-            resource_display_name(GameId::HonkaiStarRail, "trailblaze_power"),
+            resource_display_name("trailblaze_power"),
             "Trailblaze Power"
         );
-        assert_eq!(
-            resource_display_name(GameId::ZenlessZoneZero, "battery"),
-            "Battery"
-        );
-        assert_eq!(
-            resource_display_name(GameId::WutheringWaves, "waveplates"),
-            "Waveplates"
-        );
+        assert_eq!(resource_display_name("battery"), "Battery");
+        assert_eq!(resource_display_name("waveplates"), "Waveplates");
     }
 
     #[test]
     fn test_display_name_unknown_fallback() {
         ensure_init();
-        assert_eq!(
-            resource_display_name(GameId::GenshinImpact, "unknown_thing"),
-            "Unknown Resource"
-        );
+        assert_eq!(resource_display_name("unknown_thing"), "Unknown Resource");
     }
 
     // =========================================================================
@@ -160,8 +138,8 @@ mod tests {
             max: Some(160),
             regen_rate_seconds: Some(480),
         };
-        let body = build_notification_body("Original Resin", &info, now);
-        assert_eq!(body, "Original Resin is full!");
+        let body = build_notification_body(&info, now);
+        assert_eq!(body, "Full!");
     }
 
     #[test]
@@ -176,9 +154,8 @@ mod tests {
             max: Some(160),
             regen_rate_seconds: Some(480),
         };
-        let body = build_notification_body("Original Resin", &info, now);
-        // Should contain resource name, current/max, and time info
-        assert!(body.contains("Original Resin"));
+        let body = build_notification_body(&info, now);
+        // Should contain /max and time info
         assert!(body.contains("/160"));
     }
 
@@ -197,8 +174,8 @@ mod tests {
             max: None,
             regen_rate_seconds: None,
         };
-        let body = build_notification_body("Parametric Transformer", &info, now);
-        assert_eq!(body, "Parametric Transformer is ready to claim!");
+        let body = build_notification_body(&info, now);
+        assert_eq!(body, "Ready!");
     }
 
     #[test]
@@ -213,8 +190,7 @@ mod tests {
             max: None,
             regen_rate_seconds: None,
         };
-        let body = build_notification_body("Parametric Transformer", &info, now);
-        assert!(body.contains("Parametric Transformer"));
-        assert!(body.contains("will be ready in"));
+        let body = build_notification_body(&info, now);
+        assert!(body.contains("Ready in"));
     }
 }

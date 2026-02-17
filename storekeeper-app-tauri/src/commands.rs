@@ -219,7 +219,7 @@ pub async fn send_preview_notification(
 ) -> Result<(), CommandError> {
     let resources = state.get_resources().await;
     let game_name = notification::game_display_name(game_id);
-    let resource_name = notification::resource_display_name(game_id, &resource_type);
+    let resource_name = notification::resource_display_name(&resource_type);
 
     // Try to find cached resource data and build a real notification body
     let body = resources
@@ -237,21 +237,12 @@ pub async fn send_preview_notification(
         .and_then(|data| {
             let info = notification::extract_resource_info(&resource_type, data)?;
             let now = Utc::now();
-            Some(notification::build_notification_body(
-                &resource_name,
-                &info,
-                now,
-            ))
+            Some(notification::build_notification_body(&info, now))
         })
-        .unwrap_or_else(|| {
-            i18n::t_args(
-                "notification.no_data",
-                &[("resource_name", i18n::Value::from(resource_name.as_str()))],
-            )
-        });
+        .unwrap_or_else(|| i18n::t("notification_no_data"));
 
     let title = i18n::t_args(
-        "notification.title",
+        "notification_title",
         &[
             ("game_name", i18n::Value::from(game_name.as_str())),
             ("resource_name", i18n::Value::from(resource_name.as_str())),

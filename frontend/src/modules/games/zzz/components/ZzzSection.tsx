@@ -5,7 +5,7 @@ import { GameSection } from "@/modules/ui/components/GameSection";
 import * as m from "@/paraglide/messages";
 
 export const ZzzSection: React.FC = () => (
-  <GameSection title={m.game_zenless_zone_zero()}>
+  <GameSection title={m.game_zzz_name()}>
     <ResourceCard
       resourceAtom={atoms.games.zzz.battery}
       resourceType={ZzzResource.Battery}
