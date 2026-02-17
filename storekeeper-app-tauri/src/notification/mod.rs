@@ -16,10 +16,34 @@ pub(crate) use resource_extractor::extract_resource_info;
 pub use tracker::NotificationTracker;
 
 use chrono::Utc;
+use storekeeper_core::GameId;
+use storekeeper_core::config::{GamesConfig, ResourceNotificationConfig};
 use tauri::{AppHandle, Manager};
 use tokio_util::sync::CancellationToken;
 
 use crate::state::AppState;
+
+use self::resource_extractor::ResourceInfo;
+
+/// Resolves a resource JSON object into its notification config and extracted
+/// timing info, returning `None` if the resource is missing fields, has no
+/// config, or notifications are disabled.
+fn resolve_notifiable_resource<'a>(
+    resource_obj: &'a serde_json::Value,
+    games_config: &'a GamesConfig,
+    game_id: GameId,
+) -> Option<(&'a str, &'a ResourceNotificationConfig, ResourceInfo)> {
+    let type_tag = resource_obj
+        .get("type")
+        .and_then(serde_json::Value::as_str)?;
+    let config = games_config.notification_config(game_id, type_tag)?;
+    if !config.enabled {
+        return None;
+    }
+    let data = resource_obj.get("data")?;
+    let resource_info = extract_resource_info(type_tag, data)?;
+    Some((type_tag, config, resource_info))
+}
 
 /// Starts the background notification checker.
 ///
@@ -65,24 +89,9 @@ pub(crate) async fn check_and_notify(app_handle: &AppHandle) {
         };
 
         for resource_obj in resource_array {
-            let Some(type_tag) = resource_obj.get("type").and_then(serde_json::Value::as_str)
+            let Some((type_tag, config, resource_info)) =
+                resolve_notifiable_resource(resource_obj, &games_config, *game_id)
             else {
-                continue;
-            };
-
-            let Some(config) = games_config.notification_config(*game_id, type_tag) else {
-                continue;
-            };
-
-            if !config.enabled {
-                continue;
-            }
-
-            let Some(data) = resource_obj.get("data") else {
-                continue;
-            };
-
-            let Some(resource_info) = extract_resource_info(type_tag, data) else {
                 continue;
             };
 
