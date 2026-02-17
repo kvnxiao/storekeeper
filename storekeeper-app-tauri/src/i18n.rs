@@ -64,8 +64,8 @@ mod tests {
     #[test]
     fn test_simple_lookup() {
         ensure_init();
-        assert_eq!(t("tray.quit"), "Quit");
-        assert_eq!(t("tray.refresh_now"), "Refresh Now");
+        assert_eq!(t("tray_quit"), "Quit");
+        assert_eq!(t("tray_refresh_now"), "Refresh Now");
     }
 
     #[test]
@@ -78,7 +78,7 @@ mod tests {
     fn test_simple_substitution() {
         ensure_init();
         let result = t_args(
-            "notification.title",
+            "notification_title",
             &[
                 ("game_name", Value::String("Genshin Impact".to_string())),
                 ("resource_name", Value::String("Original Resin".to_string())),
@@ -88,24 +88,24 @@ mod tests {
     }
 
     #[test]
-    fn test_resource_full_simple() {
+    fn test_stamina_full() {
         ensure_init();
-        let result = t("notification.resource_full");
+        let result = t("notification_stamina_full");
         assert_eq!(result, "Full!");
     }
 
     #[test]
-    fn test_resource_ready() {
+    fn test_cooldown_complete() {
         ensure_init();
-        let result = t("notification.resource_ready");
-        assert_eq!(result, "Ready to claim!");
+        let result = t("notification_cooldown_complete");
+        assert_eq!(result, "Ready!");
     }
 
     #[test]
-    fn test_resource_ready_in() {
+    fn test_cooldown_remaining() {
         ensure_init();
         let result = t_args(
-            "notification.resource_ready_in",
+            "notification_cooldown_remaining",
             &[
                 ("duration", Value::String("30m".to_string())),
                 ("local_time", Value::String("5:30 PM".to_string())),
@@ -115,10 +115,10 @@ mod tests {
     }
 
     #[test]
-    fn test_resource_status() {
+    fn test_stamina_progress() {
         ensure_init();
         let result = t_args(
-            "notification.resource_status",
+            "notification_stamina_progress",
             &[
                 ("current", Value::String("140".to_string())),
                 ("max", Value::String("160".to_string())),
@@ -171,19 +171,19 @@ mod tests {
     #[test]
     fn test_game_names() {
         ensure_init();
-        assert_eq!(t("game.genshin.name"), "Genshin Impact");
-        assert_eq!(t("game.hsr.name"), "Honkai: Star Rail");
-        assert_eq!(t("game.zzz.name"), "Zenless Zone Zero");
-        assert_eq!(t("game.wuwa.name"), "Wuthering Waves");
+        assert_eq!(t("game_genshin_name"), "Genshin Impact");
+        assert_eq!(t("game_hsr_name"), "Honkai: Star Rail");
+        assert_eq!(t("game_zzz_name"), "Zenless Zone Zero");
+        assert_eq!(t("game_wuwa_name"), "Wuthering Waves");
     }
 
     #[test]
     fn test_resource_names() {
         ensure_init();
-        assert_eq!(t("game.genshin.resource.resin"), "Original Resin");
-        assert_eq!(t("game.hsr.resource.trailblaze_power"), "Trailblaze Power");
-        assert_eq!(t("game.zzz.resource.battery"), "Battery");
-        assert_eq!(t("game.wuwa.resource.waveplates"), "Waveplates");
+        assert_eq!(t("resource_resin"), "Original Resin");
+        assert_eq!(t("resource_trailblaze_power"), "Trailblaze Power");
+        assert_eq!(t("resource_battery"), "Battery");
+        assert_eq!(t("resource_waveplates"), "Waveplates");
     }
 
     #[test]

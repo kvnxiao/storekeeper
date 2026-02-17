@@ -6,7 +6,7 @@ import { GameSection } from "@/modules/ui/components/GameSection";
 import * as m from "@/paraglide/messages";
 
 export const GenshinSection: React.FC = () => (
-  <GameSection title={m.game_genshin_impact()}>
+  <GameSection title={m.game_genshin_name()}>
     <ResourceCard
       resourceAtom={atoms.games.genshin.resin}
       resourceType={GenshinResource.Resin}

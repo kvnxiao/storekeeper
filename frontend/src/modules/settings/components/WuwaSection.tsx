@@ -26,7 +26,7 @@ export const WuwaSection: React.FC<WuwaSectionProps> = ({
 
   return (
     <Section
-      title={m.game_wuthering_waves()}
+      title={m.game_wuwa_name()}
       description={m.settings_game_configure_wuwa()}
     >
       <Switch

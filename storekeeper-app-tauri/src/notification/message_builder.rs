@@ -8,11 +8,11 @@ use crate::i18n;
 use super::resource_extractor::ResourceInfo;
 
 /// Maps resource type tags to localized display names via i18n lookup.
-pub(crate) fn resource_display_name(game_id: GameId, resource_type: &str) -> String {
-    let key = format!("game.{}.resource.{resource_type}", game_id.short_id());
+pub(crate) fn resource_display_name(resource_type: &str) -> String {
+    let key = format!("resource_{resource_type}");
     let result = i18n::t(&key);
     if result == key {
-        i18n::t("resource.unknown")
+        i18n::t("resource_unknown")
     } else {
         result
     }
@@ -20,7 +20,7 @@ pub(crate) fn resource_display_name(game_id: GameId, resource_type: &str) -> Str
 
 /// Returns the localized game display name via i18n lookup.
 pub(crate) fn game_display_name(game_id: GameId) -> String {
-    let key = format!("game.{}.name", game_id.short_id());
+    let key = format!("game_{}_name", game_id.short_id());
     i18n::t(&key)
 }
 
@@ -38,7 +38,7 @@ pub(crate) fn build_notification_body(info: &ResourceInfo, now: DateTime<Utc>) -
 
     if is_stamina {
         if info.is_complete {
-            return i18n::t("notification.resource_full");
+            return i18n::t("notification_stamina_full");
         }
 
         let current = info
@@ -53,7 +53,7 @@ pub(crate) fn build_notification_body(info: &ResourceInfo, now: DateTime<Utc>) -
         let local_time = i18n::format_time(hour, minute);
 
         i18n::t_args(
-            "notification.resource_status",
+            "notification_stamina_progress",
             &[
                 ("current", i18n::Value::from(current)),
                 ("max", i18n::Value::from(max)),
@@ -63,7 +63,7 @@ pub(crate) fn build_notification_body(info: &ResourceInfo, now: DateTime<Utc>) -
         )
     } else {
         if info.is_complete {
-            return i18n::t("notification.resource_ready");
+            return i18n::t("notification_cooldown_complete");
         }
 
         let mins_remaining = (info.completion_at - now).num_minutes();
@@ -74,7 +74,7 @@ pub(crate) fn build_notification_body(info: &ResourceInfo, now: DateTime<Utc>) -
         let local_time = i18n::format_time(hour, minute);
 
         i18n::t_args(
-            "notification.resource_ready_in",
+            "notification_cooldown_remaining",
             &[
                 ("duration", i18n::Value::from(duration)),
                 ("local_time", i18n::Value::from(local_time)),
@@ -102,43 +102,25 @@ mod tests {
     #[test]
     fn test_display_names() {
         ensure_init();
+        assert_eq!(resource_display_name("resin"), "Original Resin");
         assert_eq!(
-            resource_display_name(GameId::GenshinImpact, "resin"),
-            "Original Resin"
-        );
-        assert_eq!(
-            resource_display_name(GameId::GenshinImpact, "parametric_transformer"),
+            resource_display_name("parametric_transformer"),
             "Parametric Transformer"
         );
+        assert_eq!(resource_display_name("realm_currency"), "Realm Currency");
+        assert_eq!(resource_display_name("expeditions"), "Expeditions");
         assert_eq!(
-            resource_display_name(GameId::GenshinImpact, "realm_currency"),
-            "Realm Currency"
-        );
-        assert_eq!(
-            resource_display_name(GameId::GenshinImpact, "expeditions"),
-            "Expeditions"
-        );
-        assert_eq!(
-            resource_display_name(GameId::HonkaiStarRail, "trailblaze_power"),
+            resource_display_name("trailblaze_power"),
             "Trailblaze Power"
         );
-        assert_eq!(
-            resource_display_name(GameId::ZenlessZoneZero, "battery"),
-            "Battery"
-        );
-        assert_eq!(
-            resource_display_name(GameId::WutheringWaves, "waveplates"),
-            "Waveplates"
-        );
+        assert_eq!(resource_display_name("battery"), "Battery");
+        assert_eq!(resource_display_name("waveplates"), "Waveplates");
     }
 
     #[test]
     fn test_display_name_unknown_fallback() {
         ensure_init();
-        assert_eq!(
-            resource_display_name(GameId::GenshinImpact, "unknown_thing"),
-            "Unknown Resource"
-        );
+        assert_eq!(resource_display_name("unknown_thing"), "Unknown Resource");
     }
 
     // =========================================================================
@@ -193,7 +175,7 @@ mod tests {
             regen_rate_seconds: None,
         };
         let body = build_notification_body(&info, now);
-        assert_eq!(body, "Ready to claim!");
+        assert_eq!(body, "Ready!");
     }
 
     #[test]

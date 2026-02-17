@@ -5,7 +5,7 @@ import { GameSection } from "@/modules/ui/components/GameSection";
 import * as m from "@/paraglide/messages";
 
 export const HsrSection: React.FC = () => (
-  <GameSection title={m.game_honkai_star_rail()}>
+  <GameSection title={m.game_hsr_name()}>
     <ResourceCard
       resourceAtom={atoms.games.hsr.trailblazePower}
       resourceType={HsrResource.TrailblazePower}

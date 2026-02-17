@@ -21,12 +21,12 @@ pub(crate) fn send_resource_notification(
     now: DateTime<Utc>,
 ) -> bool {
     let game_name = game_display_name(game_id);
-    let resource_name = resource_display_name(game_id, resource_type);
+    let resource_name = resource_display_name(resource_type);
 
     let body = build_notification_body(info, now);
 
     let title = i18n::t_args(
-        "notification.title",
+        "notification_title",
         &[
             ("game_name", i18n::Value::from(game_name.as_str())),
             ("resource_name", i18n::Value::from(resource_name.as_str())),
