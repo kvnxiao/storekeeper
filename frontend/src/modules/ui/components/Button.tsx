@@ -140,7 +140,9 @@ export const Button: React.FC<ButtonProps> = ({
     >
       {composeRenderProps(children, (children) => (
         <>
-          {isPending && <ArrowPathIcon className="h-4 w-4 animate-spin" />}
+          {isPending && (
+            <ArrowPathIcon aria-hidden="true" className="size-4 animate-spin" />
+          )}
           {children}
         </>
       ))}

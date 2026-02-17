@@ -1,6 +1,6 @@
 import { atom } from "jotai";
 import type { CoreAtoms } from "@/modules/core/core.atoms";
-import { atomResourceSelector } from "@/modules/games/games.atoms";
+import { atomResourceSelector } from "@/modules/games/atomResourceSelector";
 import { GenshinResource } from "@/modules/games/games.constants";
 import { GameId } from "@/modules/games/games.types";
 import type { ExpeditionResource } from "@/modules/resources/resources.types";

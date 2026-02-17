@@ -3,7 +3,6 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { atom } from "jotai";
 import { atomEffect } from "jotai-effect";
 import { atomWithMutation, atomWithQuery } from "jotai-tanstack-query";
-import { configQueryAtom } from "@/modules/core/core.config";
 import { queryClient } from "@/modules/core/core.queryClient";
 import { GameId } from "@/modules/games/games.types";
 import {
@@ -14,6 +13,8 @@ import type {
   AllResources,
   GameResourcePayload,
 } from "@/modules/resources/resources.types";
+import { configQueryOptions } from "@/modules/settings/settings.query";
+import type { GamesConfig } from "@/modules/settings/settings.types";
 import { isLocale, setLocale } from "@/paraglide/runtime";
 
 // =============================================================================
@@ -22,11 +23,17 @@ import { isLocale, setLocale } from "@/paraglide/runtime";
 
 export class CoreAtoms {
   // ---------------------------------------------------------------------------
+  // Config Query Atom (app-wide state, shared across atom classes)
+  // ---------------------------------------------------------------------------
+
+  static readonly configQueryAtom = atomWithQuery(() => configQueryOptions());
+
+  // ---------------------------------------------------------------------------
   // Tick system - updates every minute for real-time countdown display
   // ---------------------------------------------------------------------------
 
-  readonly tickBase = atom<number>(Date.now());
-  readonly tickRestartSignal = atom<number>(0);
+  private readonly tickBase = atom<number>(Date.now());
+  private readonly tickRestartSignal = atom<number>(0);
 
   private readonly tickEffect = atomEffect((get, set) => {
     get(this.tickRestartSignal);
@@ -62,7 +69,7 @@ export class CoreAtoms {
   // Refresh state - tracks when a manual refresh is in progress
   // ---------------------------------------------------------------------------
 
-  readonly isRefreshingBase = atom(false);
+  private readonly isRefreshingBase = atom(false);
 
   private readonly isRefreshingEffect = atomEffect((_get, set) => {
     const unlistenPromises: Promise<UnlistenFn>[] = [];
@@ -144,27 +151,28 @@ export class CoreAtoms {
   // Config loading state
   // ---------------------------------------------------------------------------
 
-  readonly isConfigLoading = atom((get) => {
-    const { isPending } = get(configQueryAtom);
-    return isPending;
-  });
+  readonly isConfigLoading = atom(
+    (get) => get(CoreAtoms.configQueryAtom).isPending,
+  );
 
   // ---------------------------------------------------------------------------
   // Enabled games - derived from config
   // ---------------------------------------------------------------------------
 
+  private static readonly GAME_CONFIG_KEYS: [GameId, keyof GamesConfig][] = [
+    [GameId.GenshinImpact, "genshin_impact"],
+    [GameId.HonkaiStarRail, "honkai_star_rail"],
+    [GameId.ZenlessZoneZero, "zenless_zone_zero"],
+    [GameId.WutheringWaves, "wuthering_waves"],
+  ];
+
   readonly enabledGames = atom((get) => {
-    const { data: config } = get(configQueryAtom);
-    const enabled = new Set<GameId>();
-    if (config?.games.genshin_impact?.enabled)
-      enabled.add(GameId.GenshinImpact);
-    if (config?.games.honkai_star_rail?.enabled)
-      enabled.add(GameId.HonkaiStarRail);
-    if (config?.games.zenless_zone_zero?.enabled)
-      enabled.add(GameId.ZenlessZoneZero);
-    if (config?.games.wuthering_waves?.enabled)
-      enabled.add(GameId.WutheringWaves);
-    return enabled;
+    const { data: config } = get(CoreAtoms.configQueryAtom);
+    return new Set<GameId>(
+      CoreAtoms.GAME_CONFIG_KEYS.filter(
+        ([, key]) => config?.games[key]?.enabled,
+      ).map(([id]) => id),
+    );
   });
 
   // ---------------------------------------------------------------------------

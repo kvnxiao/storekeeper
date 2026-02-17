@@ -10,6 +10,7 @@ import { WuwaSection } from "@/modules/games/wuwa/components/WuwaSection";
 import { ZzzSection } from "@/modules/games/zzz/components/ZzzSection";
 import { Button } from "@/modules/ui/components/Button";
 import { ButtonLink } from "@/modules/ui/components/ButtonLink";
+import { cn } from "@/modules/ui/ui.styles";
 import * as m from "@/paraglide/messages";
 
 const DashboardPage: React.FC = () => {
@@ -25,11 +26,7 @@ const DashboardPage: React.FC = () => {
   // Sync Paraglide locale from backend config on startup
   useAtomValue(atoms.core.localeSync);
 
-  const hasGenshin = enabledGames.has(GameId.GenshinImpact);
-  const hasHsr = enabledGames.has(GameId.HonkaiStarRail);
-  const hasZzz = enabledGames.has(GameId.ZenlessZoneZero);
-  const hasWuwa = enabledGames.has(GameId.WutheringWaves);
-  const hasAnyGames = hasGenshin || hasHsr || hasZzz || hasWuwa;
+  const hasAnyGames = enabledGames.size > 0;
 
   return (
     <div className="mx-auto min-h-screen max-w-sm p-3">
@@ -45,7 +42,8 @@ const DashboardPage: React.FC = () => {
             onPress={() => refresh()}
           >
             <ArrowPathIcon
-              className={`h-5 w-5 ${isPending ? "animate-spin" : ""}`}
+              aria-hidden="true"
+              className={cn("size-5", isPending && "animate-spin")}
             />
           </Button>
           <ButtonLink
@@ -57,7 +55,7 @@ const DashboardPage: React.FC = () => {
                 "forward";
             }}
           >
-            <Cog6ToothIcon className="h-5 w-5" />
+            <Cog6ToothIcon aria-hidden="true" className="size-5" />
           </ButtonLink>
         </div>
       </header>
@@ -79,10 +77,10 @@ const DashboardPage: React.FC = () => {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.2 }}
               >
-                {hasGenshin && <GenshinSection />}
-                {hasHsr && <HsrSection />}
-                {hasZzz && <ZzzSection />}
-                {hasWuwa && <WuwaSection />}
+                {enabledGames.has(GameId.GenshinImpact) && <GenshinSection />}
+                {enabledGames.has(GameId.HonkaiStarRail) && <HsrSection />}
+                {enabledGames.has(GameId.ZenlessZoneZero) && <ZzzSection />}
+                {enabledGames.has(GameId.WutheringWaves) && <WuwaSection />}
               </motion.div>
             ) : (
               <motion.div

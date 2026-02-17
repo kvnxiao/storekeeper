@@ -184,7 +184,7 @@ const SettingsPage: React.FC = () => {
               document.documentElement.dataset.viewTransitionDirection = "back";
             }}
           >
-            <ArrowLeftIcon className="h-5 w-5" />
+            <ArrowLeftIcon aria-hidden="true" className="size-5" />
           </ButtonLink>
           <h1 className="text-xl font-bold text-zinc-950 dark:text-white">
             {m.settings_title()}
@@ -267,7 +267,10 @@ const SettingsPage: React.FC = () => {
                       ease: "easeInOut",
                     }}
                   >
-                    <ExclamationCircleIcon className="h-5 w-5 text-amber-500" />
+                    <ExclamationCircleIcon
+                      aria-hidden="true"
+                      className="size-5 text-amber-500"
+                    />
                   </motion.div>
                 </AriaButton>
                 <Tooltip placement="top">

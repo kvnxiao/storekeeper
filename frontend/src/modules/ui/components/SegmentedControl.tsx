@@ -1,5 +1,18 @@
 import type { Key } from "react-aria-components";
 import { ToggleButton, ToggleButtonGroup } from "react-aria-components";
+import { tv } from "tailwind-variants";
+
+const groupStyle = tv({
+  base: "inline-flex rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-800",
+});
+
+const buttonStyle = tv({
+  base: [
+    "cursor-default rounded-md px-2.5 py-1 text-xs font-medium text-zinc-500 outline-none transition-colors",
+    "selected:bg-white selected:text-zinc-950 selected:shadow-sm",
+    "dark:text-zinc-400 dark:selected:bg-zinc-700 dark:selected:text-white",
+  ],
+});
 
 interface SegmentedControlItem {
   id: string;
@@ -31,14 +44,10 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
           onSelectionChange(key);
         }
       }}
-      className="inline-flex rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-800"
+      className={groupStyle()}
     >
       {items.map((item) => (
-        <ToggleButton
-          key={item.id}
-          id={item.id}
-          className="cursor-default rounded-md px-2.5 py-1 text-xs font-medium text-zinc-500 outline-none transition-colors selected:bg-white selected:text-zinc-950 selected:shadow-sm dark:text-zinc-400 dark:selected:bg-zinc-700 dark:selected:text-white"
-        >
+        <ToggleButton key={item.id} id={item.id} className={buttonStyle()}>
           {item.label}
         </ToggleButton>
       ))}

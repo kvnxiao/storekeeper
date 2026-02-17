@@ -3,6 +3,7 @@ import { TimeRemaining } from "@/modules/resources/components/TimeRemaining";
 import { useFormattedTime } from "@/modules/resources/resources.hooks";
 import type { CooldownResource } from "@/modules/resources/resources.types";
 import { Badge } from "@/modules/ui/components/Badge";
+import { cn } from "@/modules/ui/ui.styles";
 import * as m from "@/paraglide/messages";
 
 interface CooldownCardProps {
@@ -39,7 +40,10 @@ export const CooldownCard: React.FC<CooldownCardProps> = ({
 
   return (
     <div
-      className={`rounded-lg bg-zinc-50 p-2 transition-transform hover:translate-x-0.5 dark:bg-zinc-700 ${isRefreshing ? "mask-shimmer" : ""}`}
+      className={cn(
+        "rounded-lg bg-zinc-50 p-2 transition-transform hover:translate-x-0.5 dark:bg-zinc-700",
+        isRefreshing && "mask-shimmer",
+      )}
     >
       <div className="flex items-center gap-2">
         <ResourceIcon src={iconPath} size="md" />

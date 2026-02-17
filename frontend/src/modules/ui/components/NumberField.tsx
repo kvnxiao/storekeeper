@@ -102,11 +102,11 @@ export const NumberField: React.FC<NumberFieldProps> = ({
         <div className={stepperDividerStyle()} />
         <div className="flex flex-col">
           <StepperButton slot="increment" className="rounded-tr-lg">
-            <ChevronUpIcon aria-hidden className="h-4 w-4" />
+            <ChevronUpIcon aria-hidden className="size-4" />
           </StepperButton>
           <div className={stepperDividerStyle()} />
           <StepperButton slot="decrement" className="rounded-br-lg">
-            <ChevronDownIcon aria-hidden className="h-4 w-4" />
+            <ChevronDownIcon aria-hidden className="size-4" />
           </StepperButton>
         </div>
       </Group>

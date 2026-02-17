@@ -59,11 +59,11 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
       </Switch>
       <Select
         label={m.settings_general_language()}
-        selectedKey={config.language ?? "auto"}
-        onSelectionChange={(key) =>
+        value={config.language ?? "auto"}
+        onChange={(value) =>
           onChange({
             ...config,
-            language: key === "auto" ? null : String(key),
+            language: value === "auto" ? null : String(value),
           })
         }
       >
@@ -72,15 +72,15 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
           {m.settings_general_language_system_default()}
         </SelectItem>
         {/* biome-ignore lint/correctness/useUniqueElementIds: React Aria SelectItem id is a key, not a DOM id */}
-        <SelectItem id="en">English</SelectItem>
+        <SelectItem id="en">{m.settings_general_language_english()}</SelectItem>
       </Select>
       <Select
         label={m.settings_general_log_level()}
-        selectedKey={config.log_level}
-        onSelectionChange={(key) =>
+        value={config.log_level}
+        onChange={(value) =>
           onChange({
             ...config,
-            log_level: String(key),
+            log_level: String(value),
           })
         }
       >
@@ -95,11 +95,7 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({
         {/* biome-ignore lint/correctness/useUniqueElementIds: React Aria SelectItem id is a key, not a DOM id */}
         <SelectItem id="trace">{m.settings_general_log_trace()}</SelectItem>
       </Select>
-      <Button
-        variant="solid"
-        color="light"
-        onPress={() => invoke("open_config_folder")}
-      >
+      <Button color="light" onPress={() => invoke("open_config_folder")}>
         {m.settings_general_open_config()}
       </Button>
     </Section>
