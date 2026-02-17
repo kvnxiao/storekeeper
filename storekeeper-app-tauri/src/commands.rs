@@ -235,7 +235,7 @@ pub async fn send_preview_notification(
         })
         .and_then(|obj| obj.get("data"))
         .and_then(|data| {
-            let info = notification::extract_resource_info(data)?;
+            let info = notification::extract_resource_info(&resource_type, data)?;
             let now = Utc::now();
             Some(notification::build_notification_body(
                 &resource_name,

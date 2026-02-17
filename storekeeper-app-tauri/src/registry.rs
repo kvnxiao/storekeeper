@@ -64,7 +64,7 @@ impl GameClientRegistry {
                 if let Ok(ref resources) = result {
                     let payload = GameResourcePayload {
                         game_id,
-                        data: resources.clone(),
+                        data: resources,
                     };
                     let _ = app_handle.emit(AppEvent::GameResourceUpdated.as_str(), &payload);
                 }

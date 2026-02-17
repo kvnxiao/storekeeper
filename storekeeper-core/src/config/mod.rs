@@ -14,6 +14,9 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use crate::error::{Error, Result};
+use crate::resource_types::{
+    GenshinResourceType, HsrResourceType, WuwaResourceType, ZzzResourceType,
+};
 
 // Re-exports: keep the same public surface as the original single-file module.
 pub use claim_time::{ClaimTime, DEFAULT_AUTO_CLAIM_TIME, next_claim_datetime_utc};
@@ -317,6 +320,53 @@ pub struct GamesConfig {
 }
 
 impl GamesConfig {
+    fn genshin_notification_for<'a>(
+        cfg: &'a GenshinConfig,
+        resource_type: &str,
+    ) -> Option<&'a ResourceNotificationConfig> {
+        let resource = match resource_type {
+            "resin" => GenshinResourceType::Resin,
+            "parametric_transformer" => GenshinResourceType::ParametricTransformer,
+            "realm_currency" => GenshinResourceType::RealmCurrency,
+            "expeditions" => GenshinResourceType::Expeditions,
+            _ => return None,
+        };
+        cfg.notifications.get(&resource)
+    }
+
+    fn hsr_notification_for<'a>(
+        cfg: &'a HsrConfig,
+        resource_type: &str,
+    ) -> Option<&'a ResourceNotificationConfig> {
+        let resource = match resource_type {
+            "trailblaze_power" => HsrResourceType::TrailblazePower,
+            _ => return None,
+        };
+        cfg.notifications.get(&resource)
+    }
+
+    fn zzz_notification_for<'a>(
+        cfg: &'a ZzzConfig,
+        resource_type: &str,
+    ) -> Option<&'a ResourceNotificationConfig> {
+        let resource = match resource_type {
+            "battery" => ZzzResourceType::Battery,
+            _ => return None,
+        };
+        cfg.notifications.get(&resource)
+    }
+
+    fn wuwa_notification_for<'a>(
+        cfg: &'a WuwaConfig,
+        resource_type: &str,
+    ) -> Option<&'a ResourceNotificationConfig> {
+        let resource = match resource_type {
+            "waveplates" => WuwaResourceType::Waveplates,
+            _ => return None,
+        };
+        cfg.notifications.get(&resource)
+    }
+
     /// Converts a typed notification map to string-keyed map for the notification system.
     fn stringify_notification_map<K: AsRef<str>>(
         notifications: &std::collections::HashMap<K, ResourceNotificationConfig>,
@@ -358,6 +408,60 @@ impl GamesConfig {
                 .as_ref()
                 .map(|c| Self::stringify_notification_map(&c.notifications))
                 .unwrap_or_default(),
+        }
+    }
+
+    /// Returns true if a game has any notification configs defined.
+    #[must_use]
+    pub fn has_notification_configs(&self, game_id: crate::GameId) -> bool {
+        use crate::GameId;
+
+        match game_id {
+            GameId::GenshinImpact => self
+                .genshin_impact
+                .as_ref()
+                .is_some_and(|c| !c.notifications.is_empty()),
+            GameId::HonkaiStarRail => self
+                .honkai_star_rail
+                .as_ref()
+                .is_some_and(|c| !c.notifications.is_empty()),
+            GameId::ZenlessZoneZero => self
+                .zenless_zone_zero
+                .as_ref()
+                .is_some_and(|c| !c.notifications.is_empty()),
+            GameId::WutheringWaves => self
+                .wuthering_waves
+                .as_ref()
+                .is_some_and(|c| !c.notifications.is_empty()),
+        }
+    }
+
+    /// Gets notification config for a game/resource pair without allocating a map.
+    #[must_use]
+    pub fn notification_config(
+        &self,
+        game_id: crate::GameId,
+        resource_type: &str,
+    ) -> Option<&ResourceNotificationConfig> {
+        use crate::GameId;
+
+        match game_id {
+            GameId::GenshinImpact => self
+                .genshin_impact
+                .as_ref()
+                .and_then(|c| Self::genshin_notification_for(c, resource_type)),
+            GameId::HonkaiStarRail => self
+                .honkai_star_rail
+                .as_ref()
+                .and_then(|c| Self::hsr_notification_for(c, resource_type)),
+            GameId::ZenlessZoneZero => self
+                .zenless_zone_zero
+                .as_ref()
+                .and_then(|c| Self::zzz_notification_for(c, resource_type)),
+            GameId::WutheringWaves => self
+                .wuthering_waves
+                .as_ref()
+                .and_then(|c| Self::wuwa_notification_for(c, resource_type)),
         }
     }
 

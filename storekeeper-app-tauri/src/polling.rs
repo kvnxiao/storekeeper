@@ -9,6 +9,26 @@ use crate::events::AppEvent;
 use crate::notification;
 use crate::state::{AllResources, AppState};
 
+/// RAII guard that resets the refresh-in-progress flag on drop.
+struct RefreshGuard<'a> {
+    state: &'a AppState,
+}
+
+impl Drop for RefreshGuard<'_> {
+    fn drop(&mut self) {
+        self.state.finish_refresh();
+    }
+}
+
+/// Tries to acquire the refresh slot, returning a guard on success.
+fn try_acquire_refresh(state: &AppState) -> Option<RefreshGuard<'_>> {
+    if state.try_start_refresh() {
+        Some(RefreshGuard { state })
+    } else {
+        None
+    }
+}
+
 /// Starts the background polling task.
 ///
 /// This spawns a tokio task that periodically fetches resources from all
@@ -51,10 +71,10 @@ pub fn start_polling(app_handle: AppHandle, cancel_token: CancellationToken) {
 async fn try_refresh(app_handle: &AppHandle) {
     let state = app_handle.state::<AppState>();
 
-    if state.is_refreshing().await {
+    let Some(_refresh_guard) = try_acquire_refresh(&state) else {
         tracing::debug!("Skipping poll - refresh already in progress");
         return;
-    }
+    };
 
     if !state.has_clients().await {
         tracing::debug!("Skipping poll - no game clients configured");
@@ -71,14 +91,11 @@ async fn try_refresh(app_handle: &AppHandle) {
 async fn do_refresh(app_handle: &AppHandle) -> AllResources {
     let state = app_handle.state::<AppState>();
 
-    state.set_refreshing(true).await;
-
     tracing::debug!("Fetching resources from all game clients");
 
     let resources = state.fetch_all_resources(app_handle).await;
 
     state.set_resources(resources.clone()).await;
-    state.set_refreshing(false).await;
 
     let _ = app_handle.emit(AppEvent::ResourcesUpdated.as_str(), &resources);
 
@@ -95,10 +112,10 @@ pub async fn refresh_now(app_handle: &AppHandle) -> Result<AllResources, String>
     let state = app_handle.state::<AppState>();
 
     // Check if already refreshing
-    if state.is_refreshing().await {
+    let Some(_refresh_guard) = try_acquire_refresh(&state) else {
         tracing::debug!("Refresh already in progress, rejecting manual refresh");
         return Err("Refresh already in progress".to_string());
-    }
+    };
 
     // If no clients configured, just return empty resources with timestamp
     if !state.has_clients().await {

@@ -109,6 +109,17 @@ impl HoyolabClient {
         let status = response.status();
         tracing::debug!(status = %status, url = %url, "HoYoLab API response received");
 
+        if !status.is_success() {
+            let body = response.text().await.unwrap_or_default();
+            let body_preview: String = body.chars().take(300).collect();
+            let message = format!("HTTP {status} from HoYoLab API: {}", body_preview.trim());
+            tracing::warn!(url = %url, status = %status, body_preview = %body_preview, "HoYoLab HTTP error");
+            return Err(Error::Client(ClientError::api_error(
+                i32::from(status.as_u16()),
+                message,
+            )));
+        }
+
         let api_response: HoyolabApiResponse<T> = response.json().await?;
 
         if !api_response.is_success() {

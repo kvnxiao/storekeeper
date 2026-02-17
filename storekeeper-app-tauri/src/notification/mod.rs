@@ -47,28 +47,19 @@ pub fn start_notification_checker(app_handle: AppHandle, cancel_token: Cancellat
 pub(crate) async fn check_and_notify(app_handle: &AppHandle) {
     let state = app_handle.state::<AppState>();
     let now = Utc::now();
-
-    // Read resources + all notification configs in a single lock acquisition
     let resources = state.get_resources().await;
-    let game_configs: Vec<_> = {
+
+    // Snapshot configs so the checker loop does not hold state locks while formatting/sending.
+    let games_config = {
         let inner = state.inner.read().await;
-        resources
-            .games
-            .iter()
-            .filter_map(|(game_id, resources_json)| {
-                let configs = inner.config.games.notification_configs(*game_id);
-                if configs.is_empty() {
-                    None
-                } else {
-                    Some((*game_id, configs, resources_json.clone()))
-                }
-            })
-            .collect()
+        inner.config.games.clone()
     };
 
-    // Single write lock for all tracker mutations
-    let mut inner = state.inner.write().await;
-    for (game_id, notification_configs, resources_json) in &game_configs {
+    for (game_id, resources_json) in &resources.games {
+        if !games_config.has_notification_configs(*game_id) {
+            continue;
+        }
+
         let Some(resource_array) = resources_json.as_array() else {
             continue;
         };
@@ -79,7 +70,7 @@ pub(crate) async fn check_and_notify(app_handle: &AppHandle) {
                 continue;
             };
 
-            let Some(config) = notification_configs.get(type_tag) else {
+            let Some(config) = games_config.notification_config(*game_id, type_tag) else {
                 continue;
             };
 
@@ -91,19 +82,35 @@ pub(crate) async fn check_and_notify(app_handle: &AppHandle) {
                 continue;
             };
 
-            let Some(resource_info) = extract_resource_info(data) else {
+            let Some(resource_info) = extract_resource_info(type_tag, data) else {
                 continue;
             };
 
-            checker::check_resource_and_notify(
+            let should_notify = {
+                let mut inner = state.inner.write().await;
+                inner.notification_tracker.should_notify(
+                    *game_id,
+                    type_tag,
+                    config,
+                    &resource_info,
+                    now,
+                )
+            };
+
+            if !should_notify {
+                continue;
+            }
+
+            if checker::send_resource_notification(
                 app_handle,
-                &mut inner.notification_tracker,
                 *game_id,
                 type_tag,
                 &resource_info,
-                config,
                 now,
-            );
+            ) {
+                let mut inner = state.inner.write().await;
+                inner.notification_tracker.record(*game_id, type_tag, now);
+            }
         }
     }
 }

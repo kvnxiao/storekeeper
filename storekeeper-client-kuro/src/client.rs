@@ -1,5 +1,7 @@
 //! Kuro Games HTTP client implementation.
 
+use std::time::Instant;
+
 use reqwest::Method;
 use reqwest::header::{ACCEPT, CONTENT_TYPE, ORIGIN};
 use serde::Serialize;
@@ -33,6 +35,8 @@ pub struct KuroClient {
 }
 
 const KURO_API_DEFAULT_BASE_DELAY_MS: u64 = 1500;
+const PREFLIGHT_ACCESS_CONTROL_METHOD: &str = "POST";
+const PREFLIGHT_ACCESS_CONTROL_HEADERS: &str = "content-type";
 
 impl KuroClient {
     /// Creates a new Kuro Games client with the given OAuth code.
@@ -67,17 +71,28 @@ impl KuroClient {
     /// Returns an error if the preflight request fails.
     async fn send_preflight(&self, url: &str) -> Result<()> {
         tracing::debug!(url = %url, "Sending CORS preflight OPTIONS request");
+        let started = Instant::now();
 
         let response = self
             .client
             .request(Method::OPTIONS, url)
-            .header("Access-Control-Request-Method", "POST")
-            .header("Access-Control-Request-Headers", "content-type")
+            .header(
+                "Access-Control-Request-Method",
+                PREFLIGHT_ACCESS_CONTROL_METHOD,
+            )
+            .header(
+                "Access-Control-Request-Headers",
+                PREFLIGHT_ACCESS_CONTROL_HEADERS,
+            )
             .send()
             .await?;
 
         let status = response.status();
-        tracing::debug!(status = %status, "Preflight response received");
+        tracing::debug!(
+            status = %status,
+            elapsed_ms = started.elapsed().as_millis(),
+            "Preflight response received"
+        );
 
         if !status.is_success() {
             tracing::warn!(status = %status, "Preflight request failed");
@@ -115,12 +130,17 @@ impl KuroClient {
             region = %region,
             "Kuro API POST request to queryRole"
         );
+        let post_started = Instant::now();
 
         // Make the POST request
         let response = self.client.post(&url).json(&body).send().await?;
 
         let status = response.status();
-        tracing::debug!(status = %status, "Kuro API response received");
+        tracing::debug!(
+            status = %status,
+            elapsed_ms = post_started.elapsed().as_millis(),
+            "Kuro API response received"
+        );
 
         let api_response: KuroApiResponse<serde_json::Value> = response.json().await?;
 

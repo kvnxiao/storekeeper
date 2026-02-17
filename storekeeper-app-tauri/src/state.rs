@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use anyhow::Context;
 use chrono::{DateTime, Utc};
@@ -51,14 +52,11 @@ pub struct StateData {
     /// Cached resources from all games.
     pub resources: AllResources,
 
-    /// Whether a refresh is currently in progress.
-    pub refreshing: bool,
-
     /// Registry-based game clients.
-    pub registry: GameClientRegistry,
+    pub registry: Arc<GameClientRegistry>,
 
     /// Daily reward client registry.
-    pub daily_reward_registry: DailyRewardRegistry,
+    pub daily_reward_registry: Arc<DailyRewardRegistry>,
 
     /// Cached daily reward status.
     pub daily_reward_status: AllDailyRewardStatus,
@@ -75,6 +73,7 @@ pub struct StateData {
 pub struct AppState {
     /// Inner state protected by async RwLock.
     pub inner: Arc<RwLock<StateData>>,
+    refreshing: Arc<AtomicBool>,
 }
 
 impl AppState {
@@ -83,6 +82,7 @@ impl AppState {
     pub fn new() -> Self {
         Self {
             inner: Arc::new(RwLock::new(StateData::default())),
+            refreshing: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -112,13 +112,13 @@ impl AppState {
         Self {
             inner: Arc::new(RwLock::new(StateData {
                 resources: AllResources::default(),
-                refreshing: false,
-                registry,
-                daily_reward_registry,
+                registry: Arc::new(registry),
+                daily_reward_registry: Arc::new(daily_reward_registry),
                 daily_reward_status: AllDailyRewardStatus::default(),
                 config,
                 notification_tracker: NotificationTracker::default(),
             })),
+            refreshing: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -134,24 +134,30 @@ impl AppState {
         state.resources = resources;
     }
 
-    /// Checks if a refresh is in progress.
-    pub async fn is_refreshing(&self) -> bool {
-        let state = self.inner.read().await;
-        state.refreshing
+    /// Attempts to mark refresh as started.
+    ///
+    /// Returns `true` if this call acquired the refresh slot.
+    #[must_use]
+    pub fn try_start_refresh(&self) -> bool {
+        self.refreshing
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .is_ok()
     }
 
-    /// Sets the refreshing flag.
-    pub async fn set_refreshing(&self, refreshing: bool) {
-        let mut state = self.inner.write().await;
-        state.refreshing = refreshing;
+    /// Marks refresh as finished.
+    pub fn finish_refresh(&self) {
+        self.refreshing.store(false, Ordering::Release);
     }
 
     /// Fetches resources from all configured game clients using the registry.
     ///
     /// Emits per-game update events via the app handle as each game completes.
     pub async fn fetch_all_resources(&self, app_handle: &tauri::AppHandle) -> AllResources {
-        let state = self.inner.read().await;
-        let games = state.registry.fetch_all(app_handle).await;
+        let registry = {
+            let state = self.inner.read().await;
+            Arc::clone(&state.registry)
+        };
+        let games = registry.fetch_all(app_handle).await;
         AllResources {
             games,
             last_updated: Some(Utc::now()),
@@ -166,8 +172,11 @@ impl AppState {
 
     /// Returns whether any game clients are configured.
     pub async fn has_clients(&self) -> bool {
-        let state = self.inner.read().await;
-        state.registry.has_any()
+        let registry = {
+            let state = self.inner.read().await;
+            Arc::clone(&state.registry)
+        };
+        registry.has_any()
     }
 
     // ========================================================================
@@ -188,8 +197,11 @@ impl AppState {
 
     /// Fetches daily reward status from all configured games.
     pub async fn fetch_all_daily_reward_status(&self) -> AllDailyRewardStatus {
-        let state = self.inner.read().await;
-        let games = state.daily_reward_registry.get_all_status().await;
+        let daily_reward_registry = {
+            let state = self.inner.read().await;
+            Arc::clone(&state.daily_reward_registry)
+        };
+        let games = daily_reward_registry.get_all_status().await;
         AllDailyRewardStatus {
             games,
             last_checked: Some(Utc::now()),
@@ -198,8 +210,11 @@ impl AppState {
 
     /// Claims daily rewards from all configured games.
     pub async fn claim_all_daily_rewards(&self) -> HashMap<GameId, serde_json::Value> {
-        let state = self.inner.read().await;
-        state.daily_reward_registry.claim_all().await
+        let daily_reward_registry = {
+            let state = self.inner.read().await;
+            Arc::clone(&state.daily_reward_registry)
+        };
+        daily_reward_registry.claim_all().await
     }
 
     /// Claims daily reward for a specific game.
@@ -211,8 +226,11 @@ impl AppState {
         &self,
         game_id: GameId,
     ) -> anyhow::Result<serde_json::Value> {
-        let state = self.inner.read().await;
-        state.daily_reward_registry.claim_for_game(game_id).await
+        let daily_reward_registry = {
+            let state = self.inner.read().await;
+            Arc::clone(&state.daily_reward_registry)
+        };
+        daily_reward_registry.claim_for_game(game_id).await
     }
 
     /// Gets the daily reward status for a specific game.
@@ -224,11 +242,11 @@ impl AppState {
         &self,
         game_id: GameId,
     ) -> anyhow::Result<serde_json::Value> {
-        let state = self.inner.read().await;
-        state
-            .daily_reward_registry
-            .get_status_for_game(game_id)
-            .await
+        let daily_reward_registry = {
+            let state = self.inner.read().await;
+            Arc::clone(&state.daily_reward_registry)
+        };
+        daily_reward_registry.get_status_for_game(game_id).await
     }
 
     /// Gets the list of games that have auto-claim enabled.
@@ -278,8 +296,8 @@ impl AppState {
         // Swap atomically under write lock
         let mut state = self.inner.write().await;
         state.config = config;
-        state.registry = registry;
-        state.daily_reward_registry = daily_reward_registry;
+        state.registry = Arc::new(registry);
+        state.daily_reward_registry = Arc::new(daily_reward_registry);
         state.notification_tracker.clear_all();
 
         tracing::info!("Configuration reloaded successfully");
