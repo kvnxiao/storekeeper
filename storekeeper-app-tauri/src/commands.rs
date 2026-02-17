@@ -237,18 +237,9 @@ pub async fn send_preview_notification(
         .and_then(|data| {
             let info = notification::extract_resource_info(&resource_type, data)?;
             let now = Utc::now();
-            Some(notification::build_notification_body(
-                &resource_name,
-                &info,
-                now,
-            ))
+            Some(notification::build_notification_body(&info, now))
         })
-        .unwrap_or_else(|| {
-            i18n::t_args(
-                "notification.no_data",
-                &[("resource_name", i18n::Value::from(resource_name.as_str()))],
-            )
-        });
+        .unwrap_or_else(|| i18n::t("notification.no_data"));
 
     let title = i18n::t_args(
         "notification.title",

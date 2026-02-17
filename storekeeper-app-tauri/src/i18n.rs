@@ -84,30 +84,21 @@ mod tests {
                 ("resource_name", Value::String("Original Resin".to_string())),
             ],
         );
-        assert_eq!(result, "Genshin Impact \u{2014} Original Resin");
+        assert_eq!(result, "Genshin Impact - Original Resin");
     }
 
     #[test]
     fn test_resource_full_simple() {
         ensure_init();
-        let result = t_args(
-            "notification.resource_full",
-            &[("resource_name", Value::String("Waveplates".to_string()))],
-        );
-        assert_eq!(result, "Waveplates is full!");
+        let result = t("notification.resource_full");
+        assert_eq!(result, "Full!");
     }
 
     #[test]
     fn test_resource_ready() {
         ensure_init();
-        let result = t_args(
-            "notification.resource_ready",
-            &[(
-                "resource_name",
-                Value::String("Parametric Transformer".to_string()),
-            )],
-        );
-        assert_eq!(result, "Parametric Transformer is ready to claim!");
+        let result = t("notification.resource_ready");
+        assert_eq!(result, "Ready to claim!");
     }
 
     #[test]
@@ -115,12 +106,9 @@ mod tests {
         ensure_init();
         let result = t_args(
             "notification.resource_ready_in",
-            &[
-                ("resource_name", Value::String("Expeditions".to_string())),
-                ("duration", Value::String("30 min".to_string())),
-            ],
+            &[("duration", Value::String("30m".to_string()))],
         );
-        assert_eq!(result, "Expeditions will be ready in 30 min");
+        assert_eq!(result, "Ready in 30m");
     }
 
     #[test]
@@ -129,17 +117,13 @@ mod tests {
         let result = t_args(
             "notification.resource_status",
             &[
-                ("resource_name", Value::String("Original Resin".to_string())),
                 ("current", Value::String("140".to_string())),
                 ("max", Value::String("160".to_string())),
-                ("duration", Value::String("1 hr 15 min".to_string())),
+                ("duration", Value::String("1h 15m".to_string())),
                 ("clock_time", Value::String("3:45 PM".to_string())),
             ],
         );
-        assert_eq!(
-            result,
-            "Original Resin has reached 140/160 and will be full in 1 hr 15 min at 3:45 PM"
-        );
+        assert_eq!(result, "140/160 - full in 1h 15m (3:45 PM)");
     }
 
     #[test]
@@ -161,8 +145,8 @@ mod tests {
     fn test_format_duration_zero() {
         ensure_init();
         let result = format_duration(0);
-        // ICU4X with FieldDisplay::Always on minutes should produce "0 min" (en locale)
-        assert_eq!(result, "0 min");
+        // ICU4X narrow style with FieldDisplay::Always on minutes should produce "0m" (en locale)
+        assert_eq!(result, "0m");
     }
 
     #[test]
@@ -170,7 +154,7 @@ mod tests {
         ensure_init();
         let result = format_duration(-10);
         // Negative clamps to 0, same as zero duration
-        assert_eq!(result, "0 min");
+        assert_eq!(result, "0m");
     }
 
     #[test]

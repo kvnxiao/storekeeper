@@ -23,7 +23,7 @@ pub(crate) fn send_resource_notification(
     let game_name = game_display_name(game_id);
     let resource_name = resource_display_name(game_id, resource_type);
 
-    let body = build_notification_body(&resource_name, info, now);
+    let body = build_notification_body(info, now);
 
     let title = i18n::t_args(
         "notification.title",

@@ -31,8 +31,8 @@ pub fn format_time(hour: u8, minute: u8) -> String {
 
 /// Formats a duration in minutes using the current locale.
 ///
-/// Uses `icu_experimental::duration::DurationFormatter` with `BaseStyle::Short`
-/// (e.g. "1 hr, 15 min" in English). Clamps negative values to 0.
+/// Uses `icu_experimental::duration::DurationFormatter` with `BaseStyle::Narrow`
+/// (e.g. "1h 15m" in English). Clamps negative values to 0.
 /// Falls back to plain `"{hours}h {minutes}m"` or `"{minutes}m"` if formatting fails.
 #[must_use]
 #[allow(clippy::cast_sign_loss)]
@@ -51,7 +51,7 @@ pub fn format_duration(total_minutes: i64) -> String {
 
     with_messages(|m| {
         let mut opts = DurationFormatterOptions::default();
-        opts.base = BaseStyle::Short;
+        opts.base = BaseStyle::Narrow;
         // Always show the minute unit so 0-duration doesn't produce an empty string.
         opts.minute_visibility = Some(FieldDisplay::Always);
         let Ok(validated) = ValidatedDurationFormatterOptions::validate(opts) else {

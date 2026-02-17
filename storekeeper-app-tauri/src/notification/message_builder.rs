@@ -29,20 +29,16 @@ pub(crate) fn game_display_name(game_id: GameId) -> String {
 /// Differentiates between stamina resources (have `max`) and cooldown/expedition
 /// resources (no `max`). Stamina resources show current/max + duration + clock time;
 /// cooldown resources show "ready" or "ready in {duration}".
+///
+/// The resource name is intentionally omitted — the notification title already
+/// contains both the game name and resource name.
 #[allow(clippy::cast_possible_wrap)]
-pub(crate) fn build_notification_body(
-    resource_name: &str,
-    info: &ResourceInfo,
-    now: DateTime<Utc>,
-) -> String {
+pub(crate) fn build_notification_body(info: &ResourceInfo, now: DateTime<Utc>) -> String {
     let is_stamina = info.max.is_some();
 
     if is_stamina {
         if info.is_complete {
-            return i18n::t_args(
-                "notification.resource_full",
-                &[("resource_name", i18n::Value::from(resource_name))],
-            );
+            return i18n::t("notification.resource_full");
         }
 
         let current = info
@@ -59,7 +55,6 @@ pub(crate) fn build_notification_body(
         i18n::t_args(
             "notification.resource_status",
             &[
-                ("resource_name", i18n::Value::from(resource_name)),
                 ("current", i18n::Value::from(current)),
                 ("max", i18n::Value::from(max)),
                 ("duration", i18n::Value::from(duration)),
@@ -68,10 +63,7 @@ pub(crate) fn build_notification_body(
         )
     } else {
         if info.is_complete {
-            return i18n::t_args(
-                "notification.resource_ready",
-                &[("resource_name", i18n::Value::from(resource_name))],
-            );
+            return i18n::t("notification.resource_ready");
         }
 
         let mins_remaining = (info.completion_at - now).num_minutes();
@@ -79,10 +71,7 @@ pub(crate) fn build_notification_body(
 
         i18n::t_args(
             "notification.resource_ready_in",
-            &[
-                ("resource_name", i18n::Value::from(resource_name)),
-                ("duration", i18n::Value::from(duration)),
-            ],
+            &[("duration", i18n::Value::from(duration))],
         )
     }
 }
@@ -160,8 +149,8 @@ mod tests {
             max: Some(160),
             regen_rate_seconds: Some(480),
         };
-        let body = build_notification_body("Original Resin", &info, now);
-        assert_eq!(body, "Original Resin is full!");
+        let body = build_notification_body(&info, now);
+        assert_eq!(body, "Full!");
     }
 
     #[test]
@@ -176,9 +165,8 @@ mod tests {
             max: Some(160),
             regen_rate_seconds: Some(480),
         };
-        let body = build_notification_body("Original Resin", &info, now);
-        // Should contain resource name, current/max, and time info
-        assert!(body.contains("Original Resin"));
+        let body = build_notification_body(&info, now);
+        // Should contain /max and time info
         assert!(body.contains("/160"));
     }
 
@@ -197,8 +185,8 @@ mod tests {
             max: None,
             regen_rate_seconds: None,
         };
-        let body = build_notification_body("Parametric Transformer", &info, now);
-        assert_eq!(body, "Parametric Transformer is ready to claim!");
+        let body = build_notification_body(&info, now);
+        assert_eq!(body, "Ready to claim!");
     }
 
     #[test]
@@ -213,8 +201,7 @@ mod tests {
             max: None,
             regen_rate_seconds: None,
         };
-        let body = build_notification_body("Parametric Transformer", &info, now);
-        assert!(body.contains("Parametric Transformer"));
-        assert!(body.contains("will be ready in"));
+        let body = build_notification_body(&info, now);
+        assert!(body.contains("Ready in"));
     }
 }
