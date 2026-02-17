@@ -1,6 +1,6 @@
 //! Notification message building and display name resolution.
 
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local, Timelike, Utc};
 use storekeeper_core::GameId;
 
 use crate::i18n;
@@ -26,57 +26,62 @@ pub(crate) fn game_display_name(game_id: GameId) -> String {
 
 /// Builds the notification body text for a resource.
 ///
-/// Uses i18n-formatted strings based on the resource state.
+/// Differentiates between stamina resources (have `max`) and cooldown/expedition
+/// resources (no `max`). Stamina resources show current/max + duration + clock time;
+/// cooldown resources show "ready" or "ready in {duration}".
+#[allow(clippy::cast_possible_wrap)]
 pub(crate) fn build_notification_body(
     resource_name: &str,
     info: &ResourceInfo,
-    is_value_mode: bool,
     now: DateTime<Utc>,
 ) -> String {
-    if info.is_complete {
-        let overdue_mins = (now - info.completion_at).num_minutes();
-        if overdue_mins <= 0 {
-            i18n::t_args(
+    let is_stamina = info.max.is_some();
+
+    if is_stamina {
+        if info.is_complete {
+            return i18n::t_args(
                 "notification.resource_full",
                 &[("resource_name", i18n::Value::from(resource_name))],
-            )
-        } else {
-            i18n::t_args(
-                "notification.resource_full_overdue",
-                &[
-                    ("resource_name", i18n::Value::from(resource_name)),
-                    ("minutes", i18n::Value::Number(overdue_mins)),
-                ],
-            )
+            );
         }
-    } else if is_value_mode {
-        match (info.estimated_current(now), info.max) {
-            (Some(current), Some(max)) => i18n::t_args(
-                "notification.resource_reached",
-                &[
-                    ("resource_name", i18n::Value::from(resource_name)),
-                    (
-                        "current",
-                        i18n::Value::Number(i64::try_from(current).unwrap_or(i64::MAX)),
-                    ),
-                    (
-                        "max",
-                        i18n::Value::Number(i64::try_from(max).unwrap_or(i64::MAX)),
-                    ),
-                ],
-            ),
-            _ => i18n::t_args(
-                "notification.resource_threshold_reached",
-                &[("resource_name", i18n::Value::from(resource_name))],
-            ),
-        }
-    } else {
+
+        let current = info
+            .estimated_current(now)
+            .map_or_else(|| "?".to_string(), |v| v.to_string());
+        let max = info.max.map_or_else(|| "?".to_string(), |v| v.to_string());
         let mins_remaining = (info.completion_at - now).num_minutes();
+        let duration = i18n::format_duration(mins_remaining);
+        let local_time = info.completion_at.with_timezone(&Local);
+        let hour = u8::try_from(local_time.hour()).unwrap_or(0);
+        let minute = u8::try_from(local_time.minute()).unwrap_or(0);
+        let clock_time = i18n::format_time(hour, minute);
+
         i18n::t_args(
-            "notification.resource_full_in",
+            "notification.resource_status",
             &[
                 ("resource_name", i18n::Value::from(resource_name)),
-                ("minutes", i18n::Value::Number(mins_remaining)),
+                ("current", i18n::Value::from(current)),
+                ("max", i18n::Value::from(max)),
+                ("duration", i18n::Value::from(duration)),
+                ("clock_time", i18n::Value::from(clock_time)),
+            ],
+        )
+    } else {
+        if info.is_complete {
+            return i18n::t_args(
+                "notification.resource_ready",
+                &[("resource_name", i18n::Value::from(resource_name))],
+            );
+        }
+
+        let mins_remaining = (info.completion_at - now).num_minutes();
+        let duration = i18n::format_duration(mins_remaining);
+
+        i18n::t_args(
+            "notification.resource_ready_in",
+            &[
+                ("resource_name", i18n::Value::from(resource_name)),
+                ("duration", i18n::Value::from(duration)),
             ],
         )
     }
@@ -87,6 +92,7 @@ mod tests {
     use chrono::TimeDelta;
 
     use super::*;
+    use crate::notification::resource_extractor::ResourceInfo;
 
     /// Ensures i18n is initialized for tests.
     fn ensure_init() {
@@ -140,51 +146,75 @@ mod tests {
     }
 
     // =========================================================================
-    // body text tests
+    // body text tests — stamina resources
     // =========================================================================
 
     #[test]
-    fn test_body_text_before_full() {
+    fn test_stamina_full() {
+        ensure_init();
         let now = Utc::now();
-        let completion_at = now + TimeDelta::minutes(45);
-        let time_to_full = completion_at - now;
-        let mins = time_to_full.num_minutes();
-
-        let body = format!("Original Resin will be full in {mins} minutes");
-        assert!(body.contains("45 minutes") || body.contains("44 minutes"));
-    }
-
-    #[test]
-    fn test_body_text_just_full() {
-        let now = Utc::now();
-        let completion_at = now;
-        let overdue = now - completion_at;
-
-        let body = if overdue.num_minutes() <= 0 {
-            "Original Resin is full!".to_string()
-        } else {
-            format!(
-                "Original Resin has been full for {} minutes",
-                overdue.num_minutes()
-            )
+        let info = ResourceInfo {
+            completion_at: now,
+            is_complete: true,
+            current: Some(160),
+            max: Some(160),
+            regen_rate_seconds: Some(480),
         };
+        let body = build_notification_body("Original Resin", &info, now);
         assert_eq!(body, "Original Resin is full!");
     }
 
     #[test]
-    fn test_body_text_after_full() {
+    fn test_stamina_not_full_shows_status() {
+        ensure_init();
         let now = Utc::now();
-        let completion_at = now - TimeDelta::minutes(15);
-        let overdue = now - completion_at;
-
-        let body = if overdue.num_minutes() <= 0 {
-            "Original Resin is full!".to_string()
-        } else {
-            format!(
-                "Original Resin has been full for {} minutes",
-                overdue.num_minutes()
-            )
+        let completion_at = now + TimeDelta::minutes(75);
+        let info = ResourceInfo {
+            completion_at,
+            is_complete: false,
+            current: Some(140),
+            max: Some(160),
+            regen_rate_seconds: Some(480),
         };
-        assert!(body.contains("15 minutes"));
+        let body = build_notification_body("Original Resin", &info, now);
+        // Should contain resource name, current/max, and time info
+        assert!(body.contains("Original Resin"));
+        assert!(body.contains("/160"));
+    }
+
+    // =========================================================================
+    // body text tests — cooldown resources
+    // =========================================================================
+
+    #[test]
+    fn test_cooldown_complete() {
+        ensure_init();
+        let now = Utc::now();
+        let info = ResourceInfo {
+            completion_at: now,
+            is_complete: true,
+            current: None,
+            max: None,
+            regen_rate_seconds: None,
+        };
+        let body = build_notification_body("Parametric Transformer", &info, now);
+        assert_eq!(body, "Parametric Transformer is ready to claim!");
+    }
+
+    #[test]
+    fn test_cooldown_not_complete() {
+        ensure_init();
+        let now = Utc::now();
+        let completion_at = now + TimeDelta::minutes(30);
+        let info = ResourceInfo {
+            completion_at,
+            is_complete: false,
+            current: None,
+            max: None,
+            regen_rate_seconds: None,
+        };
+        let body = build_notification_body("Parametric Transformer", &info, now);
+        assert!(body.contains("Parametric Transformer"));
+        assert!(body.contains("will be ready in"));
     }
 }

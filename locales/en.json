@@ -1,9 +1,8 @@
 {
   "notification.resource_full": "{resource_name} is full!",
-  "notification.resource_full_overdue": "{resource_name} has been full for {minutes, plural, one {# minute} other {# minutes}}",
-  "notification.resource_reached": "{resource_name} has reached {current}/{max}",
-  "notification.resource_threshold_reached": "{resource_name} threshold reached",
-  "notification.resource_full_in": "{resource_name} will be full in {minutes, plural, one {# minute} other {# minutes}}",
+  "notification.resource_ready": "{resource_name} is ready to claim!",
+  "notification.resource_ready_in": "{resource_name} will be ready in {duration}",
+  "notification.resource_status": "{resource_name} has reached {current}/{max} and will be full in {duration} at {clock_time}",
   "notification.title": "{game_name} — {resource_name}",
   "notification.no_data": "{resource_name} — No data available yet, try refreshing first",
   "tray.refresh_now": "Refresh Now",

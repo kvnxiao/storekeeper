@@ -37,10 +37,6 @@ fn default_log_level() -> String {
     "info".to_string()
 }
 
-fn default_language() -> String {
-    "en".to_string()
-}
-
 // ============================================================================
 // AppConfig
 // ============================================================================
@@ -184,9 +180,6 @@ start_minimized = true
 # Log level: error, warn, info, debug, trace (default: info)
 log_level = "info"
 
-# Language/locale for the application (default: "en")
-language = "en"
-
 # Automatically start the app when the system boots (default: false)
 autostart = false
 
@@ -281,9 +274,10 @@ pub struct GeneralConfig {
     #[serde(default = "default_log_level")]
     pub log_level: String,
 
-    /// Language/locale for the application (e.g. "en", "zh-CN").
-    #[serde(default = "default_language")]
-    pub language: String,
+    /// Language/locale override for the application (e.g. "en", "zh-CN").
+    /// When `None`, the system locale is auto-detected.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub language: Option<String>,
 
     /// Whether to automatically start the app at system login.
     #[serde(default)]
@@ -296,7 +290,7 @@ impl Default for GeneralConfig {
             poll_interval_secs: default_poll_interval(),
             start_minimized: true,
             log_level: default_log_level(),
-            language: default_language(),
+            language: None,
             autostart: false,
         }
     }

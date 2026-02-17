@@ -28,8 +28,7 @@ pub(crate) fn check_resource_and_notify(
     let game_name = game_display_name(game_id);
     let resource_name = resource_display_name(game_id, resource_type);
 
-    let is_value_mode = config.notify_at_value.is_some();
-    let body = build_notification_body(&resource_name, info, is_value_mode, now);
+    let body = build_notification_body(&resource_name, info, now);
 
     let title = i18n::t_args(
         "notification.title",

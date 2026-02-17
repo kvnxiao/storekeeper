@@ -69,12 +69,13 @@ pub async fn reload_config(app_handle: AppHandle) -> Result<(), CommandError> {
         .await
         .map_err(CommandError::internal)?;
 
-    // Update locale from new config
+    // Update locale from new config (auto-detect if no override)
     let language = {
         let inner = state.inner.read().await;
         inner.config.general.language.clone()
     };
-    if let Err(e) = i18n::set_locale(&language) {
+    let effective_locale = i18n::resolve_locale(language.as_deref());
+    if let Err(e) = i18n::set_locale(effective_locale) {
         tracing::warn!(error = %e, "Failed to update i18n locale");
     }
 
@@ -226,12 +227,8 @@ pub async fn send_preview_notification(
     state: State<'_, AppState>,
 ) -> Result<(), CommandError> {
     let resources = state.get_resources().await;
-    let notification_configs = state.get_game_notification_config(game_id).await;
     let game_name = notification::game_display_name(game_id);
     let resource_name = notification::resource_display_name(game_id, &resource_type);
-
-    let config = notification_configs.get(&resource_type);
-    let is_value_mode = config.is_some_and(|c| c.notify_at_value.is_some());
 
     // Try to find cached resource data and build a real notification body
     let body = resources
@@ -252,7 +249,6 @@ pub async fn send_preview_notification(
             Some(notification::build_notification_body(
                 &resource_name,
                 &info,
-                is_value_mode,
                 now,
             ))
         })
@@ -291,4 +287,10 @@ pub async fn send_preview_notification(
 #[tauri::command]
 pub fn get_supported_locales() -> Vec<&'static str> {
     i18n::supported_locales()
+}
+
+/// Returns the effective locale currently in use by the backend.
+#[tauri::command]
+pub fn get_effective_locale() -> String {
+    i18n::get_current_locale()
 }

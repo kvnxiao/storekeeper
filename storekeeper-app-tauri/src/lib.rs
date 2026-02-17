@@ -54,8 +54,9 @@ pub fn run() -> Result<()> {
                 )
             });
 
-            // Initialize i18n with language from config
-            if let Err(e) = i18n::init(&language) {
+            // Initialize i18n with resolved locale (auto-detect if no override)
+            let effective_locale = i18n::resolve_locale(language.as_deref());
+            if let Err(e) = i18n::init(effective_locale) {
                 tracing::warn!(error = %e, "Failed to initialize i18n, falling back to defaults");
                 let _ = i18n::init("en");
             }
@@ -113,6 +114,7 @@ pub fn run() -> Result<()> {
             commands::get_daily_reward_status_for_game,
             // Locale commands
             commands::get_supported_locales,
+            commands::get_effective_locale,
         ])
         .on_window_event(|window, event| {
             // Handle close button - minimize to tray instead of closing

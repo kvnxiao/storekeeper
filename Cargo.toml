@@ -53,9 +53,15 @@ governor = "0.8"
 # Crypto
 md-5 = "0.10"
 
-# Internationalization (ICU4X)
-icu_locale = "2"
-icu_plurals = "2"
+# Internationalization (ICU4X) — pinned to git for https://github.com/unicode-org/icu4x/pull/7616
+icu_locale = { git = "https://github.com/unicode-org/icu4x", branch = "release/2.1" }
+icu_plurals = { git = "https://github.com/unicode-org/icu4x", branch = "release/2.1" }
+icu_datetime = { git = "https://github.com/unicode-org/icu4x", branch = "release/2.1" }
+icu_experimental = { git = "https://github.com/unicode-org/icu4x", branch = "release/2.1" }
+icu_time = { git = "https://github.com/unicode-org/icu4x", branch = "release/2.1" }
+
+# System locale detection
+sys-locale = "0.3"
 
 # Enum utilities
 strum = { version = "0.27", features = ["derive"] }
