@@ -81,15 +81,17 @@ fn collect_results(all_results: Vec<Vec<OperationResult>>) -> HashMap<GameId, se
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use async_trait::async_trait;
+    use std::future::Future;
+    use std::pin::Pin;
     use std::sync::atomic::{AtomicU32, Ordering};
 
-    #[async_trait]
+    use super::*;
+
+    type BoxError = Box<dyn std::error::Error + Send + Sync>;
+    type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
+
     trait MockClient: Send + Sync {
-        async fn do_work(
-            &self,
-        ) -> Result<serde_json::Value, Box<dyn std::error::Error + Send + Sync>>;
+        fn do_work(&self) -> BoxFuture<'_, Result<serde_json::Value, BoxError>>;
     }
 
     struct TestClient {
@@ -97,16 +99,15 @@ mod tests {
         should_fail: bool,
     }
 
-    #[async_trait]
     impl MockClient for TestClient {
-        async fn do_work(
-            &self,
-        ) -> Result<serde_json::Value, Box<dyn std::error::Error + Send + Sync>> {
-            if self.should_fail {
-                Err("test error".into())
-            } else {
-                Ok(serde_json::json!({"game": self.id.as_str()}))
-            }
+        fn do_work(&self) -> BoxFuture<'_, Result<serde_json::Value, BoxError>> {
+            Box::pin(async {
+                if self.should_fail {
+                    Err("test error".into())
+                } else {
+                    Ok(serde_json::json!({"game": self.id.as_str()}))
+                }
+            })
         }
     }
 

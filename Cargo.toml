@@ -66,9 +66,6 @@ sys-locale = "0.3"
 # Enum utilities
 strum = { version = "0.27", features = ["derive"] }
 
-# Async trait (for GameClient trait)
-async-trait = "0.1"
-
 # Async utilities (for join_all)
 futures = "0.3"
 

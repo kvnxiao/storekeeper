@@ -93,13 +93,13 @@ impl ClaimTime {
     /// This is the default claim time when none is specified.
     #[must_use = "this returns the default claim time, it doesn't modify anything"]
     pub fn default_utc8_midnight() -> Self {
-        // 00:00 UTC+8 = 16:00 UTC (previous day)
-        // SAFETY: 16:00:00 is always a valid time, so unwrap_or provides
-        // a fallback that will never be used in practice.
-        Self(
-            NaiveTime::from_hms_opt(16, 0, 0)
-                .unwrap_or_else(|| NaiveTime::from_hms_opt(0, 0, 0).unwrap_or(NaiveTime::MIN)),
-        )
+        /// 00:00 UTC+8 = 16:00 UTC (previous day).
+        /// Compile-time constant — if the time were invalid, compilation would fail.
+        #[allow(clippy::expect_used)]
+        const UTC_16_00: NaiveTime =
+            NaiveTime::from_hms_opt(16, 0, 0).expect("16:00:00 is always valid");
+
+        Self(UTC_16_00)
     }
 
     /// Returns the inner `NaiveTime` (in UTC).

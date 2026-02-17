@@ -6,9 +6,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use storekeeper_core::{
-    AppConfig, ClaimTime, GameId, ResourceNotificationConfig, SecretsConfig, ensure_configs_exist,
-};
+use storekeeper_core::{AppConfig, ClaimTime, GameId, SecretsConfig, ensure_configs_exist};
 
 use crate::notification::NotificationTracker;
 
@@ -99,8 +97,14 @@ impl AppState {
             tracing::warn!("Failed to ensure config files exist: {e}");
         }
 
-        let config = AppConfig::load().unwrap_or_default();
-        let secrets = SecretsConfig::load().unwrap_or_default();
+        let config = AppConfig::load().unwrap_or_else(|e| {
+            tracing::warn!("Failed to load config, using defaults: {e}");
+            AppConfig::default()
+        });
+        let secrets = SecretsConfig::load().unwrap_or_else(|e| {
+            tracing::warn!("Failed to load secrets, using defaults: {e}");
+            SecretsConfig::default()
+        });
 
         let registry = create_registry(&config, &secrets);
         let daily_reward_registry = create_daily_reward_registry(&config, &secrets);
@@ -253,15 +257,6 @@ impl AppState {
     // ========================================================================
     // Notification Methods
     // ========================================================================
-
-    /// Gets the notification config for a specific game.
-    pub async fn get_game_notification_config(
-        &self,
-        game_id: GameId,
-    ) -> HashMap<String, ResourceNotificationConfig> {
-        let state = self.inner.read().await;
-        state.config.games.notification_configs(game_id)
-    }
 
     /// Reloads configuration and reinitializes game clients.
     ///

@@ -14,12 +14,29 @@ use storekeeper_game_zzz::ZzzClient;
 use crate::daily_reward_registry::DailyRewardRegistry;
 use crate::registry::GameClientRegistry;
 
+/// Registers a HoYoLab-based game client if enabled and region can be resolved.
+fn register_hoyolab_game(
+    registry: &mut GameClientRegistry,
+    hoyolab: &HoyolabClient,
+    uid: &str,
+    region_override: Option<Region>,
+    detect_region: impl FnOnce(&str) -> std::result::Result<Region, storekeeper_core::Error>,
+    create_client: impl FnOnce(HoyolabClient, &str, Region) -> Box<dyn DynGameClient>,
+    game_name: &str,
+) {
+    let region = region_override.or_else(|| detect_region(uid).ok());
+    if let Some(region) = region {
+        let client = create_client(hoyolab.clone(), uid, region);
+        tracing::info!(uid = %uid, region = ?region, "{game_name} client registered");
+        registry.register(client);
+    }
+}
+
 /// Creates a `GameClientRegistry` from configuration and secrets.
 ///
 /// HoYoLab-based game clients share a single `HoyolabClient` instance to
 /// avoid redundant HTTP client allocations.
 #[must_use]
-#[allow(clippy::too_many_lines)]
 pub fn create_registry(config: &AppConfig, secrets: &SecretsConfig) -> GameClientRegistry {
     tracing::info!("Creating game client registry from configuration");
     let mut registry = GameClientRegistry::new();
@@ -39,56 +56,47 @@ pub fn create_registry(config: &AppConfig, secrets: &SecretsConfig) -> GameClien
         };
 
         // Genshin Impact
-        if let Some(ref genshin_config) = config.games.genshin_impact {
-            if genshin_config.enabled {
-                let region = genshin_config
-                    .region
-                    .or_else(|| Region::from_genshin_uid(&genshin_config.uid).ok());
-                if let Some(region) = region {
-                    let client = GenshinClient::new(hoyolab.clone(), &genshin_config.uid, region);
-                    tracing::info!(
-                        uid = %genshin_config.uid,
-                        region = ?region,
-                        "Genshin Impact client registered"
-                    );
-                    registry.register(Box::new(client) as Box<dyn DynGameClient>);
-                }
+        if let Some(ref c) = config.games.genshin_impact {
+            if c.enabled {
+                register_hoyolab_game(
+                    &mut registry,
+                    &hoyolab,
+                    &c.uid,
+                    c.region,
+                    Region::from_genshin_uid,
+                    |h, uid, r| Box::new(GenshinClient::new(h, uid, r)),
+                    "Genshin Impact",
+                );
             }
         }
 
         // Honkai: Star Rail
-        if let Some(ref hsr_config) = config.games.honkai_star_rail {
-            if hsr_config.enabled {
-                let region = hsr_config
-                    .region
-                    .or_else(|| Region::from_hsr_uid(&hsr_config.uid).ok());
-                if let Some(region) = region {
-                    let client = HsrClient::new(hoyolab.clone(), &hsr_config.uid, region);
-                    tracing::info!(
-                        uid = %hsr_config.uid,
-                        region = ?region,
-                        "Honkai: Star Rail client registered"
-                    );
-                    registry.register(Box::new(client) as Box<dyn DynGameClient>);
-                }
+        if let Some(ref c) = config.games.honkai_star_rail {
+            if c.enabled {
+                register_hoyolab_game(
+                    &mut registry,
+                    &hoyolab,
+                    &c.uid,
+                    c.region,
+                    Region::from_hsr_uid,
+                    |h, uid, r| Box::new(HsrClient::new(h, uid, r)),
+                    "Honkai: Star Rail",
+                );
             }
         }
 
         // Zenless Zone Zero
-        if let Some(ref zzz_config) = config.games.zenless_zone_zero {
-            if zzz_config.enabled {
-                let region = zzz_config
-                    .region
-                    .or_else(|| Region::from_zzz_uid(&zzz_config.uid).ok());
-                if let Some(region) = region {
-                    let client = ZzzClient::new(hoyolab.clone(), &zzz_config.uid, region);
-                    tracing::info!(
-                        uid = %zzz_config.uid,
-                        region = ?region,
-                        "Zenless Zone Zero client registered"
-                    );
-                    registry.register(Box::new(client) as Box<dyn DynGameClient>);
-                }
+        if let Some(ref c) = config.games.zenless_zone_zero {
+            if c.enabled {
+                register_hoyolab_game(
+                    &mut registry,
+                    &hoyolab,
+                    &c.uid,
+                    c.region,
+                    Region::from_zzz_uid,
+                    |h, uid, r| Box::new(ZzzClient::new(h, uid, r)),
+                    "Zenless Zone Zero",
+                );
             }
         }
     } else {

@@ -13,8 +13,7 @@ use crate::error::{Error, Result};
 #[derive(Debug, Clone)]
 pub struct HoyolabClient {
     client: reqwest::Client,
-    ltuid: String,
-    ltoken: String,
+    cookie: String,
 }
 
 impl HoyolabClient {
@@ -31,11 +30,11 @@ impl HoyolabClient {
             .build()
             .map_err(Error::Client)?;
 
-        Ok(Self {
-            client,
-            ltuid: ltuid.into(),
-            ltoken: ltoken.into(),
-        })
+        let ltuid = ltuid.into();
+        let ltoken = ltoken.into();
+        let cookie = format!("ltuid_v2={ltuid}; ltoken_v2={ltoken}");
+
+        Ok(Self { client, cookie })
     }
 
     /// Makes an authenticated GET request to the HoYoLab API.
@@ -89,12 +88,11 @@ impl HoyolabClient {
         extra_headers: &[(&str, &str)],
     ) -> Result<T> {
         let ds = generate_dynamic_secret_overseas();
-        let cookie = format!("ltuid_v2={}; ltoken_v2={}", self.ltuid, self.ltoken);
 
         tracing::debug!(url = %url, method = %method, "HoYoLab API request");
 
-        let mut request = self.client.request(method.clone(), url);
-        request = request.header(COOKIE, &cookie).header("DS", ds);
+        let mut request = self.client.request(method, url);
+        request = request.header(COOKIE, &self.cookie).header("DS", ds);
 
         // Add extra headers (e.g., x-rpc-signgame for daily rewards)
         for (name, value) in extra_headers {

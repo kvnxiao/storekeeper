@@ -63,7 +63,6 @@ tracing-subscriber.workspace = true
 chrono.workspace = true
 
 [dev-dependencies]
-async-trait.workspace = true
 tokio = { workspace = true, features = ["test-util"] }
 
 [lints]

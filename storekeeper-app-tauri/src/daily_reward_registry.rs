@@ -122,9 +122,14 @@ impl Default for DailyRewardRegistry {
 
 #[cfg(test)]
 mod tests {
+    use std::future::Future;
+    use std::pin::Pin;
+
     use super::*;
-    use async_trait::async_trait;
     use storekeeper_core::ApiProvider;
+
+    type BoxError = Box<dyn std::error::Error + Send + Sync>;
+    type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
     // =========================================================================
     // Mock
@@ -151,30 +156,31 @@ mod tests {
         }
     }
 
-    #[async_trait]
     impl DynDailyRewardClient for MockDailyRewardClient {
         fn game_id(&self) -> GameId {
             self.id
         }
 
-        async fn get_reward_status_json(
-            &self,
-        ) -> Result<serde_json::Value, Box<dyn std::error::Error + Send + Sync>> {
-            if self.should_fail {
-                Err("mock status error".into())
-            } else {
-                Ok(serde_json::json!({"info": {"is_signed": true, "total_sign_day": 10}}))
-            }
+        fn get_reward_status_json(&self) -> BoxFuture<'_, Result<serde_json::Value, BoxError>> {
+            let should_fail = self.should_fail;
+            Box::pin(async move {
+                if should_fail {
+                    Err("mock status error".into())
+                } else {
+                    Ok(serde_json::json!({"info": {"is_signed": true, "total_sign_day": 10}}))
+                }
+            })
         }
 
-        async fn claim_daily_reward_json(
-            &self,
-        ) -> Result<serde_json::Value, Box<dyn std::error::Error + Send + Sync>> {
-            if self.should_fail {
-                Err("mock claim error".into())
-            } else {
-                Ok(serde_json::json!({"success": true}))
-            }
+        fn claim_daily_reward_json(&self) -> BoxFuture<'_, Result<serde_json::Value, BoxError>> {
+            let should_fail = self.should_fail;
+            Box::pin(async move {
+                if should_fail {
+                    Err("mock claim error".into())
+                } else {
+                    Ok(serde_json::json!({"success": true}))
+                }
+            })
         }
     }
 

@@ -13,7 +13,6 @@ storekeeper-client-kuro.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
-async-trait.workspace = true
 chrono.workspace = true
 tracing.workspace = true
 

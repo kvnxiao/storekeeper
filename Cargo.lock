@@ -4379,7 +4379,6 @@ name = "storekeeper-app-tauri"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-trait",
  "chrono",
  "futures",
  "icu_datetime",
@@ -4427,7 +4426,6 @@ dependencies = [
 name = "storekeeper-client-hoyolab"
 version = "0.1.0"
 dependencies = [
- "async-trait",
  "chrono",
  "governor",
  "md-5",
@@ -4464,7 +4462,6 @@ dependencies = [
 name = "storekeeper-core"
 version = "0.1.0"
 dependencies = [
- "async-trait",
  "chrono",
  "dirs 6.0.0",
  "serde",
@@ -4479,7 +4476,6 @@ dependencies = [
 name = "storekeeper-game-genshin"
 version = "0.1.0"
 dependencies = [
- "async-trait",
  "chrono",
  "serde",
  "serde_json",
@@ -4494,7 +4490,6 @@ dependencies = [
 name = "storekeeper-game-hsr"
 version = "0.1.0"
 dependencies = [
- "async-trait",
  "chrono",
  "serde",
  "serde_json",
@@ -4509,7 +4504,6 @@ dependencies = [
 name = "storekeeper-game-wuwa"
 version = "0.1.0"
 dependencies = [
- "async-trait",
  "chrono",
  "serde",
  "serde_json",
@@ -4524,7 +4518,6 @@ dependencies = [
 name = "storekeeper-game-zzz"
 version = "0.1.0"
 dependencies = [
- "async-trait",
  "chrono",
  "serde",
  "serde_json",

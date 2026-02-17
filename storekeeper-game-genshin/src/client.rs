@@ -160,7 +160,7 @@ impl GameClient for GenshinClient {
     async fn fetch_resources(&self) -> Result<Vec<Self::Resource>> {
         tracing::info!(game = "Genshin Impact", "Fetching game resources");
         let note = self.fetch_daily_note().await?;
-        let mut resources = Vec::new();
+        let mut resources = Vec::with_capacity(4);
 
         // Resin
         resources.push(GenshinResource::Resin(StaminaResource::new(
@@ -190,12 +190,11 @@ impl GameClient for GenshinClient {
         }
 
         // Expeditions - find the earliest finish time
-        let earliest_finish = note
-            .expeditions
-            .iter()
-            .map(|e| e.remained_time)
-            .min()
-            .unwrap_or_else(Local::now);
+        let earliest_finish = note.expeditions.iter().map(|e| e.remained_time).min();
+        if earliest_finish.is_none() && note.current_expedition_num > 0 {
+            tracing::warn!("Genshin reported active expeditions but expedition list is empty");
+        }
+        let earliest_finish = earliest_finish.unwrap_or_else(Local::now);
         resources.push(GenshinResource::Expeditions(ExpeditionResource::new(
             note.current_expedition_num,
             note.max_expedition_num,

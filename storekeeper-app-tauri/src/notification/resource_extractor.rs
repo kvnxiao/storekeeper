@@ -1,7 +1,6 @@
 //! Resource info extraction from JSON data.
 
-use chrono::{DateTime, Utc};
-use storekeeper_core::{CooldownResource, ExpeditionResource, StaminaResource};
+use chrono::{DateTime, FixedOffset, Utc};
 
 /// Extracted timing info from a resource JSON object.
 pub(crate) struct ResourceInfo {
@@ -46,29 +45,42 @@ impl ResourceInfo {
     }
 }
 
+/// Parses a datetime string (RFC 3339) to `DateTime<Utc>`.
+fn parse_datetime_utc(s: &str) -> Option<DateTime<Utc>> {
+    s.parse::<DateTime<FixedOffset>>()
+        .ok()
+        .map(|dt| dt.with_timezone(&Utc))
+}
+
 /// Extracts completion timing from a resource data object.
 ///
-/// Checks discriminating fields before attempting deserialization to minimize
-/// `serde_json::Value` clones (which are deep copies).
+/// Reads fields directly from the JSON object to avoid deep-cloning
+/// the entire `serde_json::Value`.
 pub(crate) fn extract_resource_info(data: &serde_json::Value) -> Option<ResourceInfo> {
     let obj = data.as_object()?;
 
     if obj.contains_key("regenRateSeconds") {
-        let stamina: StaminaResource = serde_json::from_value(data.clone()).ok()?;
+        let current = obj.get("current")?.as_u64()?;
+        let max = obj.get("max")?.as_u64()?;
+        let regen_rate = obj.get("regenRateSeconds")?.as_u64()?;
+        let full_at = parse_datetime_utc(obj.get("fullAt")?.as_str()?)?;
+
         return Some(ResourceInfo {
-            completion_at: stamina.full_at.with_timezone(&Utc),
-            is_complete: stamina.is_full(),
-            current: Some(u64::from(stamina.current)),
-            max: Some(u64::from(stamina.max)),
-            regen_rate_seconds: Some(u64::from(stamina.regen_rate_seconds)),
+            completion_at: full_at,
+            is_complete: current >= max,
+            current: Some(current),
+            max: Some(max),
+            regen_rate_seconds: Some(regen_rate),
         });
     }
 
     if obj.contains_key("isReady") {
-        let cooldown: CooldownResource = serde_json::from_value(data.clone()).ok()?;
+        let is_ready = obj.get("isReady")?.as_bool()?;
+        let ready_at = parse_datetime_utc(obj.get("readyAt")?.as_str()?)?;
+
         return Some(ResourceInfo {
-            completion_at: cooldown.ready_at.with_timezone(&Utc),
-            is_complete: cooldown.is_ready,
+            completion_at: ready_at,
+            is_complete: is_ready,
             current: None,
             max: None,
             regen_rate_seconds: None,
@@ -76,8 +88,8 @@ pub(crate) fn extract_resource_info(data: &serde_json::Value) -> Option<Resource
     }
 
     if obj.contains_key("earliestFinishAt") {
-        let expedition: ExpeditionResource = serde_json::from_value(data.clone()).ok()?;
-        let completion_at = expedition.earliest_finish_at.with_timezone(&Utc);
+        let completion_at = parse_datetime_utc(obj.get("earliestFinishAt")?.as_str()?)?;
+
         return Some(ResourceInfo {
             completion_at,
             is_complete: completion_at <= Utc::now(),

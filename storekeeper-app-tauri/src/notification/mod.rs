@@ -48,15 +48,23 @@ pub(crate) async fn check_and_notify(app_handle: &AppHandle) {
     let state = app_handle.state::<AppState>();
     let now = Utc::now();
 
-    // Read resources + notification configs (read lock, released after this block)
+    // Read resources + all notification configs in a single lock acquisition
     let resources = state.get_resources().await;
-    let mut game_configs = Vec::new();
-    for (game_id, resources_json) in &resources.games {
-        let configs = state.get_game_notification_config(*game_id).await;
-        if !configs.is_empty() {
-            game_configs.push((*game_id, configs, resources_json));
-        }
-    }
+    let game_configs: Vec<_> = {
+        let inner = state.inner.read().await;
+        resources
+            .games
+            .iter()
+            .filter_map(|(game_id, resources_json)| {
+                let configs = inner.config.games.notification_configs(*game_id);
+                if configs.is_empty() {
+                    None
+                } else {
+                    Some((*game_id, configs, resources_json.clone()))
+                }
+            })
+            .collect()
+    };
 
     // Single write lock for all tracker mutations
     let mut inner = state.inner.write().await;

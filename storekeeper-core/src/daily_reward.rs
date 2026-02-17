@@ -3,6 +3,9 @@
 //! This module provides the core abstractions for daily check-in rewards
 //! across Genshin Impact, Honkai: Star Rail, and Zenless Zone Zero.
 
+use std::future::Future;
+use std::pin::Pin;
+
 use chrono::Datelike;
 use serde::{Deserialize, Serialize};
 
@@ -10,6 +13,9 @@ use crate::game_id::GameId;
 
 /// Type alias for a boxed error with Send + Sync bounds.
 type BoxError = Box<dyn std::error::Error + Send + Sync>;
+
+/// A boxed future for object-safe async trait methods.
+type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
 /// Information about the current daily reward status.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -163,6 +169,7 @@ pub trait DailyRewardClient: Send + Sync {
     /// # Errors
     ///
     /// Returns an error if the API request fails.
+    #[must_use = "this performs an API call; the result should be used"]
     fn get_reward_info(
         &self,
     ) -> impl Future<Output = std::result::Result<DailyRewardInfo, Self::Error>> + Send;
@@ -172,6 +179,7 @@ pub trait DailyRewardClient: Send + Sync {
     /// # Errors
     ///
     /// Returns an error if the API request fails.
+    #[must_use = "this performs an API call; the result should be used"]
     fn get_monthly_rewards(
         &self,
     ) -> impl Future<Output = std::result::Result<Vec<DailyReward>, Self::Error>> + Send;
@@ -181,6 +189,7 @@ pub trait DailyRewardClient: Send + Sync {
     /// # Errors
     ///
     /// Returns an error if the API request fails.
+    #[must_use = "this performs an API call; the result should be used"]
     fn get_reward_status(
         &self,
     ) -> impl Future<Output = std::result::Result<DailyRewardStatus, Self::Error>> + Send;
@@ -194,6 +203,7 @@ pub trait DailyRewardClient: Send + Sync {
     ///
     /// Returns an error if the API request fails (network error, auth error, etc.).
     /// Note: "Already claimed" is not an error - it's returned as a failed `ClaimResult`.
+    #[must_use = "this performs an API call; the result should be used"]
     fn claim_daily_reward(
         &self,
     ) -> impl Future<Output = std::result::Result<ClaimResult, Self::Error>> + Send;
@@ -202,7 +212,6 @@ pub trait DailyRewardClient: Send + Sync {
 /// Type-erased trait for dynamic dispatch of daily reward clients.
 ///
 /// This allows storing different game clients in a single collection.
-#[async_trait::async_trait]
 pub trait DynDailyRewardClient: Send + Sync {
     /// Returns the game identifier for this client.
     fn game_id(&self) -> GameId;
@@ -212,18 +221,21 @@ pub trait DynDailyRewardClient: Send + Sync {
     /// # Errors
     ///
     /// Returns an error if the fetch or serialization fails.
-    async fn get_reward_status_json(&self) -> std::result::Result<serde_json::Value, BoxError>;
+    fn get_reward_status_json(
+        &self,
+    ) -> BoxFuture<'_, std::result::Result<serde_json::Value, BoxError>>;
 
     /// Claims the daily reward and returns the result as JSON.
     ///
     /// # Errors
     ///
     /// Returns an error if the claim or serialization fails.
-    async fn claim_daily_reward_json(&self) -> std::result::Result<serde_json::Value, BoxError>;
+    fn claim_daily_reward_json(
+        &self,
+    ) -> BoxFuture<'_, std::result::Result<serde_json::Value, BoxError>>;
 }
 
 /// Blanket implementation of `DynDailyRewardClient` for all `DailyRewardClient` implementors.
-#[async_trait::async_trait]
 impl<T> DynDailyRewardClient for T
 where
     T: DailyRewardClient,
@@ -232,20 +244,28 @@ where
         DailyRewardClient::game_id(self)
     }
 
-    async fn get_reward_status_json(&self) -> std::result::Result<serde_json::Value, BoxError> {
-        let status = self
-            .get_reward_status()
-            .await
-            .map_err(|e| Box::new(e) as BoxError)?;
-        serde_json::to_value(status).map_err(|e| Box::new(e) as BoxError)
+    fn get_reward_status_json(
+        &self,
+    ) -> BoxFuture<'_, std::result::Result<serde_json::Value, BoxError>> {
+        Box::pin(async {
+            let status = self
+                .get_reward_status()
+                .await
+                .map_err(|e| Box::new(e) as BoxError)?;
+            serde_json::to_value(status).map_err(|e| Box::new(e) as BoxError)
+        })
     }
 
-    async fn claim_daily_reward_json(&self) -> std::result::Result<serde_json::Value, BoxError> {
-        let result = self
-            .claim_daily_reward()
-            .await
-            .map_err(|e| Box::new(e) as BoxError)?;
-        serde_json::to_value(result).map_err(|e| Box::new(e) as BoxError)
+    fn claim_daily_reward_json(
+        &self,
+    ) -> BoxFuture<'_, std::result::Result<serde_json::Value, BoxError>> {
+        Box::pin(async {
+            let result = self
+                .claim_daily_reward()
+                .await
+                .map_err(|e| Box::new(e) as BoxError)?;
+            serde_json::to_value(result).map_err(|e| Box::new(e) as BoxError)
+        })
     }
 }
 

@@ -84,14 +84,18 @@ impl Default for GameClientRegistry {
 
 #[cfg(test)]
 mod tests {
+    use std::future::Future;
+    use std::pin::Pin;
+
     use super::*;
-    use async_trait::async_trait;
+
+    type BoxError = Box<dyn std::error::Error + Send + Sync>;
+    type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
     struct MockGameClient {
         id: GameId,
     }
 
-    #[async_trait]
     impl DynGameClient for MockGameClient {
         fn game_id(&self) -> GameId {
             self.id
@@ -101,16 +105,12 @@ mod tests {
             "Mock Game"
         }
 
-        async fn fetch_resources_json(
-            &self,
-        ) -> Result<serde_json::Value, Box<dyn std::error::Error + Send + Sync>> {
-            Ok(serde_json::json!({"mock": true}))
+        fn fetch_resources_json(&self) -> BoxFuture<'_, Result<serde_json::Value, BoxError>> {
+            Box::pin(async { Ok(serde_json::json!({"mock": true})) })
         }
 
-        async fn is_authenticated_dyn(
-            &self,
-        ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
-            Ok(true)
+        fn is_authenticated_dyn(&self) -> BoxFuture<'_, Result<bool, BoxError>> {
+            Box::pin(async { Ok(true) })
         }
     }
 

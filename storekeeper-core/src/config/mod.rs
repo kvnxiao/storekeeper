@@ -317,6 +317,16 @@ pub struct GamesConfig {
 }
 
 impl GamesConfig {
+    /// Converts a typed notification map to string-keyed map for the notification system.
+    fn stringify_notification_map<K: AsRef<str>>(
+        notifications: &std::collections::HashMap<K, ResourceNotificationConfig>,
+    ) -> std::collections::HashMap<String, ResourceNotificationConfig> {
+        notifications
+            .iter()
+            .map(|(k, v)| (k.as_ref().to_string(), v.clone()))
+            .collect()
+    }
+
     /// Notification configs for a game, with string keys for the notification system.
     ///
     /// Converts typed resource keys to strings via `AsRef<str>`.
@@ -331,42 +341,22 @@ impl GamesConfig {
             GameId::GenshinImpact => self
                 .genshin_impact
                 .as_ref()
-                .map(|c| {
-                    c.notifications
-                        .iter()
-                        .map(|(k, v)| (k.as_ref().to_string(), v.clone()))
-                        .collect()
-                })
+                .map(|c| Self::stringify_notification_map(&c.notifications))
                 .unwrap_or_default(),
             GameId::HonkaiStarRail => self
                 .honkai_star_rail
                 .as_ref()
-                .map(|c| {
-                    c.notifications
-                        .iter()
-                        .map(|(k, v)| (k.as_ref().to_string(), v.clone()))
-                        .collect()
-                })
+                .map(|c| Self::stringify_notification_map(&c.notifications))
                 .unwrap_or_default(),
             GameId::ZenlessZoneZero => self
                 .zenless_zone_zero
                 .as_ref()
-                .map(|c| {
-                    c.notifications
-                        .iter()
-                        .map(|(k, v)| (k.as_ref().to_string(), v.clone()))
-                        .collect()
-                })
+                .map(|c| Self::stringify_notification_map(&c.notifications))
                 .unwrap_or_default(),
             GameId::WutheringWaves => self
                 .wuthering_waves
                 .as_ref()
-                .map(|c| {
-                    c.notifications
-                        .iter()
-                        .map(|(k, v)| (k.as_ref().to_string(), v.clone()))
-                        .collect()
-                })
+                .map(|c| Self::stringify_notification_map(&c.notifications))
                 .unwrap_or_default(),
         }
     }

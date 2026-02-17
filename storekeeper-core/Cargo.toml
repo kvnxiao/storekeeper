@@ -15,7 +15,6 @@ chrono.workspace = true
 dirs.workspace = true
 thiserror.workspace = true
 strum.workspace = true
-async-trait.workspace = true
 tracing.workspace = true
 
 [lints]
