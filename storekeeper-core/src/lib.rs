@@ -11,6 +11,7 @@ pub mod game_id;
 pub mod macros;
 pub mod region;
 pub mod resource;
+pub mod resource_types;
 pub mod serde_utils;
 
 pub use config::{
@@ -27,3 +28,4 @@ pub use game::{DynGameClient, GameClient};
 pub use game_id::{ApiProvider, GameId};
 pub use region::Region;
 pub use resource::{CooldownResource, DisplayableResource, ExpeditionResource, StaminaResource};
+pub use resource_types::{GenshinResourceType, HsrResourceType, WuwaResourceType, ZzzResourceType};

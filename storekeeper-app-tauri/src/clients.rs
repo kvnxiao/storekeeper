@@ -16,8 +16,8 @@ use crate::registry::GameClientRegistry;
 
 /// Creates a `GameClientRegistry` from configuration and secrets.
 ///
-/// This function creates type-erased game clients that can be stored
-/// in a single registry for dynamic dispatch.
+/// HoYoLab-based game clients share a single `HoyolabClient` instance to
+/// avoid redundant HTTP client allocations.
 #[must_use]
 #[allow(clippy::too_many_lines)]
 pub fn create_registry(config: &AppConfig, secrets: &SecretsConfig) -> GameClientRegistry {
@@ -30,6 +30,14 @@ pub fn create_registry(config: &AppConfig, secrets: &SecretsConfig) -> GameClien
         let ltuid = secrets.hoyolab.ltuid();
         let ltoken = secrets.hoyolab.ltoken();
 
+        let hoyolab = match HoyolabClient::new(ltuid, ltoken) {
+            Ok(client) => client,
+            Err(e) => {
+                tracing::warn!("Failed to create shared HoYoLab client: {e}");
+                return registry;
+            }
+        };
+
         // Genshin Impact
         if let Some(ref genshin_config) = config.games.genshin_impact {
             if genshin_config.enabled {
@@ -37,16 +45,13 @@ pub fn create_registry(config: &AppConfig, secrets: &SecretsConfig) -> GameClien
                     .region
                     .or_else(|| Region::from_genshin_uid(&genshin_config.uid).ok());
                 if let Some(region) = region {
-                    if let Ok(client) =
-                        GenshinClient::new(ltuid, ltoken, &genshin_config.uid, region)
-                    {
-                        tracing::info!(
-                            uid = %genshin_config.uid,
-                            region = ?region,
-                            "Genshin Impact client registered"
-                        );
-                        registry.register(Box::new(client) as Box<dyn DynGameClient>);
-                    }
+                    let client = GenshinClient::new(hoyolab.clone(), &genshin_config.uid, region);
+                    tracing::info!(
+                        uid = %genshin_config.uid,
+                        region = ?region,
+                        "Genshin Impact client registered"
+                    );
+                    registry.register(Box::new(client) as Box<dyn DynGameClient>);
                 }
             }
         }
@@ -58,14 +63,13 @@ pub fn create_registry(config: &AppConfig, secrets: &SecretsConfig) -> GameClien
                     .region
                     .or_else(|| Region::from_hsr_uid(&hsr_config.uid).ok());
                 if let Some(region) = region {
-                    if let Ok(client) = HsrClient::new(ltuid, ltoken, &hsr_config.uid, region) {
-                        tracing::info!(
-                            uid = %hsr_config.uid,
-                            region = ?region,
-                            "Honkai: Star Rail client registered"
-                        );
-                        registry.register(Box::new(client) as Box<dyn DynGameClient>);
-                    }
+                    let client = HsrClient::new(hoyolab.clone(), &hsr_config.uid, region);
+                    tracing::info!(
+                        uid = %hsr_config.uid,
+                        region = ?region,
+                        "Honkai: Star Rail client registered"
+                    );
+                    registry.register(Box::new(client) as Box<dyn DynGameClient>);
                 }
             }
         }
@@ -77,14 +81,13 @@ pub fn create_registry(config: &AppConfig, secrets: &SecretsConfig) -> GameClien
                     .region
                     .or_else(|| Region::from_zzz_uid(&zzz_config.uid).ok());
                 if let Some(region) = region {
-                    if let Ok(client) = ZzzClient::new(ltuid, ltoken, &zzz_config.uid, region) {
-                        tracing::info!(
-                            uid = %zzz_config.uid,
-                            region = ?region,
-                            "Zenless Zone Zero client registered"
-                        );
-                        registry.register(Box::new(client) as Box<dyn DynGameClient>);
-                    }
+                    let client = ZzzClient::new(hoyolab.clone(), &zzz_config.uid, region);
+                    tracing::info!(
+                        uid = %zzz_config.uid,
+                        region = ?region,
+                        "Zenless Zone Zero client registered"
+                    );
+                    registry.register(Box::new(client) as Box<dyn DynGameClient>);
                 }
             }
         }

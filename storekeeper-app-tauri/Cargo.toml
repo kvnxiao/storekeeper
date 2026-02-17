@@ -39,6 +39,9 @@ futures.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 
+# HTTP (for typed error downcasting in retry logic)
+reqwest.workspace = true
+
 # Error handling
 anyhow.workspace = true
 

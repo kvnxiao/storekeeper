@@ -10,6 +10,7 @@ mod events;
 pub mod i18n;
 mod notification;
 mod polling;
+mod provider_batch;
 mod registry;
 mod scheduled_claim;
 mod state;

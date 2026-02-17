@@ -4,9 +4,10 @@ use std::collections::HashMap;
 use std::future::Future;
 use std::time::Duration;
 
+use anyhow::Context;
 use chrono::Utc;
 use storekeeper_client_core::retry::RetryConfig;
-use storekeeper_core::{ClaimTime, GameId, next_claim_datetime_utc};
+use storekeeper_core::{ClaimTime, DailyRewardStatus, GameId, next_claim_datetime_utc};
 use tauri::{AppHandle, Emitter, Manager};
 use tokio_util::sync::CancellationToken;
 
@@ -148,18 +149,15 @@ async fn sleep_or_cancel(cancel_token: &CancellationToken, duration: Duration) -
 /// Checks status and claims if not already claimed today.
 ///
 /// Returns `Ok(true)` if claimed, `Ok(false)` if already claimed, `Err` on failure.
-async fn claim_with_status_check(state: &AppState, game_id: GameId) -> Result<bool, String> {
+async fn claim_with_status_check(state: &AppState, game_id: GameId) -> anyhow::Result<bool> {
     // Step 1: Check status first
     let status = fetch_status_with_retry(state, game_id).await?;
 
-    // Step 2: Check if already claimed
-    let is_signed = status
-        .get("info")
-        .and_then(|i| i.get("is_signed"))
-        .and_then(serde_json::Value::as_bool)
-        .unwrap_or(false);
+    // Step 2: Check if already claimed via typed deserialization
+    let reward_status: DailyRewardStatus =
+        serde_json::from_value(status).context("failed to deserialize daily reward status")?;
 
-    if is_signed {
+    if reward_status.info.is_signed {
         return Ok(false); // Already claimed
     }
 
@@ -173,7 +171,7 @@ async fn claim_with_status_check(state: &AppState, game_id: GameId) -> Result<bo
 async fn fetch_status_with_retry(
     state: &AppState,
     game_id: GameId,
-) -> Result<serde_json::Value, String> {
+) -> anyhow::Result<serde_json::Value> {
     retry_with_backoff(
         || state.get_daily_reward_status_for_game(game_id),
         "fetch status",
@@ -186,7 +184,7 @@ async fn fetch_status_with_retry(
 async fn claim_reward_with_retry(
     state: &AppState,
     game_id: GameId,
-) -> Result<serde_json::Value, String> {
+) -> anyhow::Result<serde_json::Value> {
     retry_with_backoff(
         || state.claim_daily_reward_for_game(game_id),
         "claim reward",
@@ -200,10 +198,10 @@ async fn retry_with_backoff<F, Fut>(
     mut operation: F,
     operation_name: &str,
     game_id: GameId,
-) -> Result<serde_json::Value, String>
+) -> anyhow::Result<serde_json::Value>
 where
     F: FnMut() -> Fut,
-    Fut: Future<Output = Result<serde_json::Value, String>>,
+    Fut: Future<Output = anyhow::Result<serde_json::Value>>,
 {
     let config = RetryConfig::default(); // 3 retries, 500ms base, 30s max
     let mut attempt = 0;
@@ -229,19 +227,24 @@ where
     }
 }
 
-/// Determines if an error is retryable (network-related).
-fn is_retryable_error(error: &str) -> bool {
-    let patterns = [
-        "timeout",
-        "connection",
-        "network",
-        "dns",
-        "reset",
-        "refused",
-        "unreachable",
-    ];
-    let lower = error.to_lowercase();
-    patterns.iter().any(|p| lower.contains(p))
+/// Determines if an error is retryable by inspecting the error chain.
+///
+/// Walks the `anyhow` error chain looking for `reqwest` errors that indicate
+/// transient network issues (timeouts, connection errors, etc.).
+fn is_retryable_error(error: &anyhow::Error) -> bool {
+    // Walk the error chain for typed reqwest errors
+    for cause in error.chain() {
+        if let Some(reqwest_err) = cause.downcast_ref::<reqwest::Error>() {
+            if reqwest_err.is_timeout() || reqwest_err.is_connect() || reqwest_err.is_request() {
+                return true;
+            }
+        }
+    }
+
+    // Fallback: pattern-match on the display string for errors that don't
+    // preserve typed info through the chain
+    let msg = error.to_string().to_lowercase();
+    msg.contains("dns") || msg.contains("reset") || msg.contains("unreachable")
 }
 
 /// Calculates the next claim time and which games to claim.
@@ -302,79 +305,42 @@ mod tests {
     use super::*;
 
     // =========================================================================
-    // is_retryable_error — positive cases (each keyword)
+    // is_retryable_error tests
     // =========================================================================
 
     #[test]
-    fn retryable_timeout() {
-        assert!(is_retryable_error("request timeout"));
+    fn retryable_dns_in_message() {
+        let err = anyhow::anyhow!("dns resolution failed");
+        assert!(is_retryable_error(&err));
     }
 
     #[test]
-    fn retryable_connection() {
-        assert!(is_retryable_error("connection refused by host"));
+    fn retryable_reset_in_message() {
+        let err = anyhow::anyhow!("connection reset by peer");
+        assert!(is_retryable_error(&err));
     }
 
     #[test]
-    fn retryable_network() {
-        assert!(is_retryable_error("network error"));
+    fn retryable_unreachable_in_message() {
+        let err = anyhow::anyhow!("host unreachable");
+        assert!(is_retryable_error(&err));
     }
-
-    #[test]
-    fn retryable_dns() {
-        assert!(is_retryable_error("dns resolution failed"));
-    }
-
-    #[test]
-    fn retryable_reset() {
-        assert!(is_retryable_error("connection reset by peer"));
-    }
-
-    #[test]
-    fn retryable_refused() {
-        assert!(is_retryable_error("connection refused"));
-    }
-
-    #[test]
-    fn retryable_unreachable() {
-        assert!(is_retryable_error("host unreachable"));
-    }
-
-    // =========================================================================
-    // is_retryable_error — case insensitivity
-    // =========================================================================
-
-    #[test]
-    fn retryable_case_insensitive_uppercase() {
-        assert!(is_retryable_error("CONNECTION TIMEOUT"));
-    }
-
-    #[test]
-    fn retryable_case_insensitive_mixed() {
-        assert!(is_retryable_error("Network Error: DNS lookup failed"));
-    }
-
-    // =========================================================================
-    // is_retryable_error — negative cases
-    // =========================================================================
 
     #[test]
     fn not_retryable_auth_error() {
-        assert!(!is_retryable_error("authentication failed: invalid token"));
+        let err = anyhow::anyhow!("authentication failed: invalid token");
+        assert!(!is_retryable_error(&err));
     }
 
     #[test]
     fn not_retryable_rate_limit() {
-        assert!(!is_retryable_error("rate limit exceeded"));
+        let err = anyhow::anyhow!("rate limit exceeded");
+        assert!(!is_retryable_error(&err));
     }
 
     #[test]
-    fn not_retryable_invalid_cookie() {
-        assert!(!is_retryable_error("invalid cookie"));
-    }
-
-    #[test]
-    fn not_retryable_empty_string() {
-        assert!(!is_retryable_error(""));
+    fn not_retryable_empty() {
+        let err = anyhow::anyhow!("");
+        assert!(!is_retryable_error(&err));
     }
 }

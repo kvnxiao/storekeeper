@@ -27,11 +27,15 @@ pub enum ErrorCode {
 /// frontend can differentiate error types.
 #[derive(Debug, Clone, Serialize)]
 pub struct CommandError {
+    /// The error code identifying the type of error.
     pub code: ErrorCode,
+    /// Human-readable error message.
     pub message: String,
 }
 
 impl CommandError {
+    /// Creates a new `CommandError` with the `Internal` error code.
+    #[must_use = "this returns a new CommandError instance"]
     pub fn internal(message: impl Into<String>) -> Self {
         Self {
             code: ErrorCode::Internal,
@@ -76,5 +80,11 @@ impl From<std::io::Error> for CommandError {
 impl From<String> for CommandError {
     fn from(message: String) -> Self {
         Self::internal(message)
+    }
+}
+
+impl From<anyhow::Error> for CommandError {
+    fn from(err: anyhow::Error) -> Self {
+        Self::internal(format!("{err:#}"))
     }
 }

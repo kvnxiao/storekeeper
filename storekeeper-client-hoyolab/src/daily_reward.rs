@@ -3,7 +3,6 @@
 //! Provides a config-driven `DailyRewardClient` implementation that works for
 //! all HoYoLab games (Genshin Impact, Honkai: Star Rail, Zenless Zone Zero).
 
-use async_trait::async_trait;
 use reqwest::Method;
 use serde::Deserialize;
 use storekeeper_core::{
@@ -114,7 +113,6 @@ impl HoyolabDailyRewardClient {
     }
 }
 
-#[async_trait]
 impl DailyRewardClient for HoyolabDailyRewardClient {
     type Error = Error;
 

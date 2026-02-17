@@ -8,6 +8,8 @@
 /// - Implementation of `DisplayableResource` trait
 /// - Standard derives (Debug, Clone, Serialize, Deserialize)
 ///
+/// Optionally, with `/ TypeName` syntax, also generates a companion type-only enum.
+///
 /// # Example
 ///
 /// ```rust,ignore
@@ -25,6 +27,47 @@
 /// ```
 #[macro_export]
 macro_rules! game_resource_enum {
+    // Extended form: generates both data enum and type-only enum
+    (
+        $(#[$meta:meta])*
+        $vis:vis enum $name:ident / $type_name:ident {
+            $(
+                $(#[$variant_meta:meta])*
+                $variant:ident($inner:ty) => ($display_name:literal, $icon:literal)
+            ),* $(,)?
+        }
+    ) => {
+        $crate::game_resource_enum! {
+            $(#[$meta])*
+            $vis enum $name {
+                $(
+                    $(#[$variant_meta])*
+                    $variant($inner) => ($display_name, $icon)
+                ),*
+            }
+        }
+
+        #[doc = concat!("Resource type identifiers for [`", stringify!($name), "`].")]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, ::serde::Serialize, ::serde::Deserialize, ::strum::AsRefStr)]
+        #[serde(rename_all = "snake_case")]
+        #[strum(serialize_all = "snake_case")]
+        $vis enum $type_name {
+            $(
+                $(#[$variant_meta])*
+                $variant,
+            )*
+        }
+
+        impl $type_name {
+            /// Returns a static slice of all variants.
+            #[must_use]
+            pub const fn all() -> &'static [Self] {
+                &[$(Self::$variant,)*]
+            }
+        }
+    };
+
+    // Original form: generates only the data enum
     (
         $(#[$meta:meta])*
         $vis:vis enum $name:ident {

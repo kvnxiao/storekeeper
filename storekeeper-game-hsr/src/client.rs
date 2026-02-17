@@ -1,6 +1,5 @@
 //! Honkai: Star Rail game client implementation.
 
-use async_trait::async_trait;
 use chrono::{DateTime, Local};
 use serde::Deserialize;
 use storekeeper_client_hoyolab::HoyolabClient;
@@ -30,23 +29,14 @@ pub struct HsrClient {
 }
 
 impl HsrClient {
-    /// Creates a new HSR client.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the HoYoLab client cannot be created.
-    pub fn new(
-        ltuid: impl Into<String>,
-        ltoken: impl Into<String>,
-        uid: impl Into<String>,
-        region: Region,
-    ) -> Result<Self> {
-        let hoyolab = HoyolabClient::new(ltuid, ltoken)?;
-        Ok(Self {
+    /// Creates a new HSR client using a shared `HoyolabClient`.
+    #[must_use]
+    pub fn new(hoyolab: HoyolabClient, uid: impl Into<String>, region: Region) -> Self {
+        Self {
             hoyolab,
             uid: uid.into(),
             region,
-        })
+        }
     }
 
     /// Fetches the note data from the API.
@@ -58,11 +48,10 @@ impl HsrClient {
             self.uid
         );
 
-        Ok(self.hoyolab.get(&url).await?)
+        self.hoyolab.get(&url).await
     }
 }
 
-#[async_trait]
 impl GameClient for HsrClient {
     type Resource = HsrResource;
     type Error = Error;
@@ -90,6 +79,6 @@ impl GameClient for HsrClient {
     }
 
     async fn is_authenticated(&self) -> Result<bool> {
-        Ok(self.hoyolab.check_auth().await?)
+        self.hoyolab.check_auth().await
     }
 }

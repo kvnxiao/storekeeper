@@ -1,6 +1,5 @@
 //! Genshin Impact game client implementation.
 
-use async_trait::async_trait;
 use chrono::{DateTime, Local, TimeDelta};
 use serde::{Deserialize, Deserializer};
 use storekeeper_client_hoyolab::HoyolabClient;
@@ -127,23 +126,14 @@ pub struct GenshinClient {
 }
 
 impl GenshinClient {
-    /// Creates a new Genshin Impact client.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the HoYoLab client cannot be created.
-    pub fn new(
-        ltuid: impl Into<String>,
-        ltoken: impl Into<String>,
-        uid: impl Into<String>,
-        region: Region,
-    ) -> Result<Self> {
-        let hoyolab = HoyolabClient::new(ltuid, ltoken)?;
-        Ok(Self {
+    /// Creates a new Genshin Impact client using a shared `HoyolabClient`.
+    #[must_use]
+    pub fn new(hoyolab: HoyolabClient, uid: impl Into<String>, region: Region) -> Self {
+        Self {
             hoyolab,
             uid: uid.into(),
             region,
-        })
+        }
     }
 
     /// Fetches the daily note data from the API.
@@ -155,11 +145,10 @@ impl GenshinClient {
             self.uid
         );
 
-        Ok(self.hoyolab.get(&url).await?)
+        self.hoyolab.get(&url).await
     }
 }
 
-#[async_trait]
 impl GameClient for GenshinClient {
     type Resource = GenshinResource;
     type Error = Error;
@@ -225,6 +214,6 @@ impl GameClient for GenshinClient {
     }
 
     async fn is_authenticated(&self) -> Result<bool> {
-        Ok(self.hoyolab.check_auth().await?)
+        self.hoyolab.check_auth().await
     }
 }

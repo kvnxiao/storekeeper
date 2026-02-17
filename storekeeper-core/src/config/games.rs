@@ -8,6 +8,9 @@ use super::claim_time::{ClaimTime, claim_time_serde};
 use super::default_true;
 use super::notification::ResourceNotificationConfig;
 use crate::region::Region;
+use crate::resource_types::{
+    GenshinResourceType, HsrResourceType, WuwaResourceType, ZzzResourceType,
+};
 
 /// Genshin Impact specific configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -24,7 +27,7 @@ pub struct GenshinConfig {
 
     /// Resources to track.
     #[serde(default = "default_genshin_resources")]
-    pub tracked_resources: Vec<String>,
+    pub tracked_resources: Vec<GenshinResourceType>,
 
     /// Whether to auto-claim daily rewards for this game.
     #[serde(default)]
@@ -37,16 +40,11 @@ pub struct GenshinConfig {
 
     /// Per-resource notification settings.
     #[serde(default)]
-    pub notifications: HashMap<String, ResourceNotificationConfig>,
+    pub notifications: HashMap<GenshinResourceType, ResourceNotificationConfig>,
 }
 
-fn default_genshin_resources() -> Vec<String> {
-    vec![
-        "resin".to_string(),
-        "parametric_transformer".to_string(),
-        "realm_currency".to_string(),
-        "expeditions".to_string(),
-    ]
+fn default_genshin_resources() -> Vec<GenshinResourceType> {
+    GenshinResourceType::all().to_vec()
 }
 
 /// Honkai: Star Rail specific configuration.
@@ -64,7 +62,7 @@ pub struct HsrConfig {
 
     /// Resources to track.
     #[serde(default = "default_hsr_resources")]
-    pub tracked_resources: Vec<String>,
+    pub tracked_resources: Vec<HsrResourceType>,
 
     /// Whether to auto-claim daily rewards for this game.
     #[serde(default)]
@@ -77,11 +75,11 @@ pub struct HsrConfig {
 
     /// Per-resource notification settings.
     #[serde(default)]
-    pub notifications: HashMap<String, ResourceNotificationConfig>,
+    pub notifications: HashMap<HsrResourceType, ResourceNotificationConfig>,
 }
 
-fn default_hsr_resources() -> Vec<String> {
-    vec!["trailblaze_power".to_string()]
+fn default_hsr_resources() -> Vec<HsrResourceType> {
+    HsrResourceType::all().to_vec()
 }
 
 /// Zenless Zone Zero specific configuration.
@@ -99,7 +97,7 @@ pub struct ZzzConfig {
 
     /// Resources to track.
     #[serde(default = "default_zzz_resources")]
-    pub tracked_resources: Vec<String>,
+    pub tracked_resources: Vec<ZzzResourceType>,
 
     /// Whether to auto-claim daily rewards for this game.
     #[serde(default)]
@@ -112,11 +110,11 @@ pub struct ZzzConfig {
 
     /// Per-resource notification settings.
     #[serde(default)]
-    pub notifications: HashMap<String, ResourceNotificationConfig>,
+    pub notifications: HashMap<ZzzResourceType, ResourceNotificationConfig>,
 }
 
-fn default_zzz_resources() -> Vec<String> {
-    vec!["battery".to_string()]
+fn default_zzz_resources() -> Vec<ZzzResourceType> {
+    ZzzResourceType::all().to_vec()
 }
 
 /// Wuthering Waves specific configuration.
@@ -134,15 +132,15 @@ pub struct WuwaConfig {
 
     /// Resources to track.
     #[serde(default = "default_wuwa_resources")]
-    pub tracked_resources: Vec<String>,
+    pub tracked_resources: Vec<WuwaResourceType>,
 
     /// Per-resource notification settings.
     #[serde(default)]
-    pub notifications: HashMap<String, ResourceNotificationConfig>,
+    pub notifications: HashMap<WuwaResourceType, ResourceNotificationConfig>,
 }
 
-fn default_wuwa_resources() -> Vec<String> {
-    vec!["waveplates".to_string()]
+fn default_wuwa_resources() -> Vec<WuwaResourceType> {
+    WuwaResourceType::all().to_vec()
 }
 
 #[cfg(test)]
@@ -201,7 +199,7 @@ mod tests {
 
         let resin = config
             .notifications
-            .get("resin")
+            .get(&GenshinResourceType::Resin)
             .expect("should have resin config");
         assert!(resin.enabled);
         assert_eq!(resin.notify_minutes_before_full, Some(60));
@@ -209,7 +207,7 @@ mod tests {
 
         let expeditions = config
             .notifications
-            .get("expeditions")
+            .get(&GenshinResourceType::Expeditions)
             .expect("should have expeditions config");
         assert!(expeditions.enabled);
         assert_eq!(expeditions.notify_minutes_before_full, None);

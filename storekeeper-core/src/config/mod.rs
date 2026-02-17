@@ -316,6 +316,118 @@ pub struct GamesConfig {
     pub wuthering_waves: Option<WuwaConfig>,
 }
 
+impl GamesConfig {
+    /// Notification configs for a game, with string keys for the notification system.
+    ///
+    /// Converts typed resource keys to strings via `AsRef<str>`.
+    #[must_use]
+    pub fn notification_configs(
+        &self,
+        game_id: crate::GameId,
+    ) -> std::collections::HashMap<String, ResourceNotificationConfig> {
+        use crate::GameId;
+
+        match game_id {
+            GameId::GenshinImpact => self
+                .genshin_impact
+                .as_ref()
+                .map(|c| {
+                    c.notifications
+                        .iter()
+                        .map(|(k, v)| (k.as_ref().to_string(), v.clone()))
+                        .collect()
+                })
+                .unwrap_or_default(),
+            GameId::HonkaiStarRail => self
+                .honkai_star_rail
+                .as_ref()
+                .map(|c| {
+                    c.notifications
+                        .iter()
+                        .map(|(k, v)| (k.as_ref().to_string(), v.clone()))
+                        .collect()
+                })
+                .unwrap_or_default(),
+            GameId::ZenlessZoneZero => self
+                .zenless_zone_zero
+                .as_ref()
+                .map(|c| {
+                    c.notifications
+                        .iter()
+                        .map(|(k, v)| (k.as_ref().to_string(), v.clone()))
+                        .collect()
+                })
+                .unwrap_or_default(),
+            GameId::WutheringWaves => self
+                .wuthering_waves
+                .as_ref()
+                .map(|c| {
+                    c.notifications
+                        .iter()
+                        .map(|(k, v)| (k.as_ref().to_string(), v.clone()))
+                        .collect()
+                })
+                .unwrap_or_default(),
+        }
+    }
+
+    /// Whether a game is enabled in config.
+    #[must_use]
+    pub fn is_enabled(&self, game_id: crate::GameId) -> bool {
+        use crate::GameId;
+
+        match game_id {
+            GameId::GenshinImpact => self.genshin_impact.as_ref().is_some_and(|c| c.enabled),
+            GameId::HonkaiStarRail => self.honkai_star_rail.as_ref().is_some_and(|c| c.enabled),
+            GameId::ZenlessZoneZero => self.zenless_zone_zero.as_ref().is_some_and(|c| c.enabled),
+            GameId::WutheringWaves => self.wuthering_waves.as_ref().is_some_and(|c| c.enabled),
+        }
+    }
+
+    /// Whether auto-claim is enabled for a game.
+    ///
+    /// Wuthering Waves does not support daily rewards, so always returns `false`.
+    #[must_use]
+    pub fn auto_claim_enabled(&self, game_id: crate::GameId) -> bool {
+        use crate::GameId;
+
+        match game_id {
+            GameId::GenshinImpact => self
+                .genshin_impact
+                .as_ref()
+                .is_some_and(|c| c.enabled && c.auto_claim_daily_rewards),
+            GameId::HonkaiStarRail => self
+                .honkai_star_rail
+                .as_ref()
+                .is_some_and(|c| c.enabled && c.auto_claim_daily_rewards),
+            GameId::ZenlessZoneZero => self
+                .zenless_zone_zero
+                .as_ref()
+                .is_some_and(|c| c.enabled && c.auto_claim_daily_rewards),
+            GameId::WutheringWaves => false,
+        }
+    }
+
+    /// Auto-claim time for a game.
+    #[must_use]
+    pub fn auto_claim_time(&self, game_id: crate::GameId) -> Option<ClaimTime> {
+        use crate::GameId;
+
+        match game_id {
+            GameId::GenshinImpact => self.genshin_impact.as_ref().and_then(|c| c.auto_claim_time),
+            GameId::HonkaiStarRail => self
+                .honkai_star_rail
+                .as_ref()
+                .and_then(|c| c.auto_claim_time),
+            GameId::ZenlessZoneZero => self
+                .zenless_zone_zero
+                .as_ref()
+                .and_then(|c| c.auto_claim_time),
+            GameId::WutheringWaves => None,
+        }
+    }
+}
+
 // ============================================================================
 // ensure_configs_exist
 // ============================================================================

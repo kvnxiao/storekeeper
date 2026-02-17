@@ -48,10 +48,13 @@ impl ResourceInfo {
 
 /// Extracts completion timing from a resource data object.
 ///
-/// Attempts typed deserialization in order: StaminaResource, CooldownResource,
-/// ExpeditionResource. Falls back to `None` if none match.
+/// Checks discriminating fields before attempting deserialization to minimize
+/// `serde_json::Value` clones (which are deep copies).
 pub(crate) fn extract_resource_info(data: &serde_json::Value) -> Option<ResourceInfo> {
-    if let Ok(stamina) = serde_json::from_value::<StaminaResource>(data.clone()) {
+    let obj = data.as_object()?;
+
+    if obj.contains_key("regenRateSeconds") {
+        let stamina: StaminaResource = serde_json::from_value(data.clone()).ok()?;
         return Some(ResourceInfo {
             completion_at: stamina.full_at.with_timezone(&Utc),
             is_complete: stamina.is_full(),
@@ -61,7 +64,8 @@ pub(crate) fn extract_resource_info(data: &serde_json::Value) -> Option<Resource
         });
     }
 
-    if let Ok(cooldown) = serde_json::from_value::<CooldownResource>(data.clone()) {
+    if obj.contains_key("isReady") {
+        let cooldown: CooldownResource = serde_json::from_value(data.clone()).ok()?;
         return Some(ResourceInfo {
             completion_at: cooldown.ready_at.with_timezone(&Utc),
             is_complete: cooldown.is_ready,
@@ -71,7 +75,8 @@ pub(crate) fn extract_resource_info(data: &serde_json::Value) -> Option<Resource
         });
     }
 
-    if let Ok(expedition) = serde_json::from_value::<ExpeditionResource>(data.clone()) {
+    if obj.contains_key("earliestFinishAt") {
+        let expedition: ExpeditionResource = serde_json::from_value(data.clone()).ok()?;
         let completion_at = expedition.earliest_finish_at.with_timezone(&Utc);
         return Some(ResourceInfo {
             completion_at,

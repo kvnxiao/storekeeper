@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use anyhow::Context;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use storekeeper_core::{
@@ -205,7 +206,7 @@ impl AppState {
     pub async fn claim_daily_reward_for_game(
         &self,
         game_id: GameId,
-    ) -> Result<serde_json::Value, String> {
+    ) -> anyhow::Result<serde_json::Value> {
         let state = self.inner.read().await;
         state.daily_reward_registry.claim_for_game(game_id).await
     }
@@ -218,7 +219,7 @@ impl AppState {
     pub async fn get_daily_reward_status_for_game(
         &self,
         game_id: GameId,
-    ) -> Result<serde_json::Value, String> {
+    ) -> anyhow::Result<serde_json::Value> {
         let state = self.inner.read().await;
         state
             .daily_reward_registry
@@ -231,25 +232,11 @@ impl AppState {
     /// Returns a list of `(GameId, Option<ClaimTime>)` pairs.
     pub async fn get_auto_claim_games(&self) -> Vec<(GameId, Option<ClaimTime>)> {
         let state = self.inner.read().await;
-        let mut games = Vec::new();
-
-        if let Some(ref cfg) = state.config.games.genshin_impact {
-            if cfg.enabled && cfg.auto_claim_daily_rewards {
-                games.push((GameId::GenshinImpact, cfg.auto_claim_time));
-            }
-        }
-        if let Some(ref cfg) = state.config.games.honkai_star_rail {
-            if cfg.enabled && cfg.auto_claim_daily_rewards {
-                games.push((GameId::HonkaiStarRail, cfg.auto_claim_time));
-            }
-        }
-        if let Some(ref cfg) = state.config.games.zenless_zone_zero {
-            if cfg.enabled && cfg.auto_claim_daily_rewards {
-                games.push((GameId::ZenlessZoneZero, cfg.auto_claim_time));
-            }
-        }
-
-        games
+        GameId::all()
+            .iter()
+            .filter(|id| state.config.games.auto_claim_enabled(**id))
+            .map(|id| (*id, state.config.games.auto_claim_time(*id)))
+            .collect()
     }
 
     /// Checks if auto-claim is enabled for a specific game.
@@ -259,36 +246,8 @@ impl AppState {
     /// that is determined by fetching status from the API.
     pub async fn should_auto_claim_game(&self, game_id: GameId) -> bool {
         let state = self.inner.read().await;
-
-        // Check if the game has auto-claim enabled
-        let auto_claim_enabled = match game_id {
-            GameId::GenshinImpact => state
-                .config
-                .games
-                .genshin_impact
-                .as_ref()
-                .is_some_and(|c| c.enabled && c.auto_claim_daily_rewards),
-            GameId::HonkaiStarRail => state
-                .config
-                .games
-                .honkai_star_rail
-                .as_ref()
-                .is_some_and(|c| c.enabled && c.auto_claim_daily_rewards),
-            GameId::ZenlessZoneZero => state
-                .config
-                .games
-                .zenless_zone_zero
-                .as_ref()
-                .is_some_and(|c| c.enabled && c.auto_claim_daily_rewards),
-            GameId::WutheringWaves => false, // Kuro games don't support daily rewards
-        };
-
-        if !auto_claim_enabled {
-            return false;
-        }
-
-        // Check if the game is registered in the daily reward registry
-        state.daily_reward_registry.has_game(game_id)
+        state.config.games.auto_claim_enabled(game_id)
+            && state.daily_reward_registry.has_game(game_id)
     }
 
     // ========================================================================
@@ -301,32 +260,7 @@ impl AppState {
         game_id: GameId,
     ) -> HashMap<String, ResourceNotificationConfig> {
         let state = self.inner.read().await;
-        match game_id {
-            GameId::GenshinImpact => state
-                .config
-                .games
-                .genshin_impact
-                .as_ref()
-                .map_or_else(HashMap::new, |c| c.notifications.clone()),
-            GameId::HonkaiStarRail => state
-                .config
-                .games
-                .honkai_star_rail
-                .as_ref()
-                .map_or_else(HashMap::new, |c| c.notifications.clone()),
-            GameId::ZenlessZoneZero => state
-                .config
-                .games
-                .zenless_zone_zero
-                .as_ref()
-                .map_or_else(HashMap::new, |c| c.notifications.clone()),
-            GameId::WutheringWaves => state
-                .config
-                .games
-                .wuthering_waves
-                .as_ref()
-                .map_or_else(HashMap::new, |c| c.notifications.clone()),
-        }
+        state.config.games.notification_configs(game_id)
     }
 
     /// Reloads configuration and reinitializes game clients.
@@ -338,10 +272,10 @@ impl AppState {
     /// # Errors
     ///
     /// Returns an error if config or secrets files cannot be loaded.
-    pub async fn reload_config(&self) -> Result<(), String> {
+    pub async fn reload_config(&self) -> anyhow::Result<()> {
         // Build all new state outside the write lock
-        let config = AppConfig::load().map_err(|e| format!("Failed to load config: {e}"))?;
-        let secrets = SecretsConfig::load().map_err(|e| format!("Failed to load secrets: {e}"))?;
+        let config = AppConfig::load().context("failed to load config")?;
+        let secrets = SecretsConfig::load().context("failed to load secrets")?;
 
         let registry = create_registry(&config, &secrets);
         let daily_reward_registry = create_daily_reward_registry(&config, &secrets);
