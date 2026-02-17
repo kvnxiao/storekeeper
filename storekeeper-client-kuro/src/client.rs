@@ -14,13 +14,6 @@ use crate::error::{Error, Result};
 /// Base URL for the Kuro Games API.
 const KURO_API_BASE: &str = "https://pc-launcher-sdk-api.kurogame.net";
 
-/// Returns the retry configuration for code 1005 responses.
-///
-/// Uses the same defaults as the HTTP middleware (3 retries, 500ms base delay).
-fn retry_config() -> RetryConfig {
-    RetryConfig::default()
-}
-
 /// Request body for Kuro API calls.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -51,13 +44,12 @@ impl KuroClient {
     ///
     /// Returns an error if the HTTP client cannot be created.
     pub fn new(oauth_code: impl Into<String>) -> Result<Self> {
-        let retry_config = retry_config();
         let client = HttpClientBuilder::new()
             .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
             .header_static(ACCEPT, "application/json, text/plain, */*")
             .header_static(CONTENT_TYPE, "application/json")
             .header_static(ORIGIN, "null")
-            .build_with_retry(retry_config.max_retries)
+            .build_with_retry(DEFAULT_MAX_RETRIES)
             .map_err(Error::Client)?;
 
         Ok(Self {

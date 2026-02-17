@@ -21,7 +21,9 @@ pub trait GameClient: Send + Sync {
     fn game_id(&self) -> GameId;
 
     /// Returns the display name for this game.
-    fn game_name(&self) -> &'static str;
+    fn game_name(&self) -> &'static str {
+        self.game_id().display_name()
+    }
 
     /// Fetches all tracked resources from the game API.
     ///

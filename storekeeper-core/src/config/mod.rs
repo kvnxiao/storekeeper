@@ -9,7 +9,7 @@ pub mod games;
 pub mod notification;
 pub mod secrets;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
@@ -69,7 +69,7 @@ impl AppConfig {
     /// # Errors
     ///
     /// Returns an error if the config file cannot be read or parsed.
-    pub fn load_from_path(path: &PathBuf) -> Result<Self> {
+    pub fn load_from_path(path: &Path) -> Result<Self> {
         if !path.exists() {
             return Err(Error::ConfigNotFound {
                 path: path.display().to_string(),
@@ -120,7 +120,7 @@ impl AppConfig {
     /// # Errors
     ///
     /// Returns an error if the config file cannot be written.
-    pub fn save_to_path(&self, path: &PathBuf) -> Result<()> {
+    pub fn save_to_path(&self, path: &Path) -> Result<()> {
         // Ensure the directory exists
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;

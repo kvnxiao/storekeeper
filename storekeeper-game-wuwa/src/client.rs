@@ -62,10 +62,10 @@ impl WuwaClient {
             region = ?self.region,
             "Fetching WuWa role data"
         );
-        self.kuro
+        Ok(self
+            .kuro
             .query_role(&self.player_id, self.region.wuwa_region())
-            .await
-            .map_err(Error::KuroApi)
+            .await?)
     }
 }
 
@@ -76,10 +76,6 @@ impl GameClient for WuwaClient {
 
     fn game_id(&self) -> GameId {
         GameId::WutheringWaves
-    }
-
-    fn game_name(&self) -> &'static str {
-        GameId::WutheringWaves.display_name()
     }
 
     async fn fetch_resources(&self) -> Result<Vec<Self::Resource>> {
@@ -101,9 +97,9 @@ impl GameClient for WuwaClient {
     }
 
     async fn is_authenticated(&self) -> Result<bool> {
-        self.kuro
+        Ok(self
+            .kuro
             .check_auth(&self.player_id, self.region.wuwa_region())
-            .await
-            .map_err(Error::KuroApi)
+            .await?)
     }
 }

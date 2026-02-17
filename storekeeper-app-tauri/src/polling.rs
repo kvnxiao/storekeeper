@@ -30,7 +30,7 @@ pub fn start_polling(app_handle: AppHandle, cancel_token: CancellationToken) {
 
         // Do an initial fetch on startup
         tracing::debug!("Performing initial resource fetch");
-        let _ = poll_resources(&app_handle).await;
+        try_refresh(&app_handle).await;
 
         loop {
             tokio::select! {
@@ -40,48 +40,51 @@ pub fn start_polling(app_handle: AppHandle, cancel_token: CancellationToken) {
                 }
                 () = tokio::time::sleep(poll_interval) => {
                     tracing::debug!("Scheduled poll triggered");
-                    let _ = poll_resources(&app_handle).await;
+                    try_refresh(&app_handle).await;
                 }
             }
         }
     });
 }
 
-/// Polls all resources and updates the state.
-async fn poll_resources(app_handle: &AppHandle) -> Result<(), String> {
+/// Attempts a refresh, skipping if already refreshing or no clients configured.
+async fn try_refresh(app_handle: &AppHandle) {
     let state = app_handle.state::<AppState>();
 
-    // Check if already refreshing
     if state.is_refreshing().await {
         tracing::debug!("Skipping poll - refresh already in progress");
-        return Ok(());
+        return;
     }
 
-    // Skip if no clients configured
     if !state.has_clients().await {
         tracing::debug!("Skipping poll - no game clients configured");
-        return Ok(());
+        return;
     }
+
+    do_refresh(app_handle).await;
+}
+
+/// Core refresh logic shared by polling and manual refresh.
+///
+/// Fetches resources from all game clients, updates state, emits events,
+/// and checks notification thresholds. Returns the fetched resources.
+async fn do_refresh(app_handle: &AppHandle) -> AllResources {
+    let state = app_handle.state::<AppState>();
 
     state.set_refreshing(true).await;
 
     tracing::debug!("Fetching resources from all game clients");
 
-    // Fetch resources from all configured game clients
     let resources = state.fetch_all_resources(app_handle).await;
 
     state.set_resources(resources.clone()).await;
     state.set_refreshing(false).await;
 
-    tracing::debug!("Resources updated, emitting event to frontend");
-
-    // Emit event to frontend
     let _ = app_handle.emit(AppEvent::ResourcesUpdated.as_str(), &resources);
 
-    // Check notification thresholds immediately after fetch
     notification::check_and_notify(app_handle).await;
 
-    Ok(())
+    resources
 }
 
 /// Manually triggers a resource refresh.
@@ -108,23 +111,9 @@ pub async fn refresh_now(app_handle: &AppHandle) -> Result<AllResources, String>
     // Emit refresh started event to frontend
     let _ = app_handle.emit(AppEvent::RefreshStarted.as_str(), ());
 
-    state.set_refreshing(true).await;
-
-    tracing::debug!("Fetching resources from all game clients");
-
-    // Fetch resources from all configured game clients
-    let resources = state.fetch_all_resources(app_handle).await;
-
-    state.set_resources(resources.clone()).await;
-    state.set_refreshing(false).await;
+    let resources = do_refresh(app_handle).await;
 
     tracing::info!("Manual refresh completed");
-
-    // Emit event to frontend
-    let _ = app_handle.emit(AppEvent::ResourcesUpdated.as_str(), &resources);
-
-    // Check notification thresholds immediately after refresh
-    notification::check_and_notify(app_handle).await;
 
     Ok(resources)
 }

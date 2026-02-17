@@ -44,37 +44,8 @@ impl HoyolabClient {
     ///
     /// Returns an error if the request fails or the response cannot be parsed.
     pub async fn get<T: DeserializeOwned>(&self, url: &str) -> Result<T> {
-        let ds = generate_dynamic_secret_overseas();
-        // Use v2 cookie format which is current HoYoLab standard
-        let cookie = format!("ltuid_v2={}; ltoken_v2={}", self.ltuid, self.ltoken);
-
-        tracing::debug!(url = %url, "HoYoLab API GET request");
-
-        let response = self
-            .client
-            .get(url)
-            .header(COOKIE, cookie)
-            .header("DS", ds)
-            .send()
-            .await?;
-
-        let status = response.status();
-        tracing::debug!(status = %status, url = %url, "HoYoLab API response received");
-
-        let api_response: HoyolabApiResponse<T> = response.json().await?;
-
-        if !api_response.is_success() {
-            tracing::warn!(
-                retcode = api_response.retcode,
-                message = %api_response.message,
-                url = %url,
-                "HoYoLab API error response"
-            );
-        }
-
-        tracing::debug!(url = %url, "HoYoLab API request successful");
-
-        api_response.into_result().map_err(Error::Client)
+        self.request_with_headers::<T, ()>(Method::GET, url, None, &[])
+            .await
     }
 
     /// Checks if the client credentials are valid.

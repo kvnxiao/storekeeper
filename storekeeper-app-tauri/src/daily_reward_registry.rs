@@ -1,6 +1,6 @@
 //! Daily reward client registry for managing reward claiming across games.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use futures::future::join_all;
 use storekeeper_core::{ApiProvider, DynDailyRewardClient, GameId};
@@ -161,24 +161,12 @@ impl DailyRewardRegistry {
         Self::collect_results(all_results)
     }
 
-    /// Gets the list of providers that have registered clients.
-    fn get_active_providers(&self) -> Vec<ApiProvider> {
-        let mut providers = Vec::new();
-        if self
-            .clients
+    /// Gets the set of providers that have registered clients.
+    fn get_active_providers(&self) -> HashSet<ApiProvider> {
+        self.clients
             .keys()
-            .any(|id| id.api_provider() == ApiProvider::HoYoLab)
-        {
-            providers.push(ApiProvider::HoYoLab);
-        }
-        if self
-            .clients
-            .keys()
-            .any(|id| id.api_provider() == ApiProvider::Kuro)
-        {
-            providers.push(ApiProvider::Kuro);
-        }
-        providers
+            .map(storekeeper_core::GameId::api_provider)
+            .collect()
     }
 
     /// Collects results from provider fetches into a single map.
@@ -326,7 +314,7 @@ mod tests {
         )));
         let providers = r.get_active_providers();
         assert_eq!(providers.len(), 1);
-        assert_eq!(providers[0], ApiProvider::HoYoLab);
+        assert!(providers.contains(&ApiProvider::HoYoLab));
     }
 
     #[test]

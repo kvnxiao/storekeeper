@@ -34,15 +34,10 @@ pub fn start_scheduled_claims(app_handle: AppHandle, cancel_token: CancellationT
 
             if auto_claim_games.is_empty() {
                 tracing::debug!("No games with auto-claim enabled, sleeping for 60 seconds");
-                tokio::select! {
-                    () = cancel_token.cancelled() => {
-                        tracing::info!("Scheduled claims cancelled (no auto-claim games)");
-                        break;
-                    }
-                    () = tokio::time::sleep(Duration::from_secs(60)) => {
-                        continue;
-                    }
+                if sleep_or_cancel(&cancel_token, Duration::from_secs(60)).await {
+                    break;
                 }
+                continue;
             }
 
             // Find the earliest next claim time across all games
@@ -51,15 +46,10 @@ pub fn start_scheduled_claims(app_handle: AppHandle, cancel_token: CancellationT
             else {
                 // No games need claiming right now, sleep and retry
                 tracing::debug!("No games need claiming, sleeping for 60 seconds");
-                tokio::select! {
-                    () = cancel_token.cancelled() => {
-                        tracing::info!("Scheduled claims cancelled");
-                        break;
-                    }
-                    () = tokio::time::sleep(Duration::from_secs(60)) => {
-                        continue;
-                    }
+                if sleep_or_cancel(&cancel_token, Duration::from_secs(60)).await {
+                    break;
                 }
+                continue;
             };
 
             tracing::info!(
@@ -69,62 +59,12 @@ pub fn start_scheduled_claims(app_handle: AppHandle, cancel_token: CancellationT
             );
 
             // Wait until claim time or cancellation
-            tokio::select! {
-                () = cancel_token.cancelled() => {
-                    tracing::info!("Scheduled claims cancelled");
-                    break;
-                }
-                () = tokio::time::sleep(sleep_duration) => {
-                    // Claim rewards for all games that are due
-                    let mut results = HashMap::new();
-
-                    for game_id in &games_to_claim {
-                        // Check if auto-claim is still enabled for this game
-                        if !state.should_auto_claim_game(*game_id).await {
-                            tracing::debug!(game_id = ?game_id, "Skipping auto-claim (disabled in config)");
-                            continue;
-                        }
-
-                        tracing::info!(game_id = ?game_id, "Auto-claiming daily reward");
-
-                        // Use transactional claim (status check first)
-                        match claim_with_status_check(&state, *game_id).await {
-                            Ok(true) => {
-                                tracing::info!(game_id = ?game_id, "Auto-claim successful");
-                                // Fetch fresh status for the result
-                                if let Ok(status) = state.get_daily_reward_status_for_game(*game_id).await {
-                                    results.insert(*game_id, status);
-                                }
-                            }
-                            Ok(false) => {
-                                tracing::debug!(game_id = ?game_id, "Already claimed (per API)");
-                            }
-                            Err(e) => {
-                                tracing::error!(game_id = ?game_id, error = %e, "Auto-claim failed");
-                            }
-                        }
-
-                        // Small delay between games to avoid rate limiting
-                        tokio::time::sleep(Duration::from_millis(500)).await;
-                    }
-
-                    if !results.is_empty() {
-                        // Refresh the status cache after claiming
-                        let status = state.fetch_all_daily_reward_status().await;
-                        state.set_daily_reward_status(status).await;
-
-                        // Emit event to frontend
-                        if let Err(e) = app_handle.emit(AppEvent::DailyRewardClaimed.as_str(), &results) {
-                            tracing::warn!(error = %e, "Failed to emit daily reward claimed event");
-                        }
-
-                        tracing::info!(
-                            games_claimed = results.len(),
-                            "Auto-claim complete"
-                        );
-                    }
-                }
+            if sleep_or_cancel(&cancel_token, sleep_duration).await {
+                break;
             }
+
+            // Claim rewards for all games that are due
+            claim_games_and_emit(&state, &app_handle, &games_to_claim).await;
         }
     });
 }
@@ -143,21 +83,25 @@ async fn run_startup_claims(state: &AppState, app_handle: &AppHandle) {
         return;
     }
 
+    let game_ids: Vec<GameId> = auto_claim_games.into_iter().map(|(id, _)| id).collect();
+    claim_games_and_emit(state, app_handle, &game_ids).await;
+}
+
+/// Claims rewards for the given games and emits results to the frontend.
+async fn claim_games_and_emit(state: &AppState, app_handle: &AppHandle, game_ids: &[GameId]) {
     let mut results = HashMap::new();
 
-    for (game_id, _claim_time) in auto_claim_games {
-        // Check if auto-claim is enabled for this game
+    for &game_id in game_ids {
         if !state.should_auto_claim_game(game_id).await {
+            tracing::debug!(game_id = ?game_id, "Skipping auto-claim (disabled in config)");
             continue;
         }
 
-        tracing::info!(game_id = ?game_id, "Checking if startup claim needed");
+        tracing::info!(game_id = ?game_id, "Auto-claiming daily reward");
 
-        // Attempt claim with status check and retry
         match claim_with_status_check(state, game_id).await {
             Ok(true) => {
-                tracing::info!(game_id = ?game_id, "Startup auto-claim successful");
-                // Fetch fresh status for the result
+                tracing::info!(game_id = ?game_id, "Auto-claim successful");
                 if let Ok(status) = state.get_daily_reward_status_for_game(game_id).await {
                     results.insert(game_id, status);
                 }
@@ -166,7 +110,7 @@ async fn run_startup_claims(state: &AppState, app_handle: &AppHandle) {
                 tracing::debug!(game_id = ?game_id, "Already claimed today (per API)");
             }
             Err(e) => {
-                tracing::error!(game_id = ?game_id, error = %e, "Startup auto-claim failed");
+                tracing::error!(game_id = ?game_id, error = %e, "Auto-claim failed");
             }
         }
 
@@ -175,16 +119,29 @@ async fn run_startup_claims(state: &AppState, app_handle: &AppHandle) {
     }
 
     if !results.is_empty() {
-        // Refresh the status cache after claiming
         let status = state.fetch_all_daily_reward_status().await;
         state.set_daily_reward_status(status).await;
 
-        // Emit event to frontend
         if let Err(e) = app_handle.emit(AppEvent::DailyRewardClaimed.as_str(), &results) {
             tracing::warn!(error = %e, "Failed to emit daily reward claimed event");
         }
 
-        tracing::info!(games_claimed = results.len(), "Startup auto-claim complete");
+        tracing::info!(games_claimed = results.len(), "Auto-claim complete");
+    }
+}
+
+/// Sleeps for the given duration or until the token is cancelled.
+///
+/// Returns `true` if cancelled, `false` if the sleep completed.
+async fn sleep_or_cancel(cancel_token: &CancellationToken, duration: Duration) -> bool {
+    tokio::select! {
+        () = cancel_token.cancelled() => {
+            tracing::info!("Scheduled claims cancelled");
+            true
+        }
+        () = tokio::time::sleep(duration) => {
+            false
+        }
     }
 }
 

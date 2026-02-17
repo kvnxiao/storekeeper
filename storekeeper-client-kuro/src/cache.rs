@@ -22,11 +22,6 @@ struct KuroSdkCacheEntry {
     oauth_code: Option<String>,
 }
 
-/// Decodes an XOR-5 encoded string.
-fn decode_xor5(s: &str) -> String {
-    s.chars().map(|c| char::from((c as u8) ^ 5)).collect()
-}
-
 /// Attempts to load the OAuth code from the Kuro SDK launcher cache.
 ///
 /// This function looks for the cache file at:
@@ -77,7 +72,7 @@ pub fn load_oauth_from_cache() -> Result<Option<String>> {
     for entry in cache_entries {
         if let Some(encoded) = entry.oauth_code {
             if !encoded.is_empty() {
-                let decoded = decode_xor5(&encoded);
+                let decoded = crate::decode_xor5(&encoded);
                 tracing::info!("Successfully loaded OAuth code from Kuro SDK cache");
                 return Ok(Some(decoded));
             }
@@ -106,7 +101,6 @@ fn get_cache_path() -> Result<PathBuf> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn test_decode_xor5() {
@@ -116,7 +110,7 @@ mod tests {
             .chars()
             .map(|c| char::from((c as u8) ^ 5))
             .collect();
-        let decoded = decode_xor5(&encoded);
+        let decoded = crate::decode_xor5(&encoded);
         assert_eq!(decoded, original);
     }
 
@@ -130,7 +124,7 @@ mod tests {
                     .chars()
                     .map(|c| char::from((c as u8) ^ 5))
                     .collect();
-                let decoded = decode_xor5(&encoded);
+                let decoded = crate::decode_xor5(&encoded);
                 assert_eq!(decoded, original, "Failed roundtrip for: {original}");
             }
         }

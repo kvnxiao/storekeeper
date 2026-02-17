@@ -8,14 +8,6 @@ pub enum Error {
     /// Kuro API error.
     #[error("Kuro API error: {0}")]
     KuroApi(#[from] storekeeper_client_kuro::Error),
-
-    /// Core error.
-    #[error("Core error: {0}")]
-    Core(#[from] storekeeper_core::Error),
-
-    /// Failed to parse API response.
-    #[error("Failed to parse response: {0}")]
-    ParseFailed(String),
 }
 
 /// Result type alias using the WuWa Error type.

@@ -1,6 +1,6 @@
 //! Game client registry for dynamic client management.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use futures::future::join_all;
 use storekeeper_core::{ApiProvider, DynGameClient, GameId};
@@ -93,21 +93,11 @@ impl GameClientRegistry {
         }
 
         // Determine which providers have clients registered
-        let mut providers = Vec::new();
-        if self
+        let providers: HashSet<ApiProvider> = self
             .clients
             .keys()
-            .any(|id| id.api_provider() == ApiProvider::HoYoLab)
-        {
-            providers.push(ApiProvider::HoYoLab);
-        }
-        if self
-            .clients
-            .keys()
-            .any(|id| id.api_provider() == ApiProvider::Kuro)
-        {
-            providers.push(ApiProvider::Kuro);
-        }
+            .map(storekeeper_core::GameId::api_provider)
+            .collect();
 
         // Fetch each provider's games in parallel, but games within a provider sequentially
         let provider_futures: Vec<_> = providers

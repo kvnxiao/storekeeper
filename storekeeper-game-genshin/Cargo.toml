@@ -11,12 +11,14 @@ repository.workspace = true
 storekeeper-core.workspace = true
 storekeeper-client-hoyolab.workspace = true
 serde.workspace = true
-serde_json.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 async-trait.workspace = true
 tracing.workspace = true
 chrono.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
 
 [lints]
 workspace = true
