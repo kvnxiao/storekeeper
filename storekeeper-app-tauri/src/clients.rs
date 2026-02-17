@@ -47,56 +47,55 @@ pub fn create_registry(config: &AppConfig, secrets: &SecretsConfig) -> GameClien
         let ltuid = secrets.hoyolab.ltuid();
         let ltoken = secrets.hoyolab.ltoken();
 
-        let hoyolab = match HoyolabClient::new(ltuid, ltoken) {
-            Ok(client) => client,
+        match HoyolabClient::new(ltuid, ltoken) {
+            Ok(hoyolab) => {
+                // Genshin Impact
+                if let Some(ref c) = config.games.genshin_impact {
+                    if c.enabled {
+                        register_hoyolab_game(
+                            &mut registry,
+                            &hoyolab,
+                            &c.uid,
+                            c.region,
+                            Region::from_genshin_uid,
+                            |h, uid, r| Box::new(GenshinClient::new(h, uid, r)),
+                            "Genshin Impact",
+                        );
+                    }
+                }
+
+                // Honkai: Star Rail
+                if let Some(ref c) = config.games.honkai_star_rail {
+                    if c.enabled {
+                        register_hoyolab_game(
+                            &mut registry,
+                            &hoyolab,
+                            &c.uid,
+                            c.region,
+                            Region::from_hsr_uid,
+                            |h, uid, r| Box::new(HsrClient::new(h, uid, r)),
+                            "Honkai: Star Rail",
+                        );
+                    }
+                }
+
+                // Zenless Zone Zero
+                if let Some(ref c) = config.games.zenless_zone_zero {
+                    if c.enabled {
+                        register_hoyolab_game(
+                            &mut registry,
+                            &hoyolab,
+                            &c.uid,
+                            c.region,
+                            Region::from_zzz_uid,
+                            |h, uid, r| Box::new(ZzzClient::new(h, uid, r)),
+                            "Zenless Zone Zero",
+                        );
+                    }
+                }
+            }
             Err(e) => {
                 tracing::warn!("Failed to create shared HoYoLab client: {e}");
-                return registry;
-            }
-        };
-
-        // Genshin Impact
-        if let Some(ref c) = config.games.genshin_impact {
-            if c.enabled {
-                register_hoyolab_game(
-                    &mut registry,
-                    &hoyolab,
-                    &c.uid,
-                    c.region,
-                    Region::from_genshin_uid,
-                    |h, uid, r| Box::new(GenshinClient::new(h, uid, r)),
-                    "Genshin Impact",
-                );
-            }
-        }
-
-        // Honkai: Star Rail
-        if let Some(ref c) = config.games.honkai_star_rail {
-            if c.enabled {
-                register_hoyolab_game(
-                    &mut registry,
-                    &hoyolab,
-                    &c.uid,
-                    c.region,
-                    Region::from_hsr_uid,
-                    |h, uid, r| Box::new(HsrClient::new(h, uid, r)),
-                    "Honkai: Star Rail",
-                );
-            }
-        }
-
-        // Zenless Zone Zero
-        if let Some(ref c) = config.games.zenless_zone_zero {
-            if c.enabled {
-                register_hoyolab_game(
-                    &mut registry,
-                    &hoyolab,
-                    &c.uid,
-                    c.region,
-                    Region::from_zzz_uid,
-                    |h, uid, r| Box::new(ZzzClient::new(h, uid, r)),
-                    "Zenless Zone Zero",
-                );
             }
         }
     } else {

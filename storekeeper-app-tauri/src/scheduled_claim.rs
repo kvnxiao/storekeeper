@@ -244,7 +244,13 @@ fn is_retryable_error(error: &anyhow::Error) -> bool {
     // Fallback: pattern-match on the display string for errors that don't
     // preserve typed info through the chain
     let msg = error.to_string().to_lowercase();
-    msg.contains("dns") || msg.contains("reset") || msg.contains("unreachable")
+    msg.contains("timeout")
+        || msg.contains("connection")
+        || msg.contains("network")
+        || msg.contains("refused")
+        || msg.contains("dns")
+        || msg.contains("reset")
+        || msg.contains("unreachable")
 }
 
 /// Calculates the next claim time and which games to claim.
@@ -323,6 +329,30 @@ mod tests {
     #[test]
     fn retryable_unreachable_in_message() {
         let err = anyhow::anyhow!("host unreachable");
+        assert!(is_retryable_error(&err));
+    }
+
+    #[test]
+    fn retryable_timeout_in_message() {
+        let err = anyhow::anyhow!("request timeout");
+        assert!(is_retryable_error(&err));
+    }
+
+    #[test]
+    fn retryable_connection_in_message() {
+        let err = anyhow::anyhow!("connection dropped");
+        assert!(is_retryable_error(&err));
+    }
+
+    #[test]
+    fn retryable_network_in_message() {
+        let err = anyhow::anyhow!("temporary network issue");
+        assert!(is_retryable_error(&err));
+    }
+
+    #[test]
+    fn retryable_refused_in_message() {
+        let err = anyhow::anyhow!("connection refused by host");
         assert!(is_retryable_error(&err));
     }
 
