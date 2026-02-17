@@ -50,7 +50,7 @@ pub(crate) fn build_notification_body(info: &ResourceInfo, now: DateTime<Utc>) -
         let local_time = info.completion_at.with_timezone(&Local);
         let hour = u8::try_from(local_time.hour()).unwrap_or(0);
         let minute = u8::try_from(local_time.minute()).unwrap_or(0);
-        let clock_time = i18n::format_time(hour, minute);
+        let local_time = i18n::format_time(hour, minute);
 
         i18n::t_args(
             "notification.resource_status",
@@ -58,7 +58,7 @@ pub(crate) fn build_notification_body(info: &ResourceInfo, now: DateTime<Utc>) -
                 ("current", i18n::Value::from(current)),
                 ("max", i18n::Value::from(max)),
                 ("duration", i18n::Value::from(duration)),
-                ("clock_time", i18n::Value::from(clock_time)),
+                ("local_time", i18n::Value::from(local_time)),
             ],
         )
     } else {
@@ -68,10 +68,17 @@ pub(crate) fn build_notification_body(info: &ResourceInfo, now: DateTime<Utc>) -
 
         let mins_remaining = (info.completion_at - now).num_minutes();
         let duration = i18n::format_duration(mins_remaining);
+        let local_time = info.completion_at.with_timezone(&Local);
+        let hour = u8::try_from(local_time.hour()).unwrap_or(0);
+        let minute = u8::try_from(local_time.minute()).unwrap_or(0);
+        let local_time = i18n::format_time(hour, minute);
 
         i18n::t_args(
             "notification.resource_ready_in",
-            &[("duration", i18n::Value::from(duration))],
+            &[
+                ("duration", i18n::Value::from(duration)),
+                ("local_time", i18n::Value::from(local_time)),
+            ],
         )
     }
 }

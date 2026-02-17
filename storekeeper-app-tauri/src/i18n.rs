@@ -106,9 +106,12 @@ mod tests {
         ensure_init();
         let result = t_args(
             "notification.resource_ready_in",
-            &[("duration", Value::String("30m".to_string()))],
+            &[
+                ("duration", Value::String("30m".to_string())),
+                ("local_time", Value::String("5:30 PM".to_string())),
+            ],
         );
-        assert_eq!(result, "Ready in 30m");
+        assert_eq!(result, "Ready in 30m (5:30 PM)");
     }
 
     #[test]
@@ -120,7 +123,7 @@ mod tests {
                 ("current", Value::String("140".to_string())),
                 ("max", Value::String("160".to_string())),
                 ("duration", Value::String("1h 15m".to_string())),
-                ("clock_time", Value::String("3:45 PM".to_string())),
+                ("local_time", Value::String("3:45 PM".to_string())),
             ],
         );
         assert_eq!(result, "140/160 - full in 1h 15m (3:45 PM)");

@@ -1,8 +1,8 @@
 {
   "notification.resource_full": "Full!",
   "notification.resource_ready": "Ready to claim!",
-  "notification.resource_ready_in": "Ready in {duration}",
-  "notification.resource_status": "{current}/{max} - full in {duration} ({clock_time})",
+  "notification.resource_ready_in": "Ready in {duration} ({local_time})",
+  "notification.resource_status": "{current}/{max} - full in {duration} ({local_time})",
   "notification.title": "{game_name} - {resource_name}",
   "notification.no_data": "No data yet, try refreshing",
   "tray.refresh_now": "Refresh Now",
