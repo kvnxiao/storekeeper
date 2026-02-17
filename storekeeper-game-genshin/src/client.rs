@@ -149,6 +149,52 @@ impl GenshinClient {
     }
 }
 
+fn build_resources(note: &DailyNoteResponse, now: DateTime<Local>) -> Vec<GenshinResource> {
+    let mut resources = Vec::with_capacity(4);
+
+    // Resin
+    resources.push(GenshinResource::Resin(StaminaResource::new(
+        note.current_resin,
+        note.max_resin,
+        note.resin_recovery_time,
+        RESIN_REGEN_SECONDS,
+    )));
+
+    // Realm Currency
+    resources.push(GenshinResource::RealmCurrency(StaminaResource::new(
+        note.current_home_coin,
+        note.max_home_coin,
+        note.home_coin_recovery_time,
+        REALM_REGEN_SECONDS,
+    )));
+
+    // Parametric Transformer
+    if let Some(ref transformer) = note.transformer {
+        if transformer.obtained {
+            let cooldown = CooldownResource::new(transformer.ready_at <= now, transformer.ready_at);
+            resources.push(GenshinResource::ParametricTransformer(cooldown));
+        }
+    }
+
+    // Expeditions - find the earliest finish time
+    let earliest_finish = note
+        .expeditions
+        .iter()
+        .map(|expedition| expedition.remained_time)
+        .min();
+    if earliest_finish.is_none() && note.current_expedition_num > 0 {
+        tracing::warn!("Genshin reported active expeditions but expedition list is empty");
+    }
+    let earliest_finish = earliest_finish.unwrap_or(now);
+    resources.push(GenshinResource::Expeditions(ExpeditionResource::new(
+        note.current_expedition_num,
+        note.max_expedition_num,
+        earliest_finish,
+    )));
+
+    resources
+}
+
 impl GameClient for GenshinClient {
     type Resource = GenshinResource;
     type Error = Error;
@@ -160,46 +206,7 @@ impl GameClient for GenshinClient {
     async fn fetch_resources(&self) -> Result<Vec<Self::Resource>> {
         tracing::info!(game = "Genshin Impact", "Fetching game resources");
         let note = self.fetch_daily_note().await?;
-        let mut resources = Vec::with_capacity(4);
-
-        // Resin
-        resources.push(GenshinResource::Resin(StaminaResource::new(
-            note.current_resin,
-            note.max_resin,
-            note.resin_recovery_time,
-            RESIN_REGEN_SECONDS,
-        )));
-
-        // Realm Currency
-        resources.push(GenshinResource::RealmCurrency(StaminaResource::new(
-            note.current_home_coin,
-            note.max_home_coin,
-            note.home_coin_recovery_time,
-            REALM_REGEN_SECONDS,
-        )));
-
-        // Parametric Transformer
-        if let Some(ref transformer) = note.transformer {
-            if transformer.obtained {
-                let cooldown = CooldownResource::new(
-                    transformer.ready_at <= Local::now(),
-                    transformer.ready_at,
-                );
-                resources.push(GenshinResource::ParametricTransformer(cooldown));
-            }
-        }
-
-        // Expeditions - find the earliest finish time
-        let earliest_finish = note.expeditions.iter().map(|e| e.remained_time).min();
-        if earliest_finish.is_none() && note.current_expedition_num > 0 {
-            tracing::warn!("Genshin reported active expeditions but expedition list is empty");
-        }
-        let earliest_finish = earliest_finish.unwrap_or_else(Local::now);
-        resources.push(GenshinResource::Expeditions(ExpeditionResource::new(
-            note.current_expedition_num,
-            note.max_expedition_num,
-            earliest_finish,
-        )));
+        let resources = build_resources(&note, Local::now());
 
         tracing::info!(
             resin = note.current_resin,
@@ -214,5 +221,143 @@ impl GameClient for GenshinClient {
 
     async fn is_authenticated(&self) -> Result<bool> {
         self.hoyolab.check_auth().await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use chrono::TimeDelta;
+    use serde_json::json;
+
+    use super::*;
+
+    fn make_note(
+        transformer: Option<TransformerInfo>,
+        expeditions: Vec<ExpeditionInfo>,
+        current_expeditions: u32,
+    ) -> DailyNoteResponse {
+        let now = Local::now();
+        DailyNoteResponse {
+            current_resin: 100,
+            max_resin: 160,
+            resin_recovery_time: now + TimeDelta::try_hours(8).expect("valid delta"),
+            current_home_coin: 1200,
+            max_home_coin: 2400,
+            home_coin_recovery_time: now + TimeDelta::try_hours(4).expect("valid delta"),
+            current_expedition_num: current_expeditions,
+            max_expedition_num: 5,
+            expeditions,
+            transformer,
+        }
+    }
+
+    #[test]
+    fn transformer_deserialize_reached_sets_ready_at_now() {
+        let before = Local::now();
+        let transformer: TransformerInfo = serde_json::from_value(json!({
+            "obtained": true,
+            "recovery_time": {
+                "Day": 0,
+                "Hour": 0,
+                "Minute": 0,
+                "Second": 0,
+                "reached": true
+            }
+        }))
+        .expect("deserialize transformer");
+        let after = Local::now();
+
+        assert!(transformer.obtained);
+        assert!(transformer.ready_at >= before && transformer.ready_at <= after);
+    }
+
+    #[test]
+    fn transformer_deserialize_positive_duration_adds_delta() {
+        let transformer: TransformerInfo = serde_json::from_value(json!({
+            "obtained": true,
+            "recovery_time": {
+                "Day": 0,
+                "Hour": 0,
+                "Minute": 1,
+                "Second": 30,
+                "reached": false
+            }
+        }))
+        .expect("deserialize transformer");
+
+        let seconds_until_ready = (transformer.ready_at - Local::now()).num_seconds();
+        assert!(
+            (85..=95).contains(&seconds_until_ready),
+            "Expected ~90s until ready, got {seconds_until_ready}s"
+        );
+    }
+
+    #[test]
+    fn transformer_deserialize_zero_duration_falls_back_to_now() {
+        let before = Local::now();
+        let transformer: TransformerInfo = serde_json::from_value(json!({
+            "obtained": true,
+            "recovery_time": {
+                "Day": 0,
+                "Hour": 0,
+                "Minute": 0,
+                "Second": 0,
+                "reached": false
+            }
+        }))
+        .expect("deserialize transformer");
+        let after = Local::now();
+
+        assert!(transformer.ready_at >= before && transformer.ready_at <= after);
+    }
+
+    #[test]
+    fn build_resources_omits_transformer_when_not_obtained() {
+        let now = Local::now();
+        let note = make_note(
+            Some(TransformerInfo {
+                obtained: false,
+                ready_at: now + TimeDelta::try_hours(10).expect("valid delta"),
+            }),
+            vec![ExpeditionInfo {
+                remained_time: now + TimeDelta::try_minutes(20).expect("valid delta"),
+                avatar_side_icon: "icon".to_string(),
+                status: ExpeditionStatus::Ongoing,
+            }],
+            1,
+        );
+
+        let resources = build_resources(&note, now);
+        let has_transformer = resources
+            .iter()
+            .any(|resource| matches!(resource, GenshinResource::ParametricTransformer(_)));
+        assert!(
+            !has_transformer,
+            "Not-obtained transformer should be excluded"
+        );
+    }
+
+    #[test]
+    fn build_resources_uses_now_when_expeditions_are_missing() {
+        let now = Local::now();
+        let note = make_note(None, Vec::new(), 2);
+        let resources = build_resources(&note, now);
+
+        let expedition = resources.iter().find_map(|resource| match resource {
+            GenshinResource::Expeditions(expedition) => Some(expedition),
+            _ => None,
+        });
+
+        assert!(
+            expedition.is_some(),
+            "Expeditions resource should always be present"
+        );
+        let expedition = expedition.expect("expedition resource should exist");
+        assert_eq!(expedition.current_expeditions, 2);
+        assert_eq!(expedition.max_expeditions, 5);
+        assert_eq!(
+            expedition.earliest_finish_at, now,
+            "When expedition list is empty, fallback should use provided current time"
+        );
     }
 }

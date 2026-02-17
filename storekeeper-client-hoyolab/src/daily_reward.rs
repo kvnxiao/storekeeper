@@ -218,3 +218,335 @@ impl DailyRewardClient for HoyolabDailyRewardClient {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+    use std::sync::Arc;
+
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::{TcpListener, TcpStream};
+    use tokio::sync::{Mutex, oneshot};
+
+    use super::*;
+
+    #[derive(Debug, Clone)]
+    struct TestRequest {
+        method: String,
+        target: String,
+    }
+
+    #[derive(Debug, Clone)]
+    struct TestResponse {
+        status: u16,
+        body: String,
+    }
+
+    struct TestServer {
+        base_url: String,
+        requests: Arc<Mutex<Vec<TestRequest>>>,
+        shutdown_tx: Option<oneshot::Sender<()>>,
+    }
+
+    impl TestServer {
+        async fn spawn(handler: Arc<dyn Fn(&TestRequest) -> TestResponse + Send + Sync>) -> Self {
+            let listener = TcpListener::bind("127.0.0.1:0")
+                .await
+                .expect("bind test server");
+            let addr = listener.local_addr().expect("get local addr");
+            let requests = Arc::new(Mutex::new(Vec::new()));
+            let requests_clone = Arc::clone(&requests);
+            let (shutdown_tx, mut shutdown_rx) = oneshot::channel::<()>();
+
+            tokio::spawn(async move {
+                loop {
+                    tokio::select! {
+                        _ = &mut shutdown_rx => {
+                            break;
+                        }
+                        accepted = listener.accept() => {
+                            let Ok((mut stream, _)) = accepted else {
+                                break;
+                            };
+                            let requests = Arc::clone(&requests_clone);
+                            let handler = Arc::clone(&handler);
+                            tokio::spawn(async move {
+                                if let Some(request) = read_request(&mut stream).await {
+                                    requests.lock().await.push(request.clone());
+                                    let response = handler(&request);
+                                    let _ = write_response(&mut stream, response).await;
+                                }
+                            });
+                        }
+                    }
+                }
+            });
+
+            Self {
+                base_url: format!("http://{addr}"),
+                requests,
+                shutdown_tx: Some(shutdown_tx),
+            }
+        }
+
+        async fn requests(&self) -> Vec<TestRequest> {
+            self.requests.lock().await.clone()
+        }
+    }
+
+    impl Drop for TestServer {
+        fn drop(&mut self) {
+            if let Some(tx) = self.shutdown_tx.take() {
+                let _ = tx.send(());
+            }
+        }
+    }
+
+    async fn read_request(stream: &mut TcpStream) -> Option<TestRequest> {
+        let mut raw = Vec::new();
+        let mut buf = [0_u8; 1024];
+
+        let header_end = loop {
+            let read = stream.read(&mut buf).await.ok()?;
+            if read == 0 {
+                return None;
+            }
+            raw.extend_from_slice(&buf[..read]);
+            if let Some(pos) = find_header_end(&raw) {
+                break pos;
+            }
+        };
+
+        let head = String::from_utf8_lossy(&raw[..header_end]).to_string();
+        let mut lines = head.split("\r\n");
+        let request_line = lines.next()?.to_string();
+        let mut request_line_parts = request_line.split_whitespace();
+        let method = request_line_parts.next()?.to_string();
+        let target = request_line_parts.next()?.to_string();
+
+        let mut headers = HashMap::new();
+        for line in lines {
+            if line.is_empty() {
+                continue;
+            }
+            if let Some((name, value)) = line.split_once(':') {
+                headers.insert(name.trim().to_ascii_lowercase(), value.trim().to_string());
+            }
+        }
+
+        let content_length = headers
+            .get("content-length")
+            .and_then(|v| v.parse::<usize>().ok())
+            .unwrap_or(0);
+
+        let mut body = raw[header_end + 4..].to_vec();
+        while body.len() < content_length {
+            let read = stream.read(&mut buf).await.ok()?;
+            if read == 0 {
+                break;
+            }
+            body.extend_from_slice(&buf[..read]);
+        }
+
+        Some(TestRequest { method, target })
+    }
+
+    fn find_header_end(bytes: &[u8]) -> Option<usize> {
+        bytes.windows(4).position(|window| window == b"\r\n\r\n")
+    }
+
+    async fn write_response(stream: &mut TcpStream, response: TestResponse) -> std::io::Result<()> {
+        let reason = match response.status {
+            500 => "Internal Server Error",
+            _ => "OK",
+        };
+        let body = response.body;
+        let reply = format!(
+            "HTTP/1.1 {} {}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            response.status,
+            reason,
+            body.len(),
+            body
+        );
+        stream.write_all(reply.as_bytes()).await
+    }
+
+    fn ok(body: &str) -> TestResponse {
+        TestResponse {
+            status: 200,
+            body: body.to_string(),
+        }
+    }
+
+    fn leak_string(value: String) -> &'static str {
+        Box::leak(value.into_boxed_str())
+    }
+
+    fn test_config(base_url: &str) -> &'static HoyolabDailyRewardConfig {
+        Box::leak(Box::new(HoyolabDailyRewardConfig {
+            reward_url: leak_string(format!("{base_url}/event/luna/test")),
+            act_id: "act123",
+            sign_game: "testgame",
+            game_id: GameId::GenshinImpact,
+        }))
+    }
+
+    fn test_client(
+        server: &TestServer,
+        config: &'static HoyolabDailyRewardConfig,
+    ) -> HoyolabDailyRewardClient {
+        let auth_url = format!("{}/auth", server.base_url);
+        let hoyolab =
+            HoyolabClient::with_auth_check_url("uid", "token", auth_url).expect("create client");
+        HoyolabDailyRewardClient::new(hoyolab, config)
+    }
+
+    #[tokio::test]
+    async fn reward_status_handles_signed_day_zero_with_first_reward() {
+        let server = TestServer::spawn(Arc::new(|request| {
+            if request.target.starts_with("/event/luna/test/info") {
+                ok(r#"{"retcode":0,"message":"OK","data":{"is_sign":true,"total_sign_day":0}}"#)
+            } else if request.target.starts_with("/event/luna/test/home") {
+                ok(
+                    r#"{"retcode":0,"message":"OK","data":{"awards":[{"name":"A","cnt":1,"icon":"a.png"},{"name":"B","cnt":2,"icon":"b.png"}]}}"#,
+                )
+            } else {
+                ok(r#"{"retcode":0,"message":"OK","data":{}}"#)
+            }
+        }))
+        .await;
+
+        let config = test_config(&server.base_url);
+        let client = test_client(&server, config);
+        let status = client
+            .get_reward_status()
+            .await
+            .expect("status should load");
+
+        assert!(status.info.is_signed);
+        assert_eq!(status.info.total_sign_day, 0);
+        assert_eq!(status.monthly_rewards.len(), 2);
+        assert_eq!(
+            status
+                .today_reward
+                .as_ref()
+                .map(|reward| reward.name.as_str()),
+            Some("A")
+        );
+    }
+
+    #[tokio::test]
+    async fn claim_daily_reward_already_claimed_skips_sign_endpoint() {
+        let server = TestServer::spawn(Arc::new(|request| {
+            if request.target.starts_with("/event/luna/test/info") {
+                ok(r#"{"retcode":0,"message":"OK","data":{"is_sign":true,"total_sign_day":1}}"#)
+            } else if request.target.starts_with("/event/luna/test/home") {
+                ok(
+                    r#"{"retcode":0,"message":"OK","data":{"awards":[{"name":"Primogems","cnt":60,"icon":"primogem.png"}]}}"#,
+                )
+            } else {
+                ok(r#"{"retcode":0,"message":"OK","data":{}}"#)
+            }
+        }))
+        .await;
+
+        let config = test_config(&server.base_url);
+        let client = test_client(&server, config);
+        let claim = client
+            .claim_daily_reward()
+            .await
+            .expect("claim should return already-claimed result");
+
+        assert!(
+            !claim.success,
+            "already claimed should not be marked successful"
+        );
+        assert_eq!(
+            claim.message.as_deref(),
+            Some("Already claimed today"),
+            "already-claimed path should return stable message"
+        );
+
+        let requests = server.requests().await;
+        let sign_calls = requests
+            .iter()
+            .filter(|request| {
+                request.method == "POST" && request.target.starts_with("/event/luna/test/sign")
+            })
+            .count();
+        assert_eq!(sign_calls, 0, "sign endpoint should not be called");
+    }
+
+    #[tokio::test]
+    async fn claim_daily_reward_reports_missing_reward_details() {
+        let server = TestServer::spawn(Arc::new(|request| {
+            if request.target.starts_with("/event/luna/test/info") {
+                ok(r#"{"retcode":0,"message":"OK","data":{"is_sign":false,"total_sign_day":99}}"#)
+            } else if request.target.starts_with("/event/luna/test/home") {
+                ok(
+                    r#"{"retcode":0,"message":"OK","data":{"awards":[{"name":"Mora","cnt":5000,"icon":"mora.png"}]}}"#,
+                )
+            } else {
+                ok(r#"{"retcode":0,"message":"OK","data":{}}"#)
+            }
+        }))
+        .await;
+
+        let config = test_config(&server.base_url);
+        let client = test_client(&server, config);
+        let claim = client
+            .claim_daily_reward()
+            .await
+            .expect("claim should complete with fallback message");
+
+        assert!(
+            !claim.success,
+            "missing reward details should be reported as non-success"
+        );
+        assert_eq!(
+            claim.message.as_deref(),
+            Some("Claim succeeded but reward details unavailable")
+        );
+
+        let requests = server.requests().await;
+        let sign_calls = requests
+            .iter()
+            .filter(|request| {
+                request.method == "POST" && request.target.starts_with("/event/luna/test/sign")
+            })
+            .count();
+        assert_eq!(sign_calls, 1, "sign endpoint should be called exactly once");
+    }
+
+    #[tokio::test]
+    async fn reward_status_selects_signed_day_reward_by_index() {
+        let server = TestServer::spawn(Arc::new(|request| {
+            if request.target.starts_with("/event/luna/test/info") {
+                ok(r#"{"retcode":0,"message":"OK","data":{"is_sign":true,"total_sign_day":2}}"#)
+            } else if request.target.starts_with("/event/luna/test/home") {
+                ok(
+                    r#"{"retcode":0,"message":"OK","data":{"awards":[{"name":"Day1","cnt":1,"icon":"1.png"},{"name":"Day2","cnt":1,"icon":"2.png"},{"name":"Day3","cnt":1,"icon":"3.png"}]}}"#,
+                )
+            } else {
+                ok(r#"{"retcode":0,"message":"OK","data":{}}"#)
+            }
+        }))
+        .await;
+
+        let config = test_config(&server.base_url);
+        let client = test_client(&server, config);
+        let status = client
+            .get_reward_status()
+            .await
+            .expect("status should load");
+
+        assert_eq!(
+            status
+                .today_reward
+                .as_ref()
+                .map(|reward| reward.name.as_str()),
+            Some("Day2"),
+            "signed day 2 should map to index 1"
+        );
+    }
+}
