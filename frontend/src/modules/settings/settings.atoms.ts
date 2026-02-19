@@ -1,13 +1,10 @@
-import { invoke } from "@tauri-apps/api/core";
 import { deepEqual } from "fast-equals";
 import { atom } from "jotai";
 import { atomEffect } from "jotai-effect";
 import { atomWithMutation, atomWithQuery } from "jotai-tanstack-query";
 import type { CoreAtoms } from "@/modules/core/core.atoms";
 import {
-  reloadConfigMutationOptions,
-  saveConfigMutationOptions,
-  saveSecretsMutationOptions,
+  saveAndApplyMutationOptions,
   secretsQueryOptions,
 } from "@/modules/settings/settings.query";
 import type {
@@ -93,19 +90,9 @@ export class SettingsAtoms {
   // Mutations
   // ---------------------------------------------------------------------------
 
-  /** Save config to backend */
-  private readonly saveConfigMutation = atomWithMutation(() =>
-    saveConfigMutationOptions(),
-  );
-
-  /** Save secrets to backend */
-  private readonly saveSecretsMutation = atomWithMutation(() =>
-    saveSecretsMutationOptions(),
-  );
-
-  /** Reload config in backend (applies changes) */
-  private readonly reloadConfigMutation = atomWithMutation(() =>
-    reloadConfigMutationOptions(),
+  /** Save config + secrets and apply changes in a single IPC call */
+  private readonly saveAndApplyMutation = atomWithMutation(() =>
+    saveAndApplyMutationOptions(),
   );
 
   // ---------------------------------------------------------------------------
@@ -131,15 +118,13 @@ export class SettingsAtoms {
   /** Error state for save operations */
   readonly saveError = atom<string | null>(null);
 
-  /** Derived pending state from mutation atoms */
+  /** Derived pending state from mutation atom */
   readonly isSaving = atom((get) => {
-    const { isPending: isSavingConfig } = get(this.saveConfigMutation);
-    const { isPending: isSavingSecrets } = get(this.saveSecretsMutation);
-    const { isPending: isReloading } = get(this.reloadConfigMutation);
-    return isSavingConfig || isSavingSecrets || isReloading;
+    const { isPending } = get(this.saveAndApplyMutation);
+    return isPending;
   });
 
-  /** Coordinated save action - saves config + secrets, reloads, marks as saved */
+  /** Coordinated save action — single IPC: write + diff + apply */
   readonly save = atom(null, async (get, set) => {
     const config = get(this.editedConfig);
     const secrets = get(this.editedSecrets);
@@ -148,19 +133,14 @@ export class SettingsAtoms {
     set(this.saveError, null);
 
     try {
-      const { mutateAsync: doSaveConfig } = get(this.saveConfigMutation);
-      const { mutateAsync: doSaveSecrets } = get(this.saveSecretsMutation);
-      const { mutateAsync: doReloadConfig } = get(this.reloadConfigMutation);
-
-      await Promise.all([doSaveConfig(config), doSaveSecrets(secrets)]);
-      await doReloadConfig();
+      const { mutateAsync: doSaveAndApply } = get(this.saveAndApplyMutation);
+      const result = await doSaveAndApply({ config, secrets });
       set(this.markAsSaved);
 
       // Sync frontend locale from backend's effective locale
-      const effectiveLocale = await invoke<string>("get_effective_locale");
-      if (isLocale(effectiveLocale)) {
-        setLocale(effectiveLocale, { reload: false });
-        set(this.core.locale, effectiveLocale);
+      if (isLocale(result.effective_locale)) {
+        setLocale(result.effective_locale, { reload: false });
+        set(this.core.locale, result.effective_locale);
       }
     } catch (e) {
       set(this.saveError, `Failed to save settings: ${String(e)}`);

@@ -2,6 +2,7 @@ import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import type {
   AppConfig,
+  SaveResult,
   SecretsConfig,
 } from "@/modules/settings/settings.types";
 
@@ -23,34 +24,11 @@ export function secretsQueryOptions() {
   });
 }
 
-/** Mutation options for saving config to backend */
-export function saveConfigMutationOptions() {
+/** Mutation options for saving config + secrets and applying changes in one call */
+export function saveAndApplyMutationOptions() {
   return mutationOptions({
-    mutationKey: ["save-config"],
-    mutationFn: async (config: AppConfig) => {
-      await invoke("save_config", { config });
-      return config;
-    },
-  });
-}
-
-/** Mutation options for saving secrets to backend */
-export function saveSecretsMutationOptions() {
-  return mutationOptions({
-    mutationKey: ["save-secrets"],
-    mutationFn: async (secrets: SecretsConfig) => {
-      await invoke("save_secrets", { secrets });
-      return secrets;
-    },
-  });
-}
-
-/** Mutation options for reloading config in backend */
-export function reloadConfigMutationOptions() {
-  return mutationOptions({
-    mutationKey: ["reload-config"],
-    mutationFn: async (): Promise<void> => {
-      await invoke("reload_config");
-    },
+    mutationKey: ["save-and-apply"],
+    mutationFn: async (params: { config: AppConfig; secrets: SecretsConfig }) =>
+      invoke<SaveResult>("save_and_apply", params),
   });
 }

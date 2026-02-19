@@ -101,10 +101,8 @@ pub fn run() -> Result<()> {
             commands::get_all_resources,
             commands::refresh_resources,
             commands::get_config,
-            commands::save_config,
             commands::get_secrets,
-            commands::save_secrets,
-            commands::reload_config,
+            commands::save_and_apply,
             commands::open_config_folder,
             // Notification commands
             commands::send_preview_notification,

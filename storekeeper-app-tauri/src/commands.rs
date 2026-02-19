@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 
 use chrono::Utc;
+use serde::Serialize;
 use storekeeper_core::{AppConfig, GameId, SecretsConfig};
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_autostart::ManagerExt;
@@ -34,39 +35,32 @@ pub async fn get_config() -> Result<AppConfig, CommandError> {
     Ok(AppConfig::load()?)
 }
 
-/// Saves the application configuration.
-#[tauri::command]
-pub async fn save_config(config: AppConfig) -> Result<(), CommandError> {
-    config.save()?;
-    tracing::info!("Configuration saved successfully");
-    Ok(())
-}
-
 /// Gets the current secrets configuration.
 #[tauri::command]
 pub async fn get_secrets() -> Result<SecretsConfig, CommandError> {
     Ok(SecretsConfig::load()?)
 }
 
-/// Saves the secrets configuration.
-#[tauri::command]
-pub async fn save_secrets(secrets: SecretsConfig) -> Result<(), CommandError> {
-    secrets.save()?;
-    tracing::info!("Secrets saved successfully");
-    Ok(())
+/// Result returned by `save_and_apply`.
+#[derive(Serialize)]
+pub struct SaveResult {
+    /// The effective locale after applying changes.
+    effective_locale: String,
 }
 
-/// Reloads configuration and applies only the changes that are needed.
+/// Saves config + secrets and applies only the changes that are needed.
 ///
-/// Diffs old vs new config/secrets to determine minimal work:
-/// - Language change → update locale + rebuild tray
-/// - Autostart change → sync with OS
-/// - Game config change → rebuild registries, fetch only affected games
-/// - Secrets change → rebuild registries, fetch affected provider's games
-/// - Notification change → reset cooldowns for affected games only
-/// - No changes → instant return, no work done
+/// Combines write + diff + selective apply into a single IPC call:
+/// 1. Writes config.toml and secrets.toml to disk
+/// 2. Diffs old (from state) vs new (from params) in-memory — no re-read
+/// 3. Selectively applies changes based on the diff
+/// 4. Returns the effective locale for frontend sync
 #[tauri::command]
-pub async fn reload_config(app_handle: AppHandle) -> Result<(), CommandError> {
+pub async fn save_and_apply(
+    config: AppConfig,
+    secrets: SecretsConfig,
+    app_handle: AppHandle,
+) -> Result<SaveResult, CommandError> {
     let state = app_handle.state::<AppState>();
 
     // Snapshot old config + secrets from state
@@ -75,16 +69,19 @@ pub async fn reload_config(app_handle: AppHandle) -> Result<(), CommandError> {
         (inner.config.clone(), inner.secrets.clone())
     };
 
-    // Load new config + secrets from disk
-    let new_config = AppConfig::load()?;
-    let new_secrets = SecretsConfig::load()?;
+    // Write both files to disk
+    config.save()?;
+    secrets.save()?;
+    tracing::info!("Configuration and secrets saved to disk");
 
-    // Compute diff
-    let diff = crate::config_diff::compute(&old_config, &new_config, &old_secrets, &new_secrets);
+    // Compute diff in-memory (no disk re-read)
+    let diff = crate::config_diff::compute(&old_config, &config, &old_secrets, &secrets);
 
     if diff.is_empty() {
-        tracing::info!("Config unchanged, nothing to do");
-        return Ok(());
+        tracing::info!("Config unchanged, nothing to apply");
+        return Ok(SaveResult {
+            effective_locale: i18n::get_current_locale(),
+        });
     }
 
     tracing::info!(
@@ -98,7 +95,7 @@ pub async fn reload_config(app_handle: AppHandle) -> Result<(), CommandError> {
 
     // Apply new config + secrets, optionally rebuilding registries
     state
-        .apply_config(new_config, new_secrets, diff.needs_registry_rebuild)
+        .apply_config(config, secrets, diff.needs_registry_rebuild)
         .await;
 
     // Update locale if changed
@@ -146,8 +143,10 @@ pub async fn reload_config(app_handle: AppHandle) -> Result<(), CommandError> {
         let _ = polling::refresh_games(&app_handle, &diff.games_to_refresh).await;
     }
 
-    tracing::info!("Configuration reloaded successfully");
-    Ok(())
+    tracing::info!("Configuration applied successfully");
+    Ok(SaveResult {
+        effective_locale: i18n::get_current_locale(),
+    })
 }
 
 /// Opens the configuration folder in the system file manager.
