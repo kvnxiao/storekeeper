@@ -4,6 +4,7 @@
 
 mod clients;
 mod commands;
+mod config_diff;
 mod daily_reward_registry;
 mod error;
 mod events;

@@ -15,7 +15,7 @@ use crate::resource_types::{
 };
 
 /// Genshin Impact specific configuration.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GenshinConfig {
     /// Whether this game is enabled.
     #[serde(default = "default_true")]
@@ -53,7 +53,7 @@ fn default_genshin_resources() -> Vec<GenshinResourceType> {
 }
 
 /// Honkai: Star Rail specific configuration.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HsrConfig {
     /// Whether this game is enabled.
     #[serde(default = "default_true")]
@@ -91,7 +91,7 @@ fn default_hsr_resources() -> Vec<HsrResourceType> {
 }
 
 /// Zenless Zone Zero specific configuration.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ZzzConfig {
     /// Whether this game is enabled.
     #[serde(default = "default_true")]
@@ -129,7 +129,7 @@ fn default_zzz_resources() -> Vec<ZzzResourceType> {
 }
 
 /// Wuthering Waves specific configuration.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WuwaConfig {
     /// Whether this game is enabled.
     #[serde(default = "default_true")]

@@ -15,8 +15,8 @@ pub mod resource_types;
 pub mod serde_utils;
 
 pub use config::{
-    AppConfig, ClaimTime, DEFAULT_AUTO_CLAIM_TIME, GenshinConfig, HsrConfig,
-    ResourceNotificationConfig, SecretsConfig, ZzzConfig, ensure_configs_exist,
+    AppConfig, ClaimTime, DEFAULT_AUTO_CLAIM_TIME, GamesConfig, GenshinConfig, HsrConfig,
+    ResourceNotificationConfig, SecretsConfig, WuwaConfig, ZzzConfig, ensure_configs_exist,
     next_claim_datetime_utc,
 };
 pub use daily_reward::{

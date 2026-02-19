@@ -21,11 +21,15 @@ type OperationResult = (
 /// Clients sharing an API provider are processed sequentially (to avoid rate limits).
 /// Different providers are processed in parallel.
 ///
+/// An optional `game_filter` limits which games are processed. When `None`, all
+/// clients are processed.
+///
 /// The `operation` closure receives the game ID and client reference, and returns
 /// a pinned future yielding the game ID paired with the result. The closure is
 /// responsible for any side effects like event emission or inter-operation delays.
 pub async fn batch_by_provider<C, F>(
     clients: &HashMap<GameId, Box<C>>,
+    game_filter: Option<&HashSet<GameId>>,
     operation: F,
 ) -> HashMap<GameId, serde_json::Value>
 where
@@ -36,12 +40,24 @@ where
         return HashMap::new();
     }
 
-    let providers: HashSet<_> = clients.keys().map(GameId::api_provider).collect();
+    let active_clients: Vec<_> = clients
+        .iter()
+        .filter(|(id, _)| game_filter.is_none_or(|f| f.contains(id)))
+        .collect();
+
+    if active_clients.is_empty() {
+        return HashMap::new();
+    }
+
+    let providers: HashSet<_> = active_clients
+        .iter()
+        .map(|(id, _)| id.api_provider())
+        .collect();
 
     let provider_futures: Vec<_> = providers
         .into_iter()
         .map(|provider| {
-            let provider_clients: Vec<_> = clients
+            let provider_clients: Vec<_> = active_clients
                 .iter()
                 .filter(|(id, _)| id.api_provider() == provider)
                 .collect();
@@ -49,7 +65,7 @@ where
             async {
                 let mut results = Vec::new();
                 for (game_id, client) in provider_clients {
-                    results.push(operation(*game_id, client.as_ref()).await);
+                    results.push(operation(**game_id, client.as_ref()).await);
                 }
                 results
             }
@@ -129,7 +145,7 @@ mod tests {
     #[tokio::test(start_paused = true)]
     async fn empty_clients() {
         let clients: HashMap<GameId, Box<dyn MockClient>> = HashMap::new();
-        let result = batch_by_provider(&clients, |id, c| {
+        let result = batch_by_provider(&clients, None, |id, c| {
             Box::pin(async move { (id, c.do_work().await) })
         })
         .await;
@@ -143,7 +159,7 @@ mod tests {
             (GameId::HonkaiStarRail, false),
             (GameId::WutheringWaves, false),
         ]);
-        let result = batch_by_provider(&clients, |id, c| {
+        let result = batch_by_provider(&clients, None, |id, c| {
             Box::pin(async move { (id, c.do_work().await) })
         })
         .await;
@@ -156,7 +172,7 @@ mod tests {
             (GameId::GenshinImpact, false),
             (GameId::HonkaiStarRail, true),
         ]);
-        let result = batch_by_provider(&clients, |id, c| {
+        let result = batch_by_provider(&clients, None, |id, c| {
             Box::pin(async move { (id, c.do_work().await) })
         })
         .await;
@@ -168,7 +184,7 @@ mod tests {
     async fn closure_can_add_side_effects() {
         let clients = make_clients(&[(GameId::GenshinImpact, false)]);
         let counter = AtomicU32::new(0);
-        let result = batch_by_provider(&clients, |id, c| {
+        let result = batch_by_provider(&clients, None, |id, c| {
             let counter = &counter;
             Box::pin(async move {
                 counter.fetch_add(1, Ordering::Relaxed);

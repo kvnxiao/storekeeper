@@ -45,7 +45,7 @@ fn default_log_level() -> String {
 // ============================================================================
 
 /// Main application configuration loaded from `config.toml`.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AppConfig {
     /// General application settings.
     #[serde(default)]
@@ -263,7 +263,7 @@ player_id = "YOUR_PLAYER_ID_HERE"
 // ============================================================================
 
 /// General application settings.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GeneralConfig {
     /// Polling interval in seconds.
     #[serde(default = "default_poll_interval")]
@@ -304,7 +304,7 @@ impl Default for GeneralConfig {
 // ============================================================================
 
 /// Per-game configuration.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GamesConfig {
     /// Genshin Impact configuration.
     pub genshin_impact: Option<GenshinConfig>,

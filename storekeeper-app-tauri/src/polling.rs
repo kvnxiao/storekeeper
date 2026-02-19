@@ -1,7 +1,10 @@
 //! Background polling for periodic resource updates.
 
+use std::collections::HashSet;
 use std::time::Duration;
 
+use chrono::Utc;
+use storekeeper_core::GameId;
 use tauri::{AppHandle, Emitter, Manager};
 use tokio_util::sync::CancellationToken;
 
@@ -132,5 +135,51 @@ pub async fn refresh_now(app_handle: &AppHandle) -> Result<AllResources, String>
 
     tracing::info!("Manual refresh completed");
 
+    Ok(resources)
+}
+
+/// Refreshes resources and daily reward status for a specific set of games.
+///
+/// Merges the fetched results into the existing cached state rather than
+/// replacing it entirely. This is used by the config reload path to only
+/// fetch games whose configuration actually changed.
+pub async fn refresh_games(
+    app_handle: &AppHandle,
+    game_ids: &HashSet<GameId>,
+) -> Result<AllResources, String> {
+    tracing::info!(games = ?game_ids, "Selective refresh requested");
+    let state = app_handle.state::<AppState>();
+
+    let Some(_refresh_guard) = try_acquire_refresh(&state) else {
+        tracing::debug!("Refresh already in progress, skipping selective refresh");
+        return Err("Refresh already in progress".to_string());
+    };
+
+    let _ = app_handle.emit(AppEvent::RefreshStarted.as_str(), ());
+
+    // Fetch only the specified games
+    let new_resources = state.fetch_resources_for_games(game_ids, app_handle).await;
+    let new_daily_status = state.fetch_daily_reward_status_for_games(game_ids).await;
+
+    // Merge into existing cached state
+    let mut resources = state.get_resources().await;
+    for (game_id, data) in new_resources {
+        resources.games.insert(game_id, data);
+    }
+    resources.last_updated = Some(Utc::now());
+    state.set_resources(resources.clone()).await;
+
+    let mut daily_status = state.get_daily_reward_status().await;
+    for (game_id, data) in new_daily_status {
+        daily_status.games.insert(game_id, data);
+    }
+    daily_status.last_checked = Some(Utc::now());
+    state.set_daily_reward_status(daily_status).await;
+
+    // Emit full snapshot and run notification check
+    let _ = app_handle.emit(AppEvent::ResourcesUpdated.as_str(), &resources);
+    notification::check_and_notify(app_handle).await;
+
+    tracing::info!("Selective refresh completed");
     Ok(resources)
 }

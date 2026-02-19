@@ -13,7 +13,7 @@ use super::default_true;
 ///
 /// If both are `None`, notifications fire only when the resource is full/ready.
 /// If both are `Some` (e.g. manual config edit), `notify_at_value` takes priority.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ResourceNotificationConfig {
     /// Whether notifications are enabled for this resource.
     #[serde(default = "default_true")]

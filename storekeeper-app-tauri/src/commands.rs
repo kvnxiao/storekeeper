@@ -56,49 +56,97 @@ pub async fn save_secrets(secrets: SecretsConfig) -> Result<(), CommandError> {
     Ok(())
 }
 
-/// Reloads configuration and restarts the polling loop with new settings.
+/// Reloads configuration and applies only the changes that are needed.
 ///
-/// This should be called after saving config/secrets to apply the changes.
+/// Diffs old vs new config/secrets to determine minimal work:
+/// - Language change → update locale + rebuild tray
+/// - Autostart change → sync with OS
+/// - Game config change → rebuild registries, fetch only affected games
+/// - Secrets change → rebuild registries, fetch affected provider's games
+/// - Notification change → reset cooldowns for affected games only
+/// - No changes → instant return, no work done
 #[tauri::command]
 pub async fn reload_config(app_handle: AppHandle) -> Result<(), CommandError> {
     let state = app_handle.state::<AppState>();
 
-    // Reload config and reinitialize game clients
-    state.reload_config().await?;
-
-    // Update locale from new config (auto-detect if no override)
-    let language = {
+    // Snapshot old config + secrets from state
+    let (old_config, old_secrets) = {
         let inner = state.inner.read().await;
-        inner.config.general.language.clone()
+        (inner.config.clone(), inner.secrets.clone())
     };
-    let effective_locale = i18n::resolve_locale(language.as_deref());
-    if let Err(e) = i18n::set_locale(effective_locale) {
-        tracing::warn!(error = %e, "Failed to update i18n locale");
+
+    // Load new config + secrets from disk
+    let new_config = AppConfig::load()?;
+    let new_secrets = SecretsConfig::load()?;
+
+    // Compute diff
+    let diff = crate::config_diff::compute(&old_config, &new_config, &old_secrets, &new_secrets);
+
+    if diff.is_empty() {
+        tracing::info!("Config unchanged, nothing to do");
+        return Ok(());
     }
 
-    // Rebuild tray menu with new locale strings
-    if let Err(e) = crate::tray::build_tray_menu(&app_handle) {
-        tracing::warn!(error = %e, "Failed to rebuild tray menu");
+    tracing::info!(
+        locale_changed = diff.locale_changed,
+        autostart_changed = diff.autostart_changed,
+        needs_registry_rebuild = diff.needs_registry_rebuild,
+        games_to_refresh = ?diff.games_to_refresh,
+        games_to_reset_notifications = ?diff.games_to_reset_notifications,
+        "Config diff computed"
+    );
+
+    // Apply new config + secrets, optionally rebuilding registries
+    state
+        .apply_config(new_config, new_secrets, diff.needs_registry_rebuild)
+        .await;
+
+    // Update locale if changed
+    if diff.locale_changed {
+        let language = {
+            let inner = state.inner.read().await;
+            inner.config.general.language.clone()
+        };
+        let effective_locale = i18n::resolve_locale(language.as_deref());
+        if let Err(e) = i18n::set_locale(effective_locale) {
+            tracing::warn!(error = %e, "Failed to update i18n locale");
+        }
+        if let Err(e) = crate::tray::build_tray_menu(&app_handle) {
+            tracing::warn!(error = %e, "Failed to rebuild tray menu");
+        }
     }
 
-    // Sync autostart state from config
-    let autostart_enabled = {
-        let inner = state.inner.read().await;
-        inner.config.general.autostart
-    };
-    let autolaunch = app_handle.autolaunch();
-    let autostart_result = if autostart_enabled {
-        autolaunch.enable()
-    } else {
-        autolaunch.disable()
-    };
-    if let Err(e) = autostart_result {
-        tracing::warn!(error = %e, "Failed to sync autostart state");
+    // Sync autostart if changed
+    if diff.autostart_changed {
+        let autostart_enabled = {
+            let inner = state.inner.read().await;
+            inner.config.general.autostart
+        };
+        let autolaunch = app_handle.autolaunch();
+        let autostart_result = if autostart_enabled {
+            autolaunch.enable()
+        } else {
+            autolaunch.disable()
+        };
+        if let Err(e) = autostart_result {
+            tracing::warn!(error = %e, "Failed to sync autostart state");
+        }
     }
 
-    // Trigger an immediate refresh to fetch resources with new config
-    let _ = polling::refresh_now(&app_handle).await;
+    // Reset notification cooldowns for affected games only
+    if !diff.games_to_reset_notifications.is_empty() {
+        let mut inner = state.inner.write().await;
+        for game_id in &diff.games_to_reset_notifications {
+            inner.notification_tracker.clear_for_game(*game_id);
+        }
+    }
 
+    // Selective refresh: only fetch games that actually changed
+    if !diff.games_to_refresh.is_empty() {
+        let _ = polling::refresh_games(&app_handle, &diff.games_to_refresh).await;
+    }
+
+    tracing::info!("Configuration reloaded successfully");
     Ok(())
 }
 
