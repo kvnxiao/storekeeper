@@ -4,22 +4,23 @@ import type { GameId, GameResourceTypeMap } from "@/modules/games/games.types";
 import type { GameResource } from "@/modules/resources/resources.types";
 
 /**
- * Creates a derived atom that selects a single resource by game and type.
+ * Creates a derived atom that selects a single resource by game and type,
+ * narrowing `.data` via the provided type guard.
  *
- * Reads from the core resources query and returns the matching resource
- * or null if not found.
+ * Returns the narrowed data (`T`) or `null` if not found / guard fails.
  */
-export function atomResourceSelector<G extends GameId>(
+export function atomResourceSelector<G extends GameId, T>(
   getCore: () => CoreAtoms,
   gameId: G,
   resourceType: GameResourceTypeMap[G],
+  guard: (data: unknown) => data is T,
 ) {
-  return atom((get) => {
+  return atom<T | null>((get) => {
     const { data } = get(getCore().resourcesQuery);
-    return (
-      (data?.games?.[gameId]?.find(
-        (r: GameResource) => r.type === resourceType,
-      ) as GameResource | undefined) ?? null
+    const resource = data?.games?.[gameId]?.find(
+      (r: GameResource) => r.type === resourceType,
     );
+    if (!resource || !guard(resource.data)) return null;
+    return resource.data;
   });
 }
