@@ -9,6 +9,7 @@ const groupStyle = tv({
 const buttonStyle = tv({
   base: [
     "cursor-default rounded-md px-2.5 py-1 text-xs font-medium text-zinc-500 outline-none transition-colors",
+    "hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50",
     "selected:bg-white selected:text-zinc-950 selected:shadow-sm",
     "dark:text-zinc-400 dark:selected:bg-zinc-700 dark:selected:text-white",
   ],
@@ -40,7 +41,7 @@ export const SegmentedControl: React.FC<SegmentedControlProps> = ({
       selectedKeys={new Set<Key>([selectedKey])}
       onSelectionChange={(keys) => {
         const key = [...keys][0];
-        if (typeof key === "string") {
+        if (typeof key === "string" && key !== selectedKey) {
           onSelectionChange(key);
         }
       }}
