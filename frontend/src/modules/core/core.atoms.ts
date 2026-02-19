@@ -15,6 +15,7 @@ import type {
 } from "@/modules/resources/resources.types";
 import { configQueryOptions } from "@/modules/settings/settings.query";
 import type { GamesConfig } from "@/modules/settings/settings.types";
+import "@formatjs/intl-durationformat/polyfill.js";
 import { getLocale, isLocale, setLocale } from "@/paraglide/runtime";
 
 // =============================================================================
@@ -44,6 +45,34 @@ export class CoreAtoms {
   // ---------------------------------------------------------------------------
 
   readonly locale = atom<string>(getLocale());
+
+  // ---------------------------------------------------------------------------
+  // Intl formatter atoms — derived from locale, cached by Jotai
+  // ---------------------------------------------------------------------------
+
+  readonly durationFormatter = atom((get) => {
+    const loc = get(this.locale);
+    return new Intl.DurationFormat(loc, {
+      style: loc.startsWith("en") ? "narrow" : "short",
+    });
+  });
+
+  readonly timeOnlyFormatter = atom((get) => {
+    const loc = get(this.locale);
+    return new Intl.DateTimeFormat(loc, {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  });
+
+  readonly weekdayTimeFormatter = atom((get) => {
+    const loc = get(this.locale);
+    return new Intl.DateTimeFormat(loc, {
+      weekday: "short",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  });
 
   // ---------------------------------------------------------------------------
   // Tick system - updates every minute for real-time countdown display

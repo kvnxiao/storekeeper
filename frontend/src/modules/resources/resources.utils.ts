@@ -1,43 +1,18 @@
 import * as m from "@/paraglide/messages";
 import "@formatjs/intl-durationformat/polyfill.js";
 
-// Formatter cache keyed by locale — recreated only when locale changes
-let cachedLocale: string | undefined;
-let durationFormatter: Intl.DurationFormat;
-let timeOnlyFormatter: Intl.DateTimeFormat;
-let weekdayTimeFormatter: Intl.DateTimeFormat;
-
-function getFormatters(locale: string) {
-  if (locale !== cachedLocale) {
-    cachedLocale = locale;
-    durationFormatter = new Intl.DurationFormat(locale, {
-      style: locale.startsWith("en") ? "narrow" : "short",
-    });
-    timeOnlyFormatter = new Intl.DateTimeFormat(locale, {
-      hour: "numeric",
-      minute: "2-digit",
-    });
-    weekdayTimeFormatter = new Intl.DateTimeFormat(locale, {
-      weekday: "short",
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  }
-  return { durationFormatter, timeOnlyFormatter, weekdayTimeFormatter };
-}
-
 /**
  * Formats a datetime string to human-readable duration remaining.
  *
  * @param datetime - ISO 8601 datetime string for the target time
  * @param nowMs - Current time in milliseconds (from tick atom)
- * @param locale - Current app locale (drives formatter language)
+ * @param durationFmt - Intl.DurationFormat instance for the current locale
  * @returns Formatted duration string like "2h 13m" or "Full"
  */
 export function formatTimeRemaining(
   datetime: string | null | undefined,
   nowMs: number,
-  locale: string,
+  durationFmt: Intl.DurationFormat,
 ): string {
   if (!datetime) return m.time_remaining_full();
 
@@ -54,8 +29,7 @@ export function formatTimeRemaining(
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
 
-  const { durationFormatter } = getFormatters(locale);
-  return durationFormatter.format({
+  return durationFmt.format({
     days: days > 0 ? days : undefined,
     hours: days > 0 || hours > 0 ? hours : undefined,
     minutes: days > 0 || hours > 0 ? minutes : undefined,
@@ -85,13 +59,15 @@ export function isPastDateTime(
  *
  * @param datetime - ISO 8601 datetime string
  * @param nowMs - Current time in milliseconds (from tick atom)
- * @param locale - Current app locale (drives formatter language)
+ * @param timeOnlyFmt - Intl.DateTimeFormat for time-only display
+ * @param weekdayTimeFmt - Intl.DateTimeFormat for weekday + time display
  * @returns Formatted datetime like "3:17 PM" (today) or "Mon 3:17 PM" (other days), or null
  */
 export function formatAbsoluteDateTime(
   datetime: string | null | undefined,
   nowMs: number,
-  locale: string,
+  timeOnlyFmt: Intl.DateTimeFormat,
+  weekdayTimeFmt: Intl.DateTimeFormat,
 ): string | null {
   if (!datetime) return null;
   const target = new Date(datetime);
@@ -100,8 +76,5 @@ export function formatAbsoluteDateTime(
     target.getFullYear() === now.getFullYear() &&
     target.getMonth() === now.getMonth() &&
     target.getDate() === now.getDate();
-  const { timeOnlyFormatter, weekdayTimeFormatter } = getFormatters(locale);
-  return isToday
-    ? timeOnlyFormatter.format(target)
-    : weekdayTimeFormatter.format(target);
+  return isToday ? timeOnlyFmt.format(target) : weekdayTimeFmt.format(target);
 }
