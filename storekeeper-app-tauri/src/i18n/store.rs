@@ -7,8 +7,11 @@ use icu_plurals::PluralRules;
 
 use super::locale::{DEFAULT_LOCALE, SUPPORTED_LOCALES};
 
-/// Embedded English locale strings (loaded at compile time).
+/// Embedded locale strings (loaded at compile time).
 const EN_LOCALE: &str = include_str!("../../../locales/en.json");
+const ZH_CN_LOCALE: &str = include_str!("../../../locales/zh-CN.json");
+const KO_LOCALE: &str = include_str!("../../../locales/ko.json");
+const JA_LOCALE: &str = include_str!("../../../locales/ja.json");
 
 /// Global messages store, initialized once at startup and switchable at runtime.
 static MESSAGES: OnceLock<RwLock<Messages>> = OnceLock::new();
@@ -52,6 +55,9 @@ impl From<i64> for Value {
 fn load_messages(locale_str: &str) -> Result<Messages> {
     let json_str = match locale_str {
         "en" => EN_LOCALE,
+        "zh-CN" => ZH_CN_LOCALE,
+        "ko" => KO_LOCALE,
+        "ja" => JA_LOCALE,
         _ => bail!("unsupported locale: {locale_str}"),
     };
 

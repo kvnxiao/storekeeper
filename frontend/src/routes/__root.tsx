@@ -5,9 +5,10 @@ import {
   Outlet,
   Scripts,
 } from "@tanstack/react-router";
-import { Provider as JotaiProvider } from "jotai";
+import { Provider as JotaiProvider, useAtomValue } from "jotai";
 import { useHydrateAtoms } from "jotai/utils";
 import { queryClientAtom } from "jotai-tanstack-query";
+import { atoms } from "@/modules/atoms";
 import { queryClient } from "@/modules/core/core.queryClient";
 import appCss from "@/styles.css?url";
 
@@ -23,6 +24,12 @@ const HydrateQueryClient: React.FC<React.PropsWithChildren> = ({
   return <>{children}</>;
 };
 
+/** Keys the outlet on locale so the entire route tree remounts on locale change */
+const LocaleAwareOutlet: React.FC = () => {
+  const locale = useAtomValue(atoms.core.locale);
+  return <Outlet key={locale} />;
+};
+
 const RootComponent: React.FC = () => {
   return (
     <html lang="en">
@@ -33,7 +40,7 @@ const RootComponent: React.FC = () => {
         <QueryClientProvider client={queryClient}>
           <JotaiProvider>
             <HydrateQueryClient>
-              <Outlet />
+              <LocaleAwareOutlet />
             </HydrateQueryClient>
           </JotaiProvider>
         </QueryClientProvider>

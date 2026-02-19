@@ -60,3 +60,9 @@ export function isExpeditionResource(
     typeof data === "object" && data !== null && "currentExpeditions" in data
   );
 }
+
+/** Pre-computed formatted time for a resource */
+export interface FormattedTime {
+  relativeTime: string;
+  absoluteTime: string | null;
+}

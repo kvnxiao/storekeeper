@@ -3,7 +3,7 @@ import { deepEqual } from "fast-equals";
 import { atom } from "jotai";
 import { atomEffect } from "jotai-effect";
 import { atomWithMutation, atomWithQuery } from "jotai-tanstack-query";
-import { CoreAtoms } from "@/modules/core/core.atoms";
+import type { CoreAtoms } from "@/modules/core/core.atoms";
 import {
   reloadConfigMutationOptions,
   saveConfigMutationOptions,
@@ -21,12 +21,18 @@ import { isLocale, setLocale } from "@/paraglide/runtime";
 // =============================================================================
 
 export class SettingsAtoms {
+  private readonly core: CoreAtoms;
+
+  constructor(core: CoreAtoms) {
+    this.core = core;
+    this.configQuery = core.configQuery;
+  }
   // ---------------------------------------------------------------------------
   // Query Atoms
   // ---------------------------------------------------------------------------
 
   /** Config query from core (re-exported for convenience) */
-  readonly configQuery = CoreAtoms.configQueryAtom;
+  readonly configQuery;
 
   /** Fetch secrets from backend */
   readonly secretsQuery = atomWithQuery(() => secretsQueryOptions());
@@ -154,6 +160,7 @@ export class SettingsAtoms {
       const effectiveLocale = await invoke<string>("get_effective_locale");
       if (isLocale(effectiveLocale)) {
         setLocale(effectiveLocale, { reload: false });
+        set(this.core.locale, effectiveLocale);
       }
     } catch (e) {
       set(this.saveError, `Failed to save settings: ${String(e)}`);

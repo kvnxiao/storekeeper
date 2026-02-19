@@ -1,5 +1,5 @@
 /// List of supported locale codes.
-pub(super) const SUPPORTED_LOCALES: &[&str] = &["en"];
+pub(super) const SUPPORTED_LOCALES: &[&str] = &["en", "zh-CN", "ko", "ja"];
 
 /// Default locale used when no match is found.
 pub(super) const DEFAULT_LOCALE: &str = "en";

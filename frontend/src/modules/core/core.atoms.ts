@@ -15,7 +15,19 @@ import type {
 } from "@/modules/resources/resources.types";
 import { configQueryOptions } from "@/modules/settings/settings.query";
 import type { GamesConfig } from "@/modules/settings/settings.types";
-import { isLocale, setLocale } from "@/paraglide/runtime";
+import "@formatjs/intl-durationformat/polyfill.js";
+import { getLocale, isLocale, setLocale } from "@/paraglide/runtime";
+
+// =============================================================================
+// Constants
+// =============================================================================
+
+export const GAME_CONFIG_KEYS: [GameId, keyof GamesConfig][] = [
+  [GameId.GenshinImpact, "genshin_impact"],
+  [GameId.HonkaiStarRail, "honkai_star_rail"],
+  [GameId.ZenlessZoneZero, "zenless_zone_zero"],
+  [GameId.WutheringWaves, "wuthering_waves"],
+];
 
 // =============================================================================
 // CoreAtoms Class
@@ -26,7 +38,41 @@ export class CoreAtoms {
   // Config Query Atom (app-wide state, shared across atom classes)
   // ---------------------------------------------------------------------------
 
-  static readonly configQueryAtom = atomWithQuery(() => configQueryOptions());
+  readonly configQuery = atomWithQuery(() => configQueryOptions());
+
+  // ---------------------------------------------------------------------------
+  // Locale atom — reactive locale for Intl formatters
+  // ---------------------------------------------------------------------------
+
+  readonly locale = atom<string>(getLocale());
+
+  // ---------------------------------------------------------------------------
+  // Intl formatter atoms — derived from locale, cached by Jotai
+  // ---------------------------------------------------------------------------
+
+  readonly durationFormatter = atom((get) => {
+    const loc = get(this.locale);
+    return new Intl.DurationFormat(loc, {
+      style: loc.startsWith("en") ? "narrow" : "short",
+    });
+  });
+
+  readonly timeOnlyFormatter = atom((get) => {
+    const loc = get(this.locale);
+    return new Intl.DateTimeFormat(loc, {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  });
+
+  readonly weekdayTimeFormatter = atom((get) => {
+    const loc = get(this.locale);
+    return new Intl.DateTimeFormat(loc, {
+      weekday: "short",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  });
 
   // ---------------------------------------------------------------------------
   // Tick system - updates every minute for real-time countdown display
@@ -151,27 +197,18 @@ export class CoreAtoms {
   // Config loading state
   // ---------------------------------------------------------------------------
 
-  readonly isConfigLoading = atom(
-    (get) => get(CoreAtoms.configQueryAtom).isPending,
-  );
+  readonly isConfigLoading = atom((get) => get(this.configQuery).isPending);
 
   // ---------------------------------------------------------------------------
   // Enabled games - derived from config
   // ---------------------------------------------------------------------------
 
-  private static readonly GAME_CONFIG_KEYS: [GameId, keyof GamesConfig][] = [
-    [GameId.GenshinImpact, "genshin_impact"],
-    [GameId.HonkaiStarRail, "honkai_star_rail"],
-    [GameId.ZenlessZoneZero, "zenless_zone_zero"],
-    [GameId.WutheringWaves, "wuthering_waves"],
-  ];
-
   readonly enabledGames = atom((get) => {
-    const { data: config } = get(CoreAtoms.configQueryAtom);
+    const { data: config } = get(this.configQuery);
     return new Set<GameId>(
-      CoreAtoms.GAME_CONFIG_KEYS.filter(
-        ([, key]) => config?.games[key]?.enabled,
-      ).map(([id]) => id),
+      GAME_CONFIG_KEYS.filter(([, key]) => config?.games[key]?.enabled).map(
+        ([id]) => id,
+      ),
     );
   });
 
@@ -179,10 +216,11 @@ export class CoreAtoms {
   // Locale sync - syncs Paraglide locale from backend config on startup
   // ---------------------------------------------------------------------------
 
-  private readonly localeSyncEffect = atomEffect(() => {
+  private readonly localeSyncEffect = atomEffect((_get, set) => {
     void invoke<string>("get_effective_locale").then((effectiveLocale) => {
       if (isLocale(effectiveLocale)) {
         setLocale(effectiveLocale, { reload: false });
+        set(this.locale, effectiveLocale);
       }
     });
   });

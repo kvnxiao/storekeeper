@@ -145,6 +145,14 @@ mod tests {
     }
 
     #[test]
+    fn test_format_duration_days() {
+        ensure_init();
+        // 3000 minutes = 2d 2h 0m
+        let result = format_duration(3000);
+        assert!(result.contains("2d"), "Expected '2d' in: {result}");
+    }
+
+    #[test]
     fn test_format_duration_zero() {
         ensure_init();
         let result = format_duration(0);
@@ -161,11 +169,37 @@ mod tests {
     }
 
     #[test]
-    fn test_format_time() {
+    fn test_format_time_today() {
         ensure_init();
-        let result = format_time(15, 45);
-        // Should produce locale-formatted time string (e.g. "3:45 PM" for en)
+        let now = chrono::Local::now();
+        let completion = now + chrono::TimeDelta::hours(1);
+        let result = format_time(completion, now);
+        // Same day: should produce time only (e.g. "3:45 PM" for en)
         assert!(!result.is_empty());
+        // Should NOT contain a weekday abbreviation
+        assert!(
+            !result.contains("Mon")
+                && !result.contains("Tue")
+                && !result.contains("Wed")
+                && !result.contains("Thu")
+                && !result.contains("Fri")
+                && !result.contains("Sat")
+                && !result.contains("Sun")
+        );
+    }
+
+    #[test]
+    fn test_format_time_different_day() {
+        ensure_init();
+        let now = chrono::Local::now();
+        let completion = now + chrono::TimeDelta::days(2);
+        let result = format_time(completion, now);
+        // Different day: should contain a weekday abbreviation
+        assert!(!result.is_empty());
+        let has_weekday = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+            .iter()
+            .any(|day| result.contains(day));
+        assert!(has_weekday, "Expected weekday in: {result}");
     }
 
     #[test]
@@ -208,5 +242,33 @@ mod tests {
             Some(&plural_rules),
         );
         assert_eq!(result, "Resin in 5 minutes");
+    }
+
+    #[test]
+    fn test_format_duration_ja_uses_localized_units() {
+        use icu_experimental::duration::{
+            DurationFormatter, DurationFormatterPreferences, ValidatedDurationFormatterOptions,
+            options::{BaseStyle, DurationFormatterOptions, FieldDisplay},
+        };
+
+        let ja_locale: icu_locale::Locale = "ja".parse().expect("valid locale");
+        let mut opts = DurationFormatterOptions::default();
+        opts.base = BaseStyle::Short;
+        opts.minute_visibility = Some(FieldDisplay::Always);
+        let validated = ValidatedDurationFormatterOptions::validate(opts).expect("valid opts");
+        let prefs = DurationFormatterPreferences::from(ja_locale);
+        let formatter = DurationFormatter::try_new(prefs, validated).expect("formatter");
+        let dur = icu_experimental::duration::Duration {
+            days: 4,
+            hours: 21,
+            minutes: 15,
+            ..Default::default()
+        };
+        let result = formatter.format(&dur).to_string();
+        // Japanese Short style uses 日/時間/分, not ASCII d/h/m
+        assert!(
+            result.contains('日'),
+            "Expected Japanese day unit in: {result}"
+        );
     }
 }

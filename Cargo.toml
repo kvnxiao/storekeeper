@@ -56,6 +56,7 @@ md-5 = "0.10"
 # Internationalization (ICU4X) — pinned to rev that includes re-export fix (PR #7616)
 icu_locale = { git = "https://github.com/unicode-org/icu4x", rev = "bd6b9179" }
 icu_plurals = { git = "https://github.com/unicode-org/icu4x", rev = "bd6b9179" }
+icu_calendar = { git = "https://github.com/unicode-org/icu4x", rev = "bd6b9179" }
 icu_datetime = { git = "https://github.com/unicode-org/icu4x", rev = "bd6b9179" }
 icu_experimental = { git = "https://github.com/unicode-org/icu4x", rev = "bd6b9179" }
 icu_time = { git = "https://github.com/unicode-org/icu4x", rev = "bd6b9179" }

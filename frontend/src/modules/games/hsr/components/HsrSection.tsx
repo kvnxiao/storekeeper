@@ -1,16 +1,28 @@
+import { useAtomValue } from "jotai";
 import { atoms } from "@/modules/atoms";
-import { HsrResource } from "@/modules/games/games.constants";
-import { ResourceCard } from "@/modules/resources/components/ResourceCard";
+import {
+  getResourceDisplayName,
+  HsrResource,
+} from "@/modules/games/games.constants";
+import { StaminaCard } from "@/modules/resources/components/StaminaCard";
 import { GameSection } from "@/modules/ui/components/GameSection";
 import * as m from "@/paraglide/messages";
 
-export const HsrSection: React.FC = () => (
-  <GameSection title={m.game_hsr_name()}>
-    <ResourceCard
-      resourceAtom={atoms.games.hsr.trailblazePower}
-      resourceType={HsrResource.TrailblazePower}
-      iconPath="/icons/game/hsr/Item_Trailblaze_Power.webp"
-      variant="stamina"
-    />
-  </GameSection>
-);
+export const HsrSection: React.FC = () => {
+  const isRefreshing = useAtomValue(atoms.core.isRefreshing);
+
+  const tbpData = useAtomValue(atoms.games.hsr.trailblazePower);
+  const tbpTime = useAtomValue(atoms.games.hsr.trailblazePowerTime);
+
+  return (
+    <GameSection title={m.game_hsr_name()}>
+      <StaminaCard
+        iconPath="/icons/game/hsr/Item_Trailblaze_Power.webp"
+        name={getResourceDisplayName(HsrResource.TrailblazePower)}
+        data={tbpData ?? undefined}
+        formattedTime={tbpTime}
+        isRefreshing={isRefreshing}
+      />
+    </GameSection>
+  );
+};
