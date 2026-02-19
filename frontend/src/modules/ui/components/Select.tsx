@@ -58,10 +58,9 @@ const selectItemStyle = tv({
   base: [
     "group flex w-full cursor-default select-none items-center gap-x-1.5 rounded-lg px-2 py-1.5 text-sm outline-none",
     "text-zinc-950 dark:text-white",
-    // Hover state - subtle background
-    "hovered:bg-zinc-100 dark:hovered:bg-zinc-700/50",
-    // Focus state - blue background like Catalyst
-    "focused:bg-blue-500 focused:text-white",
+    // Hover/focus state - blue background like Catalyst
+    "hover:bg-blue-500 hover:text-white",
+    "focus:bg-blue-500 focus:text-white",
     "disabled:pointer-events-none disabled:opacity-50",
   ],
 });
@@ -130,7 +129,7 @@ export const SelectItem: React.FC<SelectItemProps> = ({
           <span className="flex size-4 items-center justify-center">
             {isSelected && (
               <CheckIcon
-                className="size-4 text-blue-500 group-focused:text-white"
+                className="size-4 text-blue-500 group-hover:text-white group-focus:text-white"
                 aria-hidden="true"
               />
             )}
