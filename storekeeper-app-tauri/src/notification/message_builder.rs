@@ -1,6 +1,6 @@
 //! Notification message building and display name resolution.
 
-use chrono::{DateTime, Local, Timelike, Utc};
+use chrono::{DateTime, Local, Utc};
 use storekeeper_core::GameId;
 
 use crate::i18n;
@@ -47,10 +47,9 @@ pub(crate) fn build_notification_body(info: &ResourceInfo, now: DateTime<Utc>) -
         let max = info.max.map_or_else(|| "?".to_string(), |v| v.to_string());
         let mins_remaining = (info.completion_at - now).num_minutes();
         let duration = i18n::format_duration(mins_remaining);
-        let local_time = info.completion_at.with_timezone(&Local);
-        let hour = u8::try_from(local_time.hour()).unwrap_or(0);
-        let minute = u8::try_from(local_time.minute()).unwrap_or(0);
-        let local_time = i18n::format_time(hour, minute);
+        let completion_local = info.completion_at.with_timezone(&Local);
+        let now_local = now.with_timezone(&Local);
+        let local_time = i18n::format_time(completion_local, now_local);
 
         i18n::t_args(
             "notification_stamina_progress",
@@ -68,10 +67,9 @@ pub(crate) fn build_notification_body(info: &ResourceInfo, now: DateTime<Utc>) -
 
         let mins_remaining = (info.completion_at - now).num_minutes();
         let duration = i18n::format_duration(mins_remaining);
-        let local_time = info.completion_at.with_timezone(&Local);
-        let hour = u8::try_from(local_time.hour()).unwrap_or(0);
-        let minute = u8::try_from(local_time.minute()).unwrap_or(0);
-        let local_time = i18n::format_time(hour, minute);
+        let completion_local = info.completion_at.with_timezone(&Local);
+        let now_local = now.with_timezone(&Local);
+        let local_time = i18n::format_time(completion_local, now_local);
 
         i18n::t_args(
             "notification_cooldown_remaining",
@@ -192,5 +190,67 @@ mod tests {
         };
         let body = build_notification_body(&info, now);
         assert!(body.contains("Ready in"));
+    }
+
+    // =========================================================================
+    // duration >= 24h tests
+    // =========================================================================
+
+    #[test]
+    fn test_stamina_duration_over_24h() {
+        ensure_init();
+        let now = Utc::now();
+        // 3000 minutes = 2d 2h 0m
+        let completion_at = now + TimeDelta::minutes(3000);
+        let info = ResourceInfo {
+            completion_at,
+            is_complete: false,
+            current: Some(10),
+            max: Some(160),
+            regen_rate_seconds: Some(480),
+        };
+        let body = build_notification_body(&info, now);
+        // Should contain day unit (e.g. "2d" in narrow format)
+        assert!(body.contains("2d"), "Expected '2d' in: {body}");
+    }
+
+    #[test]
+    fn test_cooldown_duration_over_24h() {
+        ensure_init();
+        let now = Utc::now();
+        // 3000 minutes = 2d 2h 0m
+        let completion_at = now + TimeDelta::minutes(3000);
+        let info = ResourceInfo {
+            completion_at,
+            is_complete: false,
+            current: None,
+            max: None,
+            regen_rate_seconds: None,
+        };
+        let body = build_notification_body(&info, now);
+        assert!(body.contains("2d"), "Expected '2d' in: {body}");
+    }
+
+    // =========================================================================
+    // weekday shown for different-day completion
+    // =========================================================================
+
+    #[test]
+    fn test_completion_different_day_shows_weekday() {
+        ensure_init();
+        let now = Utc::now();
+        let completion_at = now + TimeDelta::days(2);
+        let info = ResourceInfo {
+            completion_at,
+            is_complete: false,
+            current: None,
+            max: None,
+            regen_rate_seconds: None,
+        };
+        let body = build_notification_body(&info, now);
+        let has_weekday = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+            .iter()
+            .any(|day| body.contains(day));
+        assert!(has_weekday, "Expected weekday in: {body}");
     }
 }

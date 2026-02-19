@@ -46,6 +46,7 @@ reqwest.workspace = true
 anyhow.workspace = true
 
 # Internationalization (ICU4X)
+icu_calendar.workspace = true
 icu_locale.workspace = true
 icu_plurals.workspace = true
 icu_datetime.workspace = true

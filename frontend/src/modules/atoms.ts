@@ -35,7 +35,7 @@ class AtomsContainer {
   constructor() {
     this.core = new CoreAtoms();
     this.games = new GamesAtoms(this.core);
-    this.settings = new SettingsAtoms();
+    this.settings = new SettingsAtoms(this.core);
   }
 }
 

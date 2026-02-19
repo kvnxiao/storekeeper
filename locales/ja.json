@@ -1,0 +1,108 @@
+{
+  "app_title": "Storekeeper",
+
+  "dashboard_refresh_resources": "リソースを更新",
+  "dashboard_settings": "設定",
+  "dashboard_no_games": "ゲーム未設定",
+  "dashboard_no_games_hint": "設定ファイルにゲームアカウント情報を追加してください。",
+
+  "stamina_full": "満タン！",
+  "stamina_full_in": "回復まで",
+  "stamina_progress_label": "{name}：{current} / {max}",
+
+  "cooldown_ready": "準備完了！",
+  "cooldown_ready_in": "準備完了まで",
+
+  "time_remaining_full": "満タン",
+
+  "game_genshin_name": "原神",
+  "game_hsr_name": "崩壊：スターレイル",
+  "game_zzz_name": "ゼンレスゾーンゼロ",
+  "game_wuwa_name": "鳴潮",
+
+  "resource_resin": "天然樹脂",
+  "resource_parametric_transformer": "参量物質変化器",
+  "resource_realm_currency": "洞天宝銭",
+  "resource_expeditions": "探索派遣",
+  "resource_trailblaze_power": "開拓力",
+  "resource_battery": "バッテリー",
+  "resource_waveplates": "結晶波長板",
+  "resource_unknown": "不明なリソース",
+
+  "notification_stamina_full": "満タン！",
+  "notification_stamina_progress": "{current}/{max} - 回復まで{duration}（{local_time}）",
+  "notification_cooldown_complete": "準備完了！",
+  "notification_cooldown_remaining": "準備完了まで{duration}（{local_time}）",
+  "notification_title": "{game_name} - {resource_name}",
+  "notification_no_data": "データなし、更新してください",
+
+  "tray_refresh_now": "今すぐ更新",
+  "tray_open_config_folder": "設定フォルダを開く",
+  "tray_quit": "終了",
+
+  "settings_title": "設定",
+  "settings_back": "戻る",
+  "settings_failed_to_load": "設定の読み込みに失敗しました：{error}",
+  "settings_loading": "設定を読み込み中…",
+  "settings_unsaved_changes": "未保存の変更があります。",
+  "settings_undo": "変更を取り消す",
+  "settings_save": "変更を保存",
+
+  "settings_general_title": "一般",
+  "settings_general_description": "ポーリングと起動時の動作に関する設定。",
+  "settings_general_poll_interval": "ポーリング間隔（秒）",
+  "settings_general_poll_description": "ゲームAPIからリソースデータを取得する頻度。",
+  "settings_general_start_minimized": "システムトレイに最小化して起動",
+  "settings_general_log_level": "ログレベル",
+  "settings_general_log_error": "エラー",
+  "settings_general_log_warning": "警告",
+  "settings_general_log_info": "情報",
+  "settings_general_log_debug": "デバッグ",
+  "settings_general_log_trace": "トレース",
+  "settings_general_language": "言語",
+  "settings_general_language_system_default": "システムデフォルト",
+  "settings_general_autostart": "システム起動時に自動起動",
+  "settings_general_open_config": "設定フォルダを開く",
+
+  "settings_game_enable_tracking": "{title}のトラッキングを有効化",
+  "settings_game_uid": "UID",
+  "settings_game_uid_placeholder": "UIDを入力",
+  "settings_game_auto_claim": "デイリー報酬を自動受取",
+
+  "settings_game_configure_genshin": "原神アカウントを設定します。",
+  "settings_game_configure_hsr": "崩壊：スターレイルアカウントを設定します。",
+  "settings_game_configure_zzz": "ゼンレスゾーンゼロアカウントを設定します。",
+  "settings_game_configure_wuwa": "鳴潮アカウントを設定します。",
+
+  "settings_wuwa_enable_tracking": "鳴潮のトラッキングを有効化",
+  "settings_wuwa_player_id": "プレイヤーID",
+  "settings_wuwa_player_id_placeholder": "プレイヤーIDを入力",
+
+  "settings_notifications_title": "通知",
+  "settings_notifications_description": "このゲームのリソースに関するデスクトップ通知を設定します。",
+
+  "settings_notification_preview": "{label}通知をプレビュー",
+  "settings_notification_mode": "通知モード",
+  "settings_notification_minutes_before_full": "満タンまでの分数",
+  "settings_notification_at_value": "指定値で通知",
+  "settings_notification_value_with_max": "値 >= で通知（最大 {maxValue}）",
+  "settings_notification_value": "値 >= で通知",
+  "settings_notification_cooldown": "再通知間隔（分）",
+  "settings_notification_once": "一度のみ通知",
+  "settings_notification_renotify_stamina": "閾値超過中は繰り返し通知",
+  "settings_notification_renotify_cooldown": "リソース準備完了中は繰り返し通知",
+
+  "settings_hoyolab_title": "HoYoLab認証",
+  "settings_hoyolab_description": "原神、崩壊：スターレイル、ゼンレスゾーンゼロ用のHoYoLab Cookieを入力してください。HoYoLabサイトの開発者ツールから取得できます。",
+  "settings_hoyolab_ltuid_placeholder": "ltuid_v2 Cookieの値",
+  "settings_hoyolab_ltoken_placeholder": "ltoken_v2 Cookieの値",
+  "settings_hoyolab_ltmid_placeholder": "ltmid_v2 Cookieの値",
+
+  "settings_kuro_title": "Kuro Games認証",
+  "settings_kuro_description": "鳴潮用です。oauth_codeはKuro SDKランチャーのキャッシュから自動取得されます。自動検出を上書きする場合のみ設定してください。",
+  "settings_kuro_oauth_label": "OAuthコード（オプション）",
+  "settings_kuro_oauth_placeholder": "自動検出を使用する場合は空欄",
+
+  "textfield_hide_password": "パスワードを隠す",
+  "textfield_show_password": "パスワードを表示"
+}

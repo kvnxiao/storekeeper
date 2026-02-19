@@ -13,21 +13,22 @@ interface FormattedTime {
 
 /**
  * Hook to format a datetime into relative and absolute time strings.
- * Updates automatically based on the tick atom.
+ * Updates automatically based on the tick atom and locale atom.
  */
 export function useFormattedTime(
   datetime: string | null | undefined,
 ): FormattedTime {
   const tick = useAtomValue(atoms.core.tick);
+  const locale = useAtomValue(atoms.core.locale);
 
   const relativeTime = useMemo(
-    () => formatTimeRemaining(datetime, tick),
-    [datetime, tick],
+    () => formatTimeRemaining(datetime, tick, locale),
+    [datetime, tick, locale],
   );
 
   const absoluteTime = useMemo(
-    () => formatAbsoluteDateTime(datetime),
-    [datetime],
+    () => formatAbsoluteDateTime(datetime, tick, locale),
+    [datetime, tick, locale],
   );
 
   return { relativeTime, absoluteTime };

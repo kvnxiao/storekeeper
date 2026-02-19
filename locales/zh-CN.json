@@ -1,0 +1,108 @@
+{
+  "app_title": "Storekeeper",
+
+  "dashboard_refresh_resources": "刷新资源",
+  "dashboard_settings": "设置",
+  "dashboard_no_games": "未配置游戏",
+  "dashboard_no_games_hint": "在配置文件中添加游戏账号信息以开始使用。",
+
+  "stamina_full": "已满！",
+  "stamina_full_in": "回满还需",
+  "stamina_progress_label": "{name}：{current} / {max}",
+
+  "cooldown_ready": "已就绪！",
+  "cooldown_ready_in": "就绪还需",
+
+  "time_remaining_full": "已满",
+
+  "game_genshin_name": "原神",
+  "game_hsr_name": "崩坏：星穹铁道",
+  "game_zzz_name": "绝区零",
+  "game_wuwa_name": "鸣潮",
+
+  "resource_resin": "原粹树脂",
+  "resource_parametric_transformer": "参量质变仪",
+  "resource_realm_currency": "洞天宝钱",
+  "resource_expeditions": "探索派遣",
+  "resource_trailblaze_power": "开拓力",
+  "resource_battery": "电量",
+  "resource_waveplates": "结晶波片",
+  "resource_unknown": "未知资源",
+
+  "notification_stamina_full": "已满！",
+  "notification_stamina_progress": "{current}/{max} - {duration}后回满（{local_time}）",
+  "notification_cooldown_complete": "已就绪！",
+  "notification_cooldown_remaining": "{duration}后就绪（{local_time}）",
+  "notification_title": "{game_name} - {resource_name}",
+  "notification_no_data": "暂无数据，请尝试刷新",
+
+  "tray_refresh_now": "立即刷新",
+  "tray_open_config_folder": "打开配置文件夹",
+  "tray_quit": "退出",
+
+  "settings_title": "设置",
+  "settings_back": "返回",
+  "settings_failed_to_load": "加载设置失败：{error}",
+  "settings_loading": "正在加载设置…",
+  "settings_unsaved_changes": "您有未保存的更改。",
+  "settings_undo": "撤销更改",
+  "settings_save": "保存更改",
+
+  "settings_general_title": "通用",
+  "settings_general_description": "轮询和启动行为的全局设置。",
+  "settings_general_poll_interval": "轮询间隔（秒）",
+  "settings_general_poll_description": "从游戏 API 获取资源数据的频率。",
+  "settings_general_start_minimized": "启动时最小化到系统托盘",
+  "settings_general_log_level": "日志级别",
+  "settings_general_log_error": "错误",
+  "settings_general_log_warning": "警告",
+  "settings_general_log_info": "信息",
+  "settings_general_log_debug": "调试",
+  "settings_general_log_trace": "追踪",
+  "settings_general_language": "语言",
+  "settings_general_language_system_default": "跟随系统",
+  "settings_general_autostart": "开机自动启动",
+  "settings_general_open_config": "打开配置文件夹",
+
+  "settings_game_enable_tracking": "启用{title}追踪",
+  "settings_game_uid": "UID",
+  "settings_game_uid_placeholder": "输入您的 UID",
+  "settings_game_auto_claim": "自动领取每日奖励",
+
+  "settings_game_configure_genshin": "配置您的原神账号。",
+  "settings_game_configure_hsr": "配置您的崩坏：星穹铁道账号。",
+  "settings_game_configure_zzz": "配置您的绝区零账号。",
+  "settings_game_configure_wuwa": "配置您的鸣潮账号。",
+
+  "settings_wuwa_enable_tracking": "启用鸣潮追踪",
+  "settings_wuwa_player_id": "玩家 ID",
+  "settings_wuwa_player_id_placeholder": "输入您的玩家 ID",
+
+  "settings_notifications_title": "通知",
+  "settings_notifications_description": "配置该游戏资源的桌面通知。",
+
+  "settings_notification_preview": "预览{label}通知",
+  "settings_notification_mode": "通知模式",
+  "settings_notification_minutes_before_full": "回满前分钟数",
+  "settings_notification_at_value": "到达数值时",
+  "settings_notification_value_with_max": "当 >= 该值时通知（最大 {maxValue}）",
+  "settings_notification_value": "当 >= 该值时通知",
+  "settings_notification_cooldown": "再次提醒间隔（分钟）",
+  "settings_notification_once": "仅通知一次",
+  "settings_notification_renotify_stamina": "超过阈值期间持续提醒",
+  "settings_notification_renotify_cooldown": "资源就绪期间持续提醒",
+
+  "settings_hoyolab_title": "米游社认证",
+  "settings_hoyolab_description": "输入您的 HoYoLab Cookie，用于原神、崩坏：星穹铁道和绝区零。在 HoYoLab 网站的开发者工具中获取。",
+  "settings_hoyolab_ltuid_placeholder": "您的 ltuid_v2 Cookie 值",
+  "settings_hoyolab_ltoken_placeholder": "您的 ltoken_v2 Cookie 值",
+  "settings_hoyolab_ltmid_placeholder": "您的 ltmid_v2 Cookie 值",
+
+  "settings_kuro_title": "库洛游戏认证",
+  "settings_kuro_description": "用于鸣潮。oauth_code 会自动从库洛 SDK 启动器缓存中读取。仅在需要覆盖自动检测时设置。",
+  "settings_kuro_oauth_label": "OAuth 码（可选覆盖）",
+  "settings_kuro_oauth_placeholder": "留空以使用自动检测",
+
+  "textfield_hide_password": "隐藏密码",
+  "textfield_show_password": "显示密码"
+}

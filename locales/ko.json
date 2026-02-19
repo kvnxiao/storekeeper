@@ -1,0 +1,108 @@
+{
+  "app_title": "Storekeeper",
+
+  "dashboard_refresh_resources": "리소스 새로고침",
+  "dashboard_settings": "설정",
+  "dashboard_no_games": "구성된 게임 없음",
+  "dashboard_no_games_hint": "설정 파일에 게임 계정 정보를 추가하여 시작하세요.",
+
+  "stamina_full": "가득 참!",
+  "stamina_full_in": "완충까지",
+  "stamina_progress_label": "{name}: {current} / {max}",
+
+  "cooldown_ready": "준비 완료!",
+  "cooldown_ready_in": "준비까지",
+
+  "time_remaining_full": "가득 참",
+
+  "game_genshin_name": "원신",
+  "game_hsr_name": "붕괴: 스타레일",
+  "game_zzz_name": "젠레스 존 제로",
+  "game_wuwa_name": "명조",
+
+  "resource_resin": "퓨어 레진",
+  "resource_parametric_transformer": "매개변수 변환기",
+  "resource_realm_currency": "선계 화폐",
+  "resource_expeditions": "탐사 파견",
+  "resource_trailblaze_power": "개척력",
+  "resource_battery": "배터리",
+  "resource_waveplates": "결정 웨이브 플레이트",
+  "resource_unknown": "알 수 없는 리소스",
+
+  "notification_stamina_full": "가득 참!",
+  "notification_stamina_progress": "{current}/{max} - {duration} 후 완충 ({local_time})",
+  "notification_cooldown_complete": "준비 완료!",
+  "notification_cooldown_remaining": "{duration} 후 준비 완료 ({local_time})",
+  "notification_title": "{game_name} - {resource_name}",
+  "notification_no_data": "데이터 없음, 새로고침하세요",
+
+  "tray_refresh_now": "지금 새로고침",
+  "tray_open_config_folder": "설정 폴더 열기",
+  "tray_quit": "종료",
+
+  "settings_title": "설정",
+  "settings_back": "뒤로",
+  "settings_failed_to_load": "설정 로드 실패: {error}",
+  "settings_loading": "설정 로드 중…",
+  "settings_unsaved_changes": "저장하지 않은 변경 사항이 있습니다.",
+  "settings_undo": "변경 취소",
+  "settings_save": "변경 저장",
+
+  "settings_general_title": "일반",
+  "settings_general_description": "폴링 및 시작 동작에 대한 전체 설정.",
+  "settings_general_poll_interval": "폴링 간격 (초)",
+  "settings_general_poll_description": "게임 API에서 리소스 데이터를 가져오는 주기.",
+  "settings_general_start_minimized": "시스템 트레이에 최소화하여 시작",
+  "settings_general_log_level": "로그 레벨",
+  "settings_general_log_error": "오류",
+  "settings_general_log_warning": "경고",
+  "settings_general_log_info": "정보",
+  "settings_general_log_debug": "디버그",
+  "settings_general_log_trace": "추적",
+  "settings_general_language": "언어",
+  "settings_general_language_system_default": "시스템 기본값",
+  "settings_general_autostart": "시스템 시작 시 자동 실행",
+  "settings_general_open_config": "설정 폴더 열기",
+
+  "settings_game_enable_tracking": "{title} 추적 활성화",
+  "settings_game_uid": "UID",
+  "settings_game_uid_placeholder": "UID를 입력하세요",
+  "settings_game_auto_claim": "일일 보상 자동 수령",
+
+  "settings_game_configure_genshin": "원신 계정을 설정합니다.",
+  "settings_game_configure_hsr": "붕괴: 스타레일 계정을 설정합니다.",
+  "settings_game_configure_zzz": "젠레스 존 제로 계정을 설정합니다.",
+  "settings_game_configure_wuwa": "명조 계정을 설정합니다.",
+
+  "settings_wuwa_enable_tracking": "명조 추적 활성화",
+  "settings_wuwa_player_id": "플레이어 ID",
+  "settings_wuwa_player_id_placeholder": "플레이어 ID를 입력하세요",
+
+  "settings_notifications_title": "알림",
+  "settings_notifications_description": "이 게임 리소스에 대한 데스크톱 알림을 설정합니다.",
+
+  "settings_notification_preview": "{label} 알림 미리보기",
+  "settings_notification_mode": "알림 모드",
+  "settings_notification_minutes_before_full": "완충 전 분",
+  "settings_notification_at_value": "지정 값에서 알림",
+  "settings_notification_value_with_max": "값 >= 일 때 알림 (최대 {maxValue})",
+  "settings_notification_value": "값 >= 일 때 알림",
+  "settings_notification_cooldown": "재알림 간격 (분)",
+  "settings_notification_once": "한 번만 알림",
+  "settings_notification_renotify_stamina": "임계값 초과 시 반복 알림",
+  "settings_notification_renotify_cooldown": "리소스 준비 완료 시 반복 알림",
+
+  "settings_hoyolab_title": "HoYoLab 인증",
+  "settings_hoyolab_description": "원신, 붕괴: 스타레일, 젠레스 존 제로용 HoYoLab 쿠키를 입력하세요. HoYoLab 웹사이트 개발자 도구에서 가져올 수 있습니다.",
+  "settings_hoyolab_ltuid_placeholder": "ltuid_v2 쿠키 값",
+  "settings_hoyolab_ltoken_placeholder": "ltoken_v2 쿠키 값",
+  "settings_hoyolab_ltmid_placeholder": "ltmid_v2 쿠키 값",
+
+  "settings_kuro_title": "쿠로 게임즈 인증",
+  "settings_kuro_description": "명조용입니다. oauth_code는 Kuro SDK 런처 캐시에서 자동으로 가져옵니다. 자동 감지를 재정의해야 하는 경우에만 설정하세요.",
+  "settings_kuro_oauth_label": "OAuth 코드 (선택적 재정의)",
+  "settings_kuro_oauth_placeholder": "자동 감지를 사용하려면 비워 두세요",
+
+  "textfield_hide_password": "비밀번호 숨기기",
+  "textfield_show_password": "비밀번호 표시"
+}
