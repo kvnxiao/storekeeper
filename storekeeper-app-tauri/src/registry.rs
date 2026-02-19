@@ -1,6 +1,6 @@
 //! Game client registry for dynamic client management.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use storekeeper_core::{DynGameClient, GameId};
 use tauri::{AppHandle, Emitter};
@@ -56,7 +56,34 @@ impl GameClientRegistry {
     /// Returns a map from game ID to the JSON-serialized resources.
     /// Clients that fail to fetch are logged and skipped.
     pub async fn fetch_all(&self, app_handle: &AppHandle) -> HashMap<GameId, serde_json::Value> {
-        provider_batch::batch_by_provider(&self.clients, |game_id, client| {
+        provider_batch::batch_by_provider(&self.clients, None, |game_id, client| {
+            let app_handle = app_handle.clone();
+            Box::pin(async move {
+                let result = client.fetch_resources_json().await;
+
+                if let Ok(ref resources) = result {
+                    let payload = GameResourcePayload {
+                        game_id,
+                        data: resources,
+                    };
+                    let _ = app_handle.emit(AppEvent::GameResourceUpdated.as_str(), &payload);
+                }
+
+                (game_id, result)
+            })
+        })
+        .await
+    }
+
+    /// Fetches resources from a subset of registered clients.
+    ///
+    /// Same as `fetch_all` but only processes games in the given set.
+    pub async fn fetch_for_games(
+        &self,
+        game_ids: &HashSet<GameId>,
+        app_handle: &AppHandle,
+    ) -> HashMap<GameId, serde_json::Value> {
+        provider_batch::batch_by_provider(&self.clients, Some(game_ids), |game_id, client| {
             let app_handle = app_handle.clone();
             Box::pin(async move {
                 let result = client.fetch_resources_json().await;

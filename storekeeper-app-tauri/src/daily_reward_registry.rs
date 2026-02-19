@@ -1,6 +1,6 @@
 //! Daily reward client registry for managing reward claiming across games.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use anyhow::Context;
 use storekeeper_core::{DynDailyRewardClient, GameId};
@@ -88,11 +88,24 @@ impl DailyRewardRegistry {
             .context("failed to claim daily reward")
     }
 
+    /// Gets reward status from a subset of registered clients.
+    ///
+    /// Same as `get_all_status` but only processes games in the given set.
+    pub async fn get_status_for_games(
+        &self,
+        game_ids: &HashSet<GameId>,
+    ) -> HashMap<GameId, serde_json::Value> {
+        provider_batch::batch_by_provider(&self.clients, Some(game_ids), |game_id, client| {
+            Box::pin(async move { (game_id, client.get_reward_status_json().await) })
+        })
+        .await
+    }
+
     /// Gets reward status from all registered clients with rate limit awareness.
     ///
     /// Returns a map from game ID to the JSON-serialized reward status.
     pub async fn get_all_status(&self) -> HashMap<GameId, serde_json::Value> {
-        provider_batch::batch_by_provider(&self.clients, |game_id, client| {
+        provider_batch::batch_by_provider(&self.clients, None, |game_id, client| {
             Box::pin(async move { (game_id, client.get_reward_status_json().await) })
         })
         .await
@@ -102,7 +115,7 @@ impl DailyRewardRegistry {
     ///
     /// Returns a map from game ID to the JSON-serialized claim results.
     pub async fn claim_all(&self) -> HashMap<GameId, serde_json::Value> {
-        provider_batch::batch_by_provider(&self.clients, |game_id, client| {
+        provider_batch::batch_by_provider(&self.clients, None, |game_id, client| {
             Box::pin(async move {
                 let result = client.claim_daily_reward_json().await;
                 // Small delay between claims to avoid rate limiting

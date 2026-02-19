@@ -1,10 +1,9 @@
 //! Application state management.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use anyhow::Context;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use storekeeper_core::{AppConfig, ClaimTime, GameId, SecretsConfig, ensure_configs_exist};
@@ -64,6 +63,9 @@ pub struct StateData {
     /// Application configuration.
     pub config: AppConfig,
 
+    /// Secrets configuration (kept in memory for diff detection on reload).
+    pub secrets: SecretsConfig,
+
     /// Notification cooldown tracker.
     pub notification_tracker: NotificationTracker,
 }
@@ -116,6 +118,7 @@ impl AppState {
                 daily_reward_registry: Arc::new(daily_reward_registry),
                 daily_reward_status: AllDailyRewardStatus::default(),
                 config,
+                secrets,
                 notification_tracker: NotificationTracker::default(),
             })),
             refreshing: Arc::new(AtomicBool::new(false)),
@@ -273,35 +276,63 @@ impl AppState {
     }
 
     // ========================================================================
-    // Notification Methods
+    // Selective Fetch Methods
     // ========================================================================
 
-    /// Reloads configuration and reinitializes game clients.
-    ///
-    /// This reloads config.toml and secrets.toml, then recreates the game
-    /// client registries with the new settings. All new state is built outside
-    /// the write lock and swapped atomically.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if config or secrets files cannot be loaded.
-    pub async fn reload_config(&self) -> anyhow::Result<()> {
-        // Build all new state outside the write lock
-        let config = AppConfig::load().context("failed to load config")?;
-        let secrets = SecretsConfig::load().context("failed to load secrets")?;
+    /// Fetches resources from a subset of configured game clients.
+    pub async fn fetch_resources_for_games(
+        &self,
+        game_ids: &HashSet<GameId>,
+        app_handle: &tauri::AppHandle,
+    ) -> HashMap<GameId, serde_json::Value> {
+        let registry = {
+            let state = self.inner.read().await;
+            Arc::clone(&state.registry)
+        };
+        registry.fetch_for_games(game_ids, app_handle).await
+    }
 
-        let registry = create_registry(&config, &secrets);
-        let daily_reward_registry = create_daily_reward_registry(&config, &secrets);
+    /// Fetches daily reward status from a subset of configured games.
+    pub async fn fetch_daily_reward_status_for_games(
+        &self,
+        game_ids: &HashSet<GameId>,
+    ) -> HashMap<GameId, serde_json::Value> {
+        let daily_reward_registry = {
+            let state = self.inner.read().await;
+            Arc::clone(&state.daily_reward_registry)
+        };
+        daily_reward_registry.get_status_for_games(game_ids).await
+    }
 
-        // Swap atomically under write lock
-        let mut state = self.inner.write().await;
-        state.config = config;
-        state.registry = Arc::new(registry);
-        state.daily_reward_registry = Arc::new(daily_reward_registry);
-        state.notification_tracker.clear_all();
+    // ========================================================================
+    // Config Reload Methods
+    // ========================================================================
 
-        tracing::info!("Configuration reloaded successfully");
-        Ok(())
+    /// Applies new config and secrets to state, optionally rebuilding registries.
+    ///
+    /// When `rebuild_registries` is true, game client and daily reward registries
+    /// are recreated from the new config/secrets. This is only needed when
+    /// game-level settings (uid, region, enabled) or credentials change.
+    pub async fn apply_config(
+        &self,
+        config: AppConfig,
+        secrets: SecretsConfig,
+        rebuild_registries: bool,
+    ) {
+        if rebuild_registries {
+            let registry = create_registry(&config, &secrets);
+            let daily_reward_registry = create_daily_reward_registry(&config, &secrets);
+
+            let mut state = self.inner.write().await;
+            state.config = config;
+            state.secrets = secrets;
+            state.registry = Arc::new(registry);
+            state.daily_reward_registry = Arc::new(daily_reward_registry);
+        } else {
+            let mut state = self.inner.write().await;
+            state.config = config;
+            state.secrets = secrets;
+        }
     }
 }
 

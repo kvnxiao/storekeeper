@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::error::{Error, Result};
 
 /// Secrets configuration loaded from `secrets.toml`.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SecretsConfig {
     /// `HoYoLab` authentication.
     #[serde(default)]
@@ -155,7 +155,7 @@ ltmid_v2 = ""
 /// `HoYoLab` authentication secrets.
 ///
 /// Uses the v2 cookie format which is the current standard on HoYoLab.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HoyolabSecrets {
     /// `HoYoLab` account ID v2 (ltuid_v2 cookie).
     #[serde(default)]
@@ -197,7 +197,7 @@ impl HoyolabSecrets {
 /// launcher cache at `%APPDATA%/KR_G153/A1730/KRSDKUserLauncherCache.json`.
 ///
 /// If set in `secrets.toml`, it acts as an override for the cached value.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct KuroSecrets {
     /// OAuth code (XOR-5 decoded) from launcher cache.
     /// Optional: if not provided, will be loaded from the Kuro SDK cache.

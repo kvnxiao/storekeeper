@@ -101,3 +101,12 @@ export interface SecretsConfig {
   hoyolab: HoyolabSecrets;
   kuro: KuroSecrets;
 }
+
+// =============================================================================
+// Command Result Types
+// =============================================================================
+
+/** Result returned by the save_and_apply command */
+export interface SaveResult {
+  effective_locale: string;
+}

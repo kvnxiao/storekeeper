@@ -92,8 +92,15 @@ impl NotificationTracker {
         self.cooldowns.remove(&(game_id, resource_type.to_string()));
     }
 
-    /// Clears all cooldown entries. Called on config reload so stale cooldowns
-    /// from a previous configuration don't suppress notifications.
+    /// Clears cooldown entries for a specific game.
+    ///
+    /// Removes all (game, resource) cooldowns matching the given game ID.
+    pub fn clear_for_game(&mut self, game_id: GameId) {
+        self.cooldowns.retain(|(id, _), _| *id != game_id);
+    }
+
+    /// Clears all cooldown entries.
+    #[allow(dead_code)]
     pub fn clear_all(&mut self) {
         self.cooldowns.clear();
     }
