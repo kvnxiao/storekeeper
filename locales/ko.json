@@ -103,6 +103,9 @@
   "settings_kuro_oauth_label": "OAuth 코드 (선택적 재정의)",
   "settings_kuro_oauth_placeholder": "자동 감지를 사용하려면 비워 두세요",
 
+  "daily_claimed": "출석 완료",
+  "daily_unclaimed": "미출석",
+
   "textfield_hide_password": "비밀번호 숨기기",
   "textfield_show_password": "비밀번호 표시"
 }

@@ -103,6 +103,9 @@
   "settings_kuro_oauth_label": "OAuth Code (Optional Override)",
   "settings_kuro_oauth_placeholder": "Leave empty to use automatic detection",
 
+  "daily_claimed": "Claimed",
+  "daily_unclaimed": "Unclaimed",
+
   "textfield_hide_password": "Hide password",
   "textfield_show_password": "Show password"
 }
