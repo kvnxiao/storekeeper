@@ -7,10 +7,12 @@ import {
   Heading,
 } from "react-aria-components";
 import { tv } from "tailwind-variants";
+import { Badge } from "@/modules/ui/components/Badge";
 import {
   cardContainerVariants,
   springTransition,
 } from "@/modules/ui/ui.animations";
+import * as m from "@/paraglide/messages";
 
 const disclosureStyle = tv({
   base: "overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-zinc-950/5 dark:bg-zinc-800 dark:ring-white/10",
@@ -26,11 +28,13 @@ const triggerStyle = tv({
 
 interface GameSectionProps {
   title: string;
+  claimStatus?: boolean | null;
   children: React.ReactNode;
 }
 
 export const GameSection: React.FC<GameSectionProps> = ({
   title,
+  claimStatus,
   children,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -44,8 +48,15 @@ export const GameSection: React.FC<GameSectionProps> = ({
     >
       <Heading>
         <Button slot="trigger" className={triggerStyle()}>
-          <span className="text-base font-semibold text-zinc-950 dark:text-white">
-            {title}
+          <span className="flex items-center gap-2">
+            <span className="text-base font-semibold text-zinc-950 dark:text-white">
+              {title}
+            </span>
+            {claimStatus != null && (
+              <Badge variant={claimStatus ? "success" : "warning"}>
+                {claimStatus ? m.daily_claimed() : m.daily_unclaimed()}
+              </Badge>
+            )}
           </span>
           <motion.span
             className="text-zinc-400"

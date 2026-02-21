@@ -103,6 +103,9 @@
   "settings_kuro_oauth_label": "OAuth 码（可选覆盖）",
   "settings_kuro_oauth_placeholder": "留空以使用自动检测",
 
+  "daily_claimed": "已签到",
+  "daily_unclaimed": "未签到",
+
   "textfield_hide_password": "隐藏密码",
   "textfield_show_password": "显示密码"
 }

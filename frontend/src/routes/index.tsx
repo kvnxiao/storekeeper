@@ -23,6 +23,8 @@ const DashboardPage: React.FC = () => {
 
   // Subscribe to backend resource updates
   useAtomValue(atoms.core.resourcesEventListener);
+  // Subscribe to daily reward claim status
+  useAtomValue(atoms.core.dailyClaimStatus);
   // Sync Paraglide locale from backend config on startup
   useAtomValue(atoms.core.localeSync);
 

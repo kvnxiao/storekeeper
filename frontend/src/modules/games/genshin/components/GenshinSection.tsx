@@ -4,6 +4,7 @@ import {
   GenshinResource,
   getResourceDisplayName,
 } from "@/modules/games/games.constants";
+import { GameId } from "@/modules/games/games.types";
 import { ExpeditionsCard } from "@/modules/games/genshin/components/ExpeditionsCard";
 import { CooldownCard } from "@/modules/resources/components/CooldownCard";
 import { StaminaCard } from "@/modules/resources/components/StaminaCard";
@@ -12,6 +13,8 @@ import * as m from "@/paraglide/messages";
 
 export const GenshinSection: React.FC = () => {
   const isRefreshing = useAtomValue(atoms.core.isRefreshing);
+  const claimStatusMap = useAtomValue(atoms.core.dailyClaimStatus);
+  const claimStatus = claimStatusMap.get(GameId.GenshinImpact) ?? null;
 
   const resinData = useAtomValue(atoms.games.genshin.resin);
   const resinTime = useAtomValue(atoms.games.genshin.resinTime);
@@ -23,7 +26,7 @@ export const GenshinSection: React.FC = () => {
   const realmTime = useAtomValue(atoms.games.genshin.realmCurrencyTime);
 
   return (
-    <GameSection title={m.game_genshin_name()}>
+    <GameSection title={m.game_genshin_name()} claimStatus={claimStatus}>
       <StaminaCard
         iconPath="/icons/game/genshin/Item_Original_Resin.webp"
         name={getResourceDisplayName(GenshinResource.Resin)}

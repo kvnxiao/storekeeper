@@ -19,6 +19,29 @@ import "@formatjs/intl-durationformat/polyfill.js";
 import { getLocale, isLocale, setLocale } from "@/paraglide/runtime";
 
 // =============================================================================
+// Backend response types (private, only used for extraction)
+// =============================================================================
+
+interface AllDailyRewardStatus {
+  games?: Record<string, { info?: { is_signed?: boolean } }>;
+  lastChecked?: string;
+}
+
+function extractClaimStatus(
+  status: AllDailyRewardStatus,
+): Map<GameId, boolean> {
+  const map = new Map<GameId, boolean>();
+  if (status.games) {
+    for (const [gameId, data] of Object.entries(status.games)) {
+      if (data?.info?.is_signed != null) {
+        map.set(gameId as GameId, data.info.is_signed);
+      }
+    }
+  }
+  return map;
+}
+
+// =============================================================================
 // Constants
 // =============================================================================
 
@@ -182,6 +205,41 @@ export class CoreAtoms {
 
   readonly resourcesEventListener = atom((get) => {
     get(this.resourcesEventEffect);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Daily reward claim status - tracks whether today's reward has been claimed
+  // ---------------------------------------------------------------------------
+
+  private readonly dailyRewardStatusBase = atom<Map<GameId, boolean>>(
+    new Map(),
+  );
+
+  private readonly dailyRewardEffect = atomEffect((_get, set) => {
+    // On mount: fetch initial status
+    void invoke<AllDailyRewardStatus>("refresh_daily_reward_status").then(
+      (status) => {
+        set(this.dailyRewardStatusBase, extractClaimStatus(status));
+      },
+    );
+
+    // Listen for claim events: re-fetch status
+    const unlistenPromise = listen("daily-reward-claimed", () => {
+      void invoke<AllDailyRewardStatus>("get_daily_reward_status").then(
+        (status) => {
+          set(this.dailyRewardStatusBase, extractClaimStatus(status));
+        },
+      );
+    });
+
+    return () => {
+      void unlistenPromise.then((fn) => fn()).catch(() => {});
+    };
+  });
+
+  readonly dailyClaimStatus = atom((get) => {
+    get(this.dailyRewardEffect);
+    return get(this.dailyRewardStatusBase);
   });
 
   // ---------------------------------------------------------------------------
