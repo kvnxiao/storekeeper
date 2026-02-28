@@ -261,7 +261,9 @@ export class CoreAtoms {
     return () => {
       void unlistenPromise.then((fn) => fn()).catch(() => {});
       clearInterval(resetCheckInterval);
-      if (resetTimeout != null) clearTimeout(resetTimeout);
+      if (resetTimeout != null) {
+        clearTimeout(resetTimeout);
+      }
     };
   });
 

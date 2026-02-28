@@ -58,7 +58,9 @@ export class SettingsAtoms {
     const origConfig = get(this.originalConfig);
     const origSecrets = get(this.originalSecrets);
 
-    if (!config || !secrets || !origConfig || !origSecrets) return false;
+    if (!config || !secrets || !origConfig || !origSecrets) {
+      return false;
+    }
     return !deepEqual(config, origConfig) || !deepEqual(secrets, origSecrets);
   });
 
@@ -104,16 +106,24 @@ export class SettingsAtoms {
   private readonly markAsSaved = atom(null, (get, set) => {
     const config = get(this.editedConfig);
     const secrets = get(this.editedSecrets);
-    if (config) set(this.originalConfig, structuredClone(config));
-    if (secrets) set(this.originalSecrets, structuredClone(secrets));
+    if (config) {
+      set(this.originalConfig, structuredClone(config));
+    }
+    if (secrets) {
+      set(this.originalSecrets, structuredClone(secrets));
+    }
   });
 
   /** Revert edited state back to original snapshots */
   readonly reset = atom(null, (get, set) => {
     const origConfig = get(this.originalConfig);
     const origSecrets = get(this.originalSecrets);
-    if (origConfig) set(this.editedConfig, structuredClone(origConfig));
-    if (origSecrets) set(this.editedSecrets, structuredClone(origSecrets));
+    if (origConfig) {
+      set(this.editedConfig, structuredClone(origConfig));
+    }
+    if (origSecrets) {
+      set(this.editedSecrets, structuredClone(origSecrets));
+    }
   });
 
   /** Error state for save operations */
@@ -129,7 +139,9 @@ export class SettingsAtoms {
   readonly save = atom(null, async (get, set) => {
     const config = get(this.editedConfig);
     const secrets = get(this.editedSecrets);
-    if (!config || !secrets) return;
+    if (!config || !secrets) {
+      return;
+    }
 
     set(this.saveError, null);
 

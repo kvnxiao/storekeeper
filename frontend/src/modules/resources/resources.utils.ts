@@ -14,14 +14,20 @@ export function formatTimeRemaining(
   nowMs: number,
   durationFmt: Intl.DurationFormat,
 ): string {
-  if (!datetime) return m.time_remaining_full();
+  if (!datetime) {
+    return m.time_remaining_full();
+  }
 
   const targetMs = new Date(datetime).getTime();
-  if (Number.isNaN(targetMs)) return m.time_remaining_full();
+  if (Number.isNaN(targetMs)) {
+    return m.time_remaining_full();
+  }
 
   const diffMs = targetMs - nowMs;
 
-  if (diffMs <= 0) return m.time_remaining_full();
+  if (diffMs <= 0) {
+    return m.time_remaining_full();
+  }
 
   const totalSeconds = Math.floor(diffMs / 1000);
   const days = Math.floor(totalSeconds / 86400);
@@ -47,9 +53,13 @@ export function isPastDateTime(
   datetime: string | null | undefined,
   nowMs: number,
 ): boolean {
-  if (!datetime) return true;
+  if (!datetime) {
+    return true;
+  }
   const targetMs = new Date(datetime).getTime();
-  if (Number.isNaN(targetMs)) return true;
+  if (Number.isNaN(targetMs)) {
+    return true;
+  }
   return targetMs <= nowMs;
 }
 
@@ -69,7 +79,9 @@ export function formatAbsoluteDateTime(
   timeOnlyFmt: Intl.DateTimeFormat,
   weekdayTimeFmt: Intl.DateTimeFormat,
 ): string | null {
-  if (!datetime) return null;
+  if (!datetime) {
+    return null;
+  }
   const target = new Date(datetime);
   const now = new Date(nowMs);
   const isToday =

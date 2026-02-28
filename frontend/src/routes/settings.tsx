@@ -41,7 +41,9 @@ function getResourceLimitsForGame(
   gameId: GameId,
 ): Partial<Record<string, ResourceLimits>> | undefined {
   const gameResources = resources?.games?.[gameId];
-  if (!gameResources) return undefined;
+  if (!gameResources) {
+    return undefined;
+  }
 
   const limits: Record<string, ResourceLimits> = {};
   for (const resource of gameResources) {

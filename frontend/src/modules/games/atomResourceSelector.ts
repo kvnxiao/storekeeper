@@ -20,7 +20,9 @@ export function atomResourceSelector<G extends GameId, T>(
     const resource = data?.games?.[gameId]?.find(
       (r: GameResource) => r.type === resourceType,
     );
-    if (!resource || !guard(resource.data)) return null;
+    if (!resource || !guard(resource.data)) {
+      return null;
+    }
     return resource.data;
   });
 }
