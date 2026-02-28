@@ -69,8 +69,12 @@ export class GenshinAtoms {
   readonly expeditionsReady = atom((get) => {
     const nowMs = get(this.core.tick);
     const data = get(this.expeditions);
-    if (!data) return false;
-    if (data.currentExpeditions === 0) return false;
+    if (!data) {
+      return false;
+    }
+    if (data.currentExpeditions === 0) {
+      return false;
+    }
 
     return isPastDateTime(data.earliestFinishAt, nowMs);
   });

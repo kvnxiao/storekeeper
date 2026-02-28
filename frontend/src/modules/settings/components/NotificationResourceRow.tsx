@@ -12,7 +12,9 @@ import * as m from "@/paraglide/messages";
 type NotifyMode = "minutes" | "value";
 
 function getNotifyMode(config: ResourceNotificationConfig): NotifyMode {
-  if (config.notify_at_value != null) return "value";
+  if (config.notify_at_value != null) {
+    return "value";
+  }
   return "minutes";
 }
 
@@ -94,7 +96,9 @@ export const NotificationResourceRow: React.FC<
 
   const handleModeChange = useCallback(
     (newMode: string) => {
-      if (!config) return;
+      if (!config) {
+        return;
+      }
       if (newMode === "value") {
         onChange({
           ...config,

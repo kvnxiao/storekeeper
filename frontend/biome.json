@@ -67,6 +67,7 @@
       },
       "style": {
         "noHeadElement": "error",
+        "useBlockStatements": "error",
         "useComponentExportOnlyModules": "off"
       },
       "performance": {
