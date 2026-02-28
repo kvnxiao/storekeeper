@@ -18,7 +18,11 @@ export const ZzzSection: React.FC = () => {
   const batteryTime = useAtomValue(atoms.games.zzz.batteryTime);
 
   return (
-    <GameSection title={m.game_zzz_name()} claimStatus={claimStatus}>
+    <GameSection
+      title={m.game_zzz_name()}
+      gameId={GameId.ZenlessZoneZero}
+      claimStatus={claimStatus}
+    >
       <StaminaCard
         iconPath="/icons/game/zzz/Item_Battery_Charge.webp"
         name={getResourceDisplayName(ZzzResource.Battery)}

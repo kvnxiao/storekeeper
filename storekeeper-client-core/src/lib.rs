@@ -32,4 +32,4 @@ pub use client::{DEFAULT_USER_AGENT, HttpClientBuilder};
 pub use error::{ClientError, Result};
 pub use reqwest_middleware::ClientWithMiddleware;
 pub use response::{ApiResponse, HoyolabApiResponse, KuroApiResponse};
-pub use retry::RetryConfig;
+pub use retry::{RetryConfig, is_transient_reqwest_error, retry_with_backoff};

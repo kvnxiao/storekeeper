@@ -26,7 +26,11 @@ export const GenshinSection: React.FC = () => {
   const realmTime = useAtomValue(atoms.games.genshin.realmCurrencyTime);
 
   return (
-    <GameSection title={m.game_genshin_name()} claimStatus={claimStatus}>
+    <GameSection
+      title={m.game_genshin_name()}
+      gameId={GameId.GenshinImpact}
+      claimStatus={claimStatus}
+    >
       <StaminaCard
         iconPath="/icons/game/genshin/Item_Original_Resin.webp"
         name={getResourceDisplayName(GenshinResource.Resin)}

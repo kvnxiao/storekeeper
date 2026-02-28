@@ -110,21 +110,6 @@ impl DailyRewardRegistry {
         })
         .await
     }
-
-    /// Claims rewards from all registered clients with rate limit awareness.
-    ///
-    /// Returns a map from game ID to the JSON-serialized claim results.
-    pub async fn claim_all(&self) -> HashMap<GameId, serde_json::Value> {
-        provider_batch::batch_by_provider(&self.clients, None, |game_id, client| {
-            Box::pin(async move {
-                let result = client.claim_daily_reward_json().await;
-                // Small delay between claims to avoid rate limiting
-                tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-                (game_id, result)
-            })
-        })
-        .await
-    }
 }
 
 impl Default for DailyRewardRegistry {
@@ -331,30 +316,6 @@ mod tests {
         )));
         let map = r.get_all_status().await;
         assert_eq!(map.len(), 1, "only successful status collected");
-    }
-
-    // =========================================================================
-    // Async — claim_all
-    // =========================================================================
-
-    #[tokio::test(start_paused = true)]
-    async fn claim_all_empty() {
-        let r = DailyRewardRegistry::new();
-        let map = r.claim_all().await;
-        assert!(map.is_empty());
-    }
-
-    #[tokio::test(start_paused = true)]
-    async fn claim_all_with_clients() {
-        let mut r = DailyRewardRegistry::new();
-        r.register(Box::new(MockDailyRewardClient::success(
-            GameId::GenshinImpact,
-        )));
-        r.register(Box::new(MockDailyRewardClient::success(
-            GameId::ZenlessZoneZero,
-        )));
-        let map = r.claim_all().await;
-        assert_eq!(map.len(), 2);
     }
 
     // =========================================================================

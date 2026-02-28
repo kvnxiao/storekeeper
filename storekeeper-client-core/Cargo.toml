@@ -13,9 +13,13 @@ reqwest-middleware.workspace = true
 reqwest-retry.workspace = true
 rand.workspace = true
 serde.workspace = true
+tokio = { workspace = true, features = ["time"] }
 serde_json.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
 
 [lints]
 workspace = true

@@ -13,6 +13,7 @@ mod notification;
 mod polling;
 mod provider_batch;
 mod registry;
+mod retry_helpers;
 mod scheduled_claim;
 mod state;
 mod tray;
@@ -109,7 +110,6 @@ pub fn run() -> Result<()> {
             // Daily reward commands
             commands::get_daily_reward_status,
             commands::refresh_daily_reward_status,
-            commands::claim_daily_rewards,
             commands::claim_daily_reward_for_game,
             commands::get_daily_reward_status_for_game,
             // Locale commands

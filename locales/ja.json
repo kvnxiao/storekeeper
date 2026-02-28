@@ -103,6 +103,7 @@
 
   "daily_claimed": "受取済み",
   "daily_unclaimed": "未受取",
+  "daily_claiming": "受取中...",
 
   "textfield_hide_password": "パスワードを隠す",
   "textfield_show_password": "パスワードを表示"

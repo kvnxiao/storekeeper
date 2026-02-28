@@ -66,5 +66,14 @@ impl ClientError {
     }
 }
 
+impl From<reqwest_middleware::Error> for ClientError {
+    fn from(err: reqwest_middleware::Error) -> Self {
+        match err {
+            reqwest_middleware::Error::Reqwest(e) => Self::HttpRequest(e),
+            reqwest_middleware::Error::Middleware(e) => Self::api_error(0, e.to_string()),
+        }
+    }
+}
+
 /// Result type alias using the base `ClientError` type.
 pub type Result<T> = std::result::Result<T, ClientError>;

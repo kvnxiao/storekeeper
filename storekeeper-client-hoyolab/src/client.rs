@@ -4,7 +4,10 @@ use reqwest::Method;
 use reqwest::header::COOKIE;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
-use storekeeper_client_core::{ApiResponse, ClientError, HoyolabApiResponse, HttpClientBuilder};
+use storekeeper_client_core::retry::DEFAULT_MAX_RETRIES;
+use storekeeper_client_core::{
+    ApiResponse, ClientError, ClientWithMiddleware, HoyolabApiResponse, HttpClientBuilder,
+};
 
 use crate::ds::generate_dynamic_secret_overseas;
 use crate::error::{Error, Result};
@@ -12,7 +15,7 @@ use crate::error::{Error, Result};
 /// HoYoLab API client.
 #[derive(Debug, Clone)]
 pub struct HoyolabClient {
-    client: reqwest::Client,
+    client: ClientWithMiddleware,
     cookie: String,
     auth_check_url: String,
 }
@@ -46,7 +49,7 @@ impl HoyolabClient {
             .header_static("x-rpc-app_version", "1.5.0")
             .header_static("x-rpc-client_type", "5")
             .header_static("x-rpc-language", "en-us")
-            .build()
+            .build_with_retry(DEFAULT_MAX_RETRIES)
             .map_err(Error::Client)?;
 
         let ltuid = ltuid.into();
