@@ -3,6 +3,7 @@ import { atom } from "jotai";
 import { atomEffect } from "jotai-effect";
 import { atomWithMutation, atomWithQuery } from "jotai-tanstack-query";
 import type { CoreAtoms } from "@/modules/core/core.atoms";
+import { queryClient } from "@/modules/core/core.queryClient";
 import {
   saveAndApplyMutationOptions,
   secretsQueryOptions,
@@ -135,6 +136,7 @@ export class SettingsAtoms {
     try {
       const { mutateAsync: doSaveAndApply } = get(this.saveAndApplyMutation);
       const result = await doSaveAndApply({ config, secrets });
+      queryClient.setQueryData(["config"], config);
       set(this.markAsSaved);
 
       // Sync frontend locale from backend's effective locale
