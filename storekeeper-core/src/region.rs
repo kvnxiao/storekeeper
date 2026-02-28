@@ -158,18 +158,18 @@ impl Region {
         }
     }
 
-    /// Parses region from a Wuthering Waves player ID.
+    /// Parses region from a Wuthering Waves UID.
     ///
     /// The first digit determines the region.
     ///
     /// # Errors
     ///
-    /// Returns an error if the player ID format is invalid or the region cannot be determined.
-    pub fn from_wuwa_player_id(player_id: &str) -> Result<Self> {
-        let first = player_id
+    /// Returns an error if the UID format is invalid or the region cannot be determined.
+    pub fn from_wuwa_uid(uid: &str) -> Result<Self> {
+        let first = uid
             .chars()
             .next()
-            .ok_or_else(|| Error::UnknownUidRegion(player_id.to_string()))?;
+            .ok_or_else(|| Error::UnknownUidRegion(uid.to_string()))?;
 
         match first {
             '5' => Ok(Self::America),
@@ -177,7 +177,7 @@ impl Region {
             '7' => Ok(Self::Asia),
             '8' => Ok(Self::Cht),
             '9' => Ok(Self::Sea),
-            _ => Err(Error::UnknownUidRegion(player_id.to_string())),
+            _ => Err(Error::UnknownUidRegion(uid.to_string())),
         }
     }
 }
@@ -221,13 +221,13 @@ mod tests {
     }
 
     #[test]
-    fn test_wuwa_player_id_parsing() {
+    fn test_wuwa_uid_parsing() {
         assert_eq!(
-            Region::from_wuwa_player_id("502763418").expect("valid id"),
+            Region::from_wuwa_uid("502763418").expect("valid uid"),
             Region::America
         );
         assert_eq!(
-            Region::from_wuwa_player_id("600000001").expect("valid id"),
+            Region::from_wuwa_uid("600000001").expect("valid uid"),
             Region::Europe
         );
     }

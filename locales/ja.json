@@ -75,8 +75,6 @@
   "settings_game_configure_wuwa": "鳴潮アカウントを設定します。",
 
   "settings_wuwa_enable_tracking": "鳴潮のトラッキングを有効化",
-  "settings_wuwa_player_id": "プレイヤーID",
-  "settings_wuwa_player_id_placeholder": "プレイヤーIDを入力",
 
   "settings_notifications_title": "通知",
   "settings_notifications_description": "このゲームのリソースに関するデスクトップ通知を設定します。",

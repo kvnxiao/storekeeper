@@ -57,7 +57,7 @@ export interface ZzzConfig extends HoyolabGameConfig {
 /** Wuthering Waves configuration */
 export interface WuwaConfig {
   enabled: boolean;
-  player_id: string;
+  uid: string;
   region?: string;
   tracked_resources?: string[];
   notifications?: Partial<Record<WuwaResourceType, ResourceNotificationConfig>>;

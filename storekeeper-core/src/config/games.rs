@@ -135,8 +135,8 @@ pub struct WuwaConfig {
     #[serde(default = "default_true")]
     pub enabled: bool,
 
-    /// Player ID.
-    pub player_id: String,
+    /// UID.
+    pub uid: String,
 
     /// Optional region override.
     pub region: Option<Region>,
