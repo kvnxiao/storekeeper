@@ -45,6 +45,13 @@ function extractClaimStatus(
 // Constants
 // =============================================================================
 
+/** UTC+8 offset in milliseconds (all HoYoLab games reset at midnight UTC+8). */
+const UTC8_OFFSET_MS = 8 * 3_600_000;
+
+function getUtc8DateString(): string {
+  return new Date(Date.now() + UTC8_OFFSET_MS).toISOString().slice(0, 10);
+}
+
 export const GAME_CONFIG_KEYS: [GameId, keyof GamesConfig][] = [
   [GameId.GenshinImpact, "genshin_impact"],
   [GameId.HonkaiStarRail, "honkai_star_rail"],
@@ -232,8 +239,29 @@ export class CoreAtoms {
       );
     });
 
+    // Daily reset watcher: detect UTC+8 date change and re-fetch claim status
+    let lastUtc8Date = getUtc8DateString();
+    let resetTimeout: ReturnType<typeof setTimeout> | undefined;
+
+    const resetCheckInterval = setInterval(() => {
+      const currentDate = getUtc8DateString();
+      if (currentDate !== lastUtc8Date) {
+        lastUtc8Date = currentDate;
+        // Buffer for game server reset propagation
+        resetTimeout = setTimeout(() => {
+          void invoke<AllDailyRewardStatus>("refresh_daily_reward_status").then(
+            (status) => {
+              set(this.dailyRewardStatusBase, extractClaimStatus(status));
+            },
+          );
+        }, 60_000);
+      }
+    }, 60_000);
+
     return () => {
       void unlistenPromise.then((fn) => fn()).catch(() => {});
+      clearInterval(resetCheckInterval);
+      if (resetTimeout != null) clearTimeout(resetTimeout);
     };
   });
 
