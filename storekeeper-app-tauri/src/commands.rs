@@ -98,6 +98,9 @@ pub async fn save_and_apply(
         .apply_config(config, secrets, diff.needs_registry_rebuild)
         .await;
 
+    // Wake the scheduler so it re-evaluates auto-claim config immediately
+    state.wake_scheduler();
+
     // Update locale if changed
     if diff.locale_changed {
         let language = {

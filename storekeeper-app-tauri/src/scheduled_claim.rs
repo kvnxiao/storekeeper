@@ -2,28 +2,54 @@
 
 use std::collections::HashMap;
 use std::future::Future;
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context;
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use storekeeper_client_core::retry::RetryConfig;
 use storekeeper_core::{ClaimTime, DailyRewardStatus, GameId, next_claim_datetime_utc};
 use tauri::{AppHandle, Emitter, Manager};
+use tokio::sync::Notify;
 use tokio_util::sync::CancellationToken;
 
 use crate::events::AppEvent;
 use crate::state::AppState;
+
+/// Maximum chunk duration for wall-clock-bounded sleeps.
+///
+/// Prevents long `tokio::time::sleep` calls that can drift during OS suspend.
+const MAX_SLEEP_CHUNK: Duration = Duration::from_secs(15 * 60);
+
+/// Short sleep used when no games are configured or no claims are pending.
+const IDLE_SLEEP: Duration = Duration::from_secs(15 * 60);
+
+/// Why the scheduler woke up from a sleep.
+enum WakeReason {
+    /// The cancellation token was triggered (app shutdown).
+    Cancelled,
+    /// Config changed — should re-read state and re-run startup claims.
+    ConfigChanged,
+    /// The timer expired normally.
+    TimerExpired,
+}
 
 /// Starts the scheduled daily claim task.
 ///
 /// This spawns a tokio task that:
 /// 1. Runs startup claims for any games that haven't been claimed today
 /// 2. Enters the main scheduling loop to claim at configured times
+///
+/// The scheduler wakes on three events:
+/// - Timer expiry (wall-clock-bounded in 15 min chunks to survive OS suspend)
+/// - Config change notification via `AppState::wake_scheduler()`
+/// - Cancellation token (app shutdown)
 pub fn start_scheduled_claims(app_handle: AppHandle, cancel_token: CancellationToken) {
     tauri::async_runtime::spawn(async move {
         tracing::info!("Starting scheduled daily reward claim task");
 
         let state = app_handle.state::<AppState>();
+        let notify = state.scheduler_notify();
 
         // Run startup claims before entering the main loop
         run_startup_claims(&state, &app_handle).await;
@@ -34,38 +60,58 @@ pub fn start_scheduled_claims(app_handle: AppHandle, cancel_token: CancellationT
             let auto_claim_games = state.get_auto_claim_games().await;
 
             if auto_claim_games.is_empty() {
-                tracing::debug!("No games with auto-claim enabled, sleeping for 60 seconds");
-                if sleep_or_cancel(&cancel_token, Duration::from_secs(60)).await {
-                    break;
+                tracing::debug!("No games with auto-claim enabled, idle sleeping");
+                match sleep_short(&cancel_token, &notify).await {
+                    WakeReason::Cancelled => break,
+                    WakeReason::ConfigChanged => {
+                        tracing::info!("Config changed during idle, re-running startup claims");
+                        run_startup_claims(&state, &app_handle).await;
+                        continue;
+                    }
+                    WakeReason::TimerExpired => continue,
                 }
-                continue;
             }
 
             // Find the earliest next claim time across all games
-            let Some((sleep_duration, games_to_claim)) =
+            let Some((target, games_to_claim)) =
                 calculate_next_claim(&auto_claim_games, &state).await
             else {
-                // No games need claiming right now, sleep and retry
-                tracing::debug!("No games need claiming, sleeping for 60 seconds");
-                if sleep_or_cancel(&cancel_token, Duration::from_secs(60)).await {
-                    break;
+                // No games need claiming right now, idle sleep
+                tracing::debug!("No games need claiming, idle sleeping");
+                match sleep_short(&cancel_token, &notify).await {
+                    WakeReason::Cancelled => break,
+                    WakeReason::ConfigChanged => {
+                        tracing::info!("Config changed while idle, re-running startup claims");
+                        run_startup_claims(&state, &app_handle).await;
+                        continue;
+                    }
+                    WakeReason::TimerExpired => continue,
                 }
-                continue;
             };
 
+            let until_claim = (target - Utc::now()).to_std().unwrap_or(Duration::ZERO);
+
             tracing::info!(
-                sleep_secs = sleep_duration.as_secs(),
+                sleep_secs = until_claim.as_secs(),
+                target = %target,
                 games = ?games_to_claim,
                 "Waiting until next scheduled claim time"
             );
 
-            // Wait until claim time or cancellation
-            if sleep_or_cancel(&cancel_token, sleep_duration).await {
-                break;
+            // Wait until claim time, config change, or cancellation
+            match sleep_until(target, &cancel_token, &notify).await {
+                WakeReason::Cancelled => break,
+                WakeReason::ConfigChanged => {
+                    tracing::info!(
+                        "Config changed while waiting for claim, re-running startup claims"
+                    );
+                    run_startup_claims(&state, &app_handle).await;
+                }
+                WakeReason::TimerExpired => {
+                    // Claim rewards for all games that are due
+                    claim_games_and_emit(&state, &app_handle, &games_to_claim).await;
+                }
             }
-
-            // Claim rewards for all games that are due
-            claim_games_and_emit(&state, &app_handle, &games_to_claim).await;
         }
     });
 }
@@ -131,17 +177,54 @@ async fn claim_games_and_emit(state: &AppState, app_handle: &AppHandle, game_ids
     }
 }
 
-/// Sleeps for the given duration or until the token is cancelled.
+/// Sleeps until the given wall-clock target, in bounded chunks.
 ///
-/// Returns `true` if cancelled, `false` if the sleep completed.
-async fn sleep_or_cancel(cancel_token: &CancellationToken, duration: Duration) -> bool {
+/// Sleeps in chunks of at most [`MAX_SLEEP_CHUNK`] and re-checks `Utc::now()`
+/// after each chunk. This ensures the scheduler fires promptly after OS
+/// suspend/resume, with at most one chunk of delay.
+async fn sleep_until(
+    target: DateTime<Utc>,
+    cancel_token: &CancellationToken,
+    notify: &Arc<Notify>,
+) -> WakeReason {
+    loop {
+        let now = Utc::now();
+        if now >= target {
+            return WakeReason::TimerExpired;
+        }
+
+        let remaining = (target - now).to_std().unwrap_or(Duration::ZERO);
+        let chunk = remaining.min(MAX_SLEEP_CHUNK);
+
+        tokio::select! {
+            () = cancel_token.cancelled() => {
+                tracing::info!("Scheduled claims cancelled");
+                return WakeReason::Cancelled;
+            }
+            () = notify.notified() => {
+                return WakeReason::ConfigChanged;
+            }
+            () = tokio::time::sleep(chunk) => {
+                // Loop back to re-check wall clock
+            }
+        }
+    }
+}
+
+/// Short idle sleep with cancel/notify support.
+///
+/// Used when no games are configured or no claims are pending.
+async fn sleep_short(cancel_token: &CancellationToken, notify: &Arc<Notify>) -> WakeReason {
     tokio::select! {
         () = cancel_token.cancelled() => {
             tracing::info!("Scheduled claims cancelled");
-            true
+            WakeReason::Cancelled
         }
-        () = tokio::time::sleep(duration) => {
-            false
+        () = notify.notified() => {
+            WakeReason::ConfigChanged
+        }
+        () = tokio::time::sleep(IDLE_SLEEP) => {
+            WakeReason::TimerExpired
         }
     }
 }
@@ -255,13 +338,12 @@ fn is_retryable_error(error: &anyhow::Error) -> bool {
 
 /// Calculates the next claim time and which games to claim.
 ///
-/// Returns the duration to sleep and the list of games to claim at that time.
-/// Returns None if no games need claiming.
+/// Returns the target wall-clock datetime and the list of games to claim at
+/// that time. Returns `None` if no games need claiming.
 async fn calculate_next_claim(
     auto_claim_games: &[(GameId, Option<ClaimTime>)],
     state: &AppState,
-) -> Option<(Duration, Vec<GameId>)> {
-    let now = Utc::now();
+) -> Option<(DateTime<Utc>, Vec<GameId>)> {
     let mut earliest_time = None;
     let mut games_at_earliest: Vec<GameId> = Vec::new();
 
@@ -301,9 +383,9 @@ async fn calculate_next_claim(
     }
 
     let earliest = earliest_time?;
-    let duration = (earliest - now).to_std().ok()?;
 
-    Some((duration, games_at_earliest))
+    // If the target is in the past, `sleep_until` will return immediately
+    Some((earliest, games_at_earliest))
 }
 
 #[cfg(test)]
