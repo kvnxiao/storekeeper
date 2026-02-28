@@ -217,12 +217,7 @@ pub async fn claim_daily_reward_for_game(
     state: State<'_, AppState>,
 ) -> Result<serde_json::Value, CommandError> {
     tracing::info!(game_id = ?game_id, "Manual daily reward claim requested for specific game");
-    let result = retry_with_backoff(
-        || state.claim_daily_reward_for_game(game_id),
-        "claim reward",
-        game_id,
-    )
-    .await?;
+    let result = retry_with_backoff(|| state.claim_daily_reward_for_game(game_id)).await?;
 
     // Refresh status for this game after claiming
     if let Ok(game_status) = state.get_daily_reward_status_for_game(game_id).await {

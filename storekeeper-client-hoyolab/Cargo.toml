@@ -11,6 +11,7 @@ repository.workspace = true
 storekeeper-core.workspace = true
 storekeeper-client-core.workspace = true
 reqwest.workspace = true
+reqwest-middleware.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true

@@ -6,43 +6,18 @@
 use std::future::Future;
 
 use storekeeper_client_core::retry::RetryConfig;
-use storekeeper_core::GameId;
 
 /// Retries a fallible async operation with exponential backoff.
 ///
 /// Only retries on transient network errors (see [`is_retryable_error`]).
 /// Non-retryable errors (auth failures, rate limits, etc.) propagate immediately.
-pub async fn retry_with_backoff<F, Fut>(
-    mut operation: F,
-    operation_name: &str,
-    game_id: GameId,
-) -> anyhow::Result<serde_json::Value>
+pub async fn retry_with_backoff<F, Fut>(operation: F) -> anyhow::Result<serde_json::Value>
 where
     F: FnMut() -> Fut,
     Fut: Future<Output = anyhow::Result<serde_json::Value>>,
 {
     let config = RetryConfig::default();
-    let mut attempt = 0;
-
-    loop {
-        match operation().await {
-            Ok(result) => return Ok(result),
-            Err(e) if is_retryable_error(&e) && config.should_retry(attempt) => {
-                let delay = config.delay_for_attempt(attempt);
-                tracing::warn!(
-                    game_id = ?game_id,
-                    operation = operation_name,
-                    attempt = attempt,
-                    delay_ms = delay.as_millis(),
-                    error = %e,
-                    "Request failed, retrying..."
-                );
-                tokio::time::sleep(delay).await;
-                attempt += 1;
-            }
-            Err(e) => return Err(e),
-        }
-    }
+    storekeeper_client_core::retry::retry_with_backoff(&config, operation, is_retryable_error).await
 }
 
 /// Determines if an error is retryable by inspecting the error chain.
@@ -53,7 +28,7 @@ fn is_retryable_error(error: &anyhow::Error) -> bool {
     // Walk the error chain for typed reqwest errors
     for cause in error.chain() {
         if let Some(reqwest_err) = cause.downcast_ref::<reqwest::Error>() {
-            if reqwest_err.is_timeout() || reqwest_err.is_connect() || reqwest_err.is_request() {
+            if storekeeper_client_core::is_transient_reqwest_error(reqwest_err) {
                 return true;
             }
         }
@@ -145,26 +120,17 @@ mod tests {
 
     #[tokio::test(start_paused = true)]
     async fn retry_succeeds_on_first_attempt() {
-        let result = retry_with_backoff(
-            || async { Ok(serde_json::json!({"ok": true})) },
-            "test",
-            GameId::GenshinImpact,
-        )
-        .await;
+        let result = retry_with_backoff(|| async { Ok(serde_json::json!({"ok": true})) }).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test(start_paused = true)]
     async fn retry_non_retryable_error_fails_immediately() {
         let mut calls = 0u32;
-        let result = retry_with_backoff(
-            || {
-                calls += 1;
-                async { Err(anyhow::anyhow!("authentication failed")) }
-            },
-            "test",
-            GameId::GenshinImpact,
-        )
+        let result = retry_with_backoff(|| {
+            calls += 1;
+            async { Err(anyhow::anyhow!("authentication failed")) }
+        })
         .await;
         assert!(result.is_err());
         assert_eq!(calls, 1, "non-retryable error should not be retried");
@@ -173,20 +139,16 @@ mod tests {
     #[tokio::test(start_paused = true)]
     async fn retry_recovers_from_transient_error() {
         let mut calls = 0u32;
-        let result = retry_with_backoff(
-            || {
-                calls += 1;
-                async move {
-                    if calls <= 1 {
-                        Err(anyhow::anyhow!("connection timeout"))
-                    } else {
-                        Ok(serde_json::json!({"ok": true}))
-                    }
+        let result = retry_with_backoff(|| {
+            calls += 1;
+            async move {
+                if calls <= 1 {
+                    Err(anyhow::anyhow!("connection timeout"))
+                } else {
+                    Ok(serde_json::json!({"ok": true}))
                 }
-            },
-            "test",
-            GameId::GenshinImpact,
-        )
+            }
+        })
         .await;
         assert!(result.is_ok());
         assert_eq!(calls, 2);

@@ -35,3 +35,9 @@ impl From<serde_json::Error> for Error {
         Self::Client(ClientError::from(err))
     }
 }
+
+impl From<reqwest_middleware::Error> for Error {
+    fn from(err: reqwest_middleware::Error) -> Self {
+        Self::Client(ClientError::from(err))
+    }
+}

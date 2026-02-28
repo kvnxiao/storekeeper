@@ -1,5 +1,6 @@
 //! Retry utilities with exponential backoff and jitter.
 
+use std::future::Future;
 use std::time::Duration;
 
 use rand::Rng;
@@ -66,6 +67,55 @@ impl RetryConfig {
     pub fn should_retry(&self, current_attempt: u32) -> bool {
         current_attempt < self.max_retries
     }
+}
+
+/// Retries an async operation with exponential backoff.
+///
+/// Executes `operation` and retries on failures where `is_retryable` returns `true`,
+/// up to `config.max_retries` times with exponential backoff delays between attempts.
+///
+/// Total attempts = 1 initial + `config.max_retries` retries.
+///
+/// # Errors
+///
+/// Returns the last error if all retries are exhausted, or the first non-retryable error.
+pub async fn retry_with_backoff<T, E, F, Fut>(
+    config: &RetryConfig,
+    mut operation: F,
+    is_retryable: impl Fn(&E) -> bool,
+) -> Result<T, E>
+where
+    F: FnMut() -> Fut,
+    Fut: Future<Output = Result<T, E>>,
+    E: std::fmt::Display,
+{
+    let mut attempt = 0;
+    loop {
+        match operation().await {
+            Ok(result) => return Ok(result),
+            Err(e) if is_retryable(&e) && config.should_retry(attempt) => {
+                let delay = config.delay_for_attempt(attempt);
+                tracing::warn!(
+                    attempt = attempt,
+                    max_retries = config.max_retries,
+                    delay_ms = delay.as_millis(),
+                    error = %e,
+                    "Retrying after transient error"
+                );
+                tokio::time::sleep(delay).await;
+                attempt += 1;
+            }
+            Err(e) => return Err(e),
+        }
+    }
+}
+
+/// Returns `true` if the reqwest error is transient and worth retrying.
+///
+/// Covers timeouts, connection failures, and request-level errors.
+#[must_use]
+pub fn is_transient_reqwest_error(err: &reqwest::Error) -> bool {
+    err.is_timeout() || err.is_connect() || err.is_request()
 }
 
 #[cfg(test)]
@@ -336,5 +386,75 @@ mod tests {
             debug_str.contains("max_retries"),
             "Debug output should contain field names"
         );
+    }
+
+    // =========================================================================
+    // retry_with_backoff tests
+    // =========================================================================
+
+    #[tokio::test(start_paused = true)]
+    async fn retry_with_backoff_succeeds_immediately() {
+        let config = RetryConfig::new(3, 100, 1000);
+        let result =
+            retry_with_backoff(&config, || async { Ok::<_, String>(42) }, |_: &String| true).await;
+        assert_eq!(result, Ok(42));
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn retry_with_backoff_retries_and_recovers() {
+        let config = RetryConfig::new(3, 100, 1000);
+        let mut calls = 0u32;
+        let result = retry_with_backoff(
+            &config,
+            || {
+                calls += 1;
+                let c = calls;
+                async move {
+                    if c <= 2 {
+                        Err("transient".to_string())
+                    } else {
+                        Ok(99)
+                    }
+                }
+            },
+            |_: &String| true,
+        )
+        .await;
+        assert_eq!(result, Ok(99));
+        assert_eq!(calls, 3);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn retry_with_backoff_non_retryable_fails_immediately() {
+        let config = RetryConfig::new(3, 100, 1000);
+        let mut calls = 0u32;
+        let result = retry_with_backoff(
+            &config,
+            || {
+                calls += 1;
+                async { Err::<i32, _>("fatal".to_string()) }
+            },
+            |e: &String| e != "fatal",
+        )
+        .await;
+        assert_eq!(result, Err("fatal".to_string()));
+        assert_eq!(calls, 1);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn retry_with_backoff_exhausts_retries() {
+        let config = RetryConfig::new(2, 100, 1000);
+        let mut calls = 0u32;
+        let result = retry_with_backoff(
+            &config,
+            || {
+                calls += 1;
+                async { Err::<i32, _>("always fails".to_string()) }
+            },
+            |_: &String| true,
+        )
+        .await;
+        assert_eq!(result, Err("always fails".to_string()));
+        assert_eq!(calls, 3, "1 initial + 2 retries = 3 total attempts");
     }
 }

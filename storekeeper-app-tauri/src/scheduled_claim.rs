@@ -254,12 +254,7 @@ async fn fetch_status_with_retry(
     state: &AppState,
     game_id: GameId,
 ) -> anyhow::Result<serde_json::Value> {
-    retry_with_backoff(
-        || state.get_daily_reward_status_for_game(game_id),
-        "fetch status",
-        game_id,
-    )
-    .await
+    retry_with_backoff(|| state.get_daily_reward_status_for_game(game_id)).await
 }
 
 /// Claims daily reward with retry on network failures.
@@ -267,12 +262,7 @@ async fn claim_reward_with_retry(
     state: &AppState,
     game_id: GameId,
 ) -> anyhow::Result<serde_json::Value> {
-    retry_with_backoff(
-        || state.claim_daily_reward_for_game(game_id),
-        "claim reward",
-        game_id,
-    )
-    .await
+    retry_with_backoff(|| state.claim_daily_reward_for_game(game_id)).await
 }
 
 /// Calculates the next claim time and which games to claim.

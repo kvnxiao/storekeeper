@@ -218,41 +218,12 @@ impl KuroClient {
             KURO_API_DEFAULT_BASE_DELAY_MS,
             DEFAULT_MAX_DELAY_MS,
         );
-        let mut last_error = None;
-
-        for attempt in 0..=retry_config.max_retries {
-            if attempt > 0 {
-                // Exponential backoff with jitter
-                let delay = retry_config.delay_for_attempt(attempt - 1);
-                tracing::info!(
-                    attempt = attempt,
-                    max_retries = retry_config.max_retries,
-                    delay_ms = delay.as_millis(),
-                    "Retrying Kuro API request (code 1005)"
-                );
-                tokio::time::sleep(delay).await;
-            }
-
-            match self.query_role_once(uid, region).await {
-                Ok(result) => {
-                    if attempt > 0 {
-                        tracing::info!(attempt = attempt, "Kuro API request succeeded after retry");
-                    }
-                    return Ok(result);
-                }
-                Err(Error::RetryRequested) => {
-                    last_error = Some(Error::RetryRequested);
-                }
-                Err(e) => return Err(e),
-            }
-        }
-
-        // All retries exhausted
-        tracing::error!(
-            retries = retry_config.max_retries,
-            "Kuro API request failed after all retries (code 1005)"
-        );
-        Err(last_error.unwrap_or(Error::RetryRequested))
+        storekeeper_client_core::retry::retry_with_backoff(
+            &retry_config,
+            || self.query_role_once(uid, region),
+            |err| matches!(err, Error::RetryRequested),
+        )
+        .await
     }
 
     /// Checks if the client credentials are valid.

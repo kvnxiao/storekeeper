@@ -39,11 +39,6 @@ impl From<serde_json::Error> for Error {
 
 impl From<reqwest_middleware::Error> for Error {
     fn from(err: reqwest_middleware::Error) -> Self {
-        match err {
-            reqwest_middleware::Error::Reqwest(e) => Self::Client(ClientError::from(e)),
-            reqwest_middleware::Error::Middleware(e) => {
-                Self::Client(ClientError::api_error(0, e.to_string()))
-            }
-        }
+        Self::Client(ClientError::from(err))
     }
 }
