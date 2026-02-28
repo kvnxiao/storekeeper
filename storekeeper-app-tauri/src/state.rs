@@ -10,7 +10,7 @@ use storekeeper_core::{AppConfig, ClaimTime, GameId, SecretsConfig, ensure_confi
 
 use crate::notification::NotificationTracker;
 
-use tokio::sync::RwLock;
+use tokio::sync::{Notify, RwLock};
 
 use crate::clients::{create_daily_reward_registry, create_registry};
 use crate::daily_reward_registry::DailyRewardRegistry;
@@ -76,6 +76,8 @@ pub struct AppState {
     /// Inner state protected by async RwLock.
     pub inner: Arc<RwLock<StateData>>,
     refreshing: Arc<AtomicBool>,
+    /// Notifier to wake the scheduler when config changes.
+    scheduler_notify: Arc<Notify>,
 }
 
 impl AppState {
@@ -85,6 +87,7 @@ impl AppState {
         Self {
             inner: Arc::new(RwLock::new(StateData::default())),
             refreshing: Arc::new(AtomicBool::new(false)),
+            scheduler_notify: Arc::new(Notify::new()),
         }
     }
 
@@ -122,6 +125,7 @@ impl AppState {
                 notification_tracker: NotificationTracker::default(),
             })),
             refreshing: Arc::new(AtomicBool::new(false)),
+            scheduler_notify: Arc::new(Notify::new()),
         }
     }
 
@@ -150,6 +154,17 @@ impl AppState {
     /// Marks refresh as finished.
     pub fn finish_refresh(&self) {
         self.refreshing.store(false, Ordering::Release);
+    }
+
+    /// Wakes the scheduler to re-evaluate config (e.g. after auto-claim changes).
+    pub fn wake_scheduler(&self) {
+        self.scheduler_notify.notify_one();
+    }
+
+    /// Returns the scheduler notify handle for use in the scheduler task.
+    #[must_use]
+    pub fn scheduler_notify(&self) -> Arc<Notify> {
+        Arc::clone(&self.scheduler_notify)
     }
 
     /// Fetches resources from all configured game clients using the registry.
