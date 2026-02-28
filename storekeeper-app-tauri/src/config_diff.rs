@@ -201,7 +201,7 @@ impl ClientFields for storekeeper_core::WuwaConfig {
     fn client_identity(&self) -> ClientIdentity<'_> {
         ClientIdentity {
             enabled: self.enabled,
-            uid: &self.player_id,
+            uid: &self.uid,
             region: self.region.as_ref(),
             tracked_resources_hash: hash_vec(&self.tracked_resources),
         }
@@ -272,7 +272,7 @@ mod tests {
     fn default_wuwa() -> WuwaConfig {
         WuwaConfig {
             enabled: true,
-            player_id: "987654321".to_string(),
+            uid: "987654321".to_string(),
             region: None,
             tracked_resources: storekeeper_core::WuwaResourceType::all().to_vec(),
             notifications: std::collections::HashMap::new(),

@@ -22,7 +22,7 @@ export const WuwaSection: React.FC<WuwaSectionProps> = ({
   onChange,
 }) => {
   const enabled = config?.enabled ?? false;
-  const playerId = config?.player_id ?? "";
+  const uid = config?.uid ?? "";
 
   return (
     <Section
@@ -35,7 +35,7 @@ export const WuwaSection: React.FC<WuwaSectionProps> = ({
           onChange({
             ...config,
             enabled: isSelected,
-            player_id: playerId,
+            uid,
           })
         }
       >
@@ -44,16 +44,16 @@ export const WuwaSection: React.FC<WuwaSectionProps> = ({
       {enabled && (
         <>
           <TextField
-            label={m.settings_wuwa_player_id()}
-            value={playerId}
+            label={m.settings_game_uid()}
+            value={uid}
             onChange={(value) =>
               onChange({
                 ...config,
                 enabled,
-                player_id: value,
+                uid: value,
               })
             }
-            placeholder={m.settings_wuwa_player_id_placeholder()}
+            placeholder={m.settings_game_uid_placeholder()}
           />
           <NotificationSection
             gameId={GameId.WutheringWaves}
@@ -64,7 +64,7 @@ export const WuwaSection: React.FC<WuwaSectionProps> = ({
               onChange({
                 ...config,
                 enabled,
-                player_id: playerId,
+                uid,
                 notifications,
               })
             }

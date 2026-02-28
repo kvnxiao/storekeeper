@@ -75,8 +75,6 @@
   "settings_game_configure_wuwa": "Configure your Wuthering Waves account.",
 
   "settings_wuwa_enable_tracking": "Enable Wuthering Waves tracking",
-  "settings_wuwa_player_id": "Player ID",
-  "settings_wuwa_player_id_placeholder": "Enter your Player ID",
 
   "settings_notifications_title": "Notifications",
   "settings_notifications_description": "Configure desktop notifications for this game's resources.",

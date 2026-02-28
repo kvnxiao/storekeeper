@@ -31,7 +31,7 @@ struct BaseInfo {
 #[derive(Debug, Clone)]
 pub struct WuwaClient {
     kuro: KuroClient,
-    player_id: String,
+    uid: String,
     region: Region,
 }
 
@@ -43,13 +43,13 @@ impl WuwaClient {
     /// Returns an error if the Kuro client cannot be created.
     pub fn new(
         oauth_code: impl Into<String>,
-        player_id: impl Into<String>,
+        uid: impl Into<String>,
         region: Region,
     ) -> Result<Self> {
         let kuro = KuroClient::new(oauth_code)?;
         Ok(Self {
             kuro,
-            player_id: player_id.into(),
+            uid: uid.into(),
             region,
         })
     }
@@ -57,12 +57,12 @@ impl WuwaClient {
     /// Fetches the role data from the API.
     async fn fetch_role_data(&self) -> Result<RoleDataResponse> {
         tracing::debug!(
-            player_id = %self.player_id,
+            uid = %self.uid,
             region = ?self.region,
             "Fetching WuWa role data"
         );
         self.kuro
-            .query_role(&self.player_id, self.region.wuwa_region())
+            .query_role(&self.uid, self.region.wuwa_region())
             .await
     }
 }
@@ -95,7 +95,7 @@ impl GameClient for WuwaClient {
 
     async fn is_authenticated(&self) -> Result<bool> {
         self.kuro
-            .check_auth(&self.player_id, self.region.wuwa_region())
+            .check_auth(&self.uid, self.region.wuwa_region())
             .await
     }
 }

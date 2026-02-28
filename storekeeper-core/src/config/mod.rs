@@ -208,7 +208,7 @@ autostart = false
 # Genshin Impact
 [games.genshin_impact]
 enabled = false
-uid = "YOUR_UID_HERE"
+uid = ""
 # region = "os_usa"  # Optional: auto-detected from UID
 # auto_claim_daily_rewards = false
 # auto_claim_time = "00:00"  # Optional: HH:MM in UTC+8 (China Standard Time)
@@ -221,7 +221,7 @@ uid = "YOUR_UID_HERE"
 # Honkai: Star Rail
 [games.honkai_star_rail]
 enabled = false
-uid = "YOUR_UID_HERE"
+uid = ""
 # region = "prod_official_usa"  # Optional: auto-detected from UID
 # auto_claim_daily_rewards = false
 # auto_claim_time = "00:00"  # Optional: HH:MM in UTC+8 (China Standard Time)
@@ -234,7 +234,7 @@ uid = "YOUR_UID_HERE"
 # Zenless Zone Zero
 [games.zenless_zone_zero]
 enabled = false
-uid = "YOUR_UID_HERE"
+uid = ""
 # region = "prod_gf_us"  # Optional: auto-detected from UID
 # auto_claim_daily_rewards = false
 # auto_claim_time = "00:00"  # Optional: HH:MM in UTC+8 (China Standard Time)
@@ -247,7 +247,7 @@ uid = "YOUR_UID_HERE"
 # Wuthering Waves
 [games.wuthering_waves]
 enabled = false
-player_id = "YOUR_PLAYER_ID_HERE"
+uid = ""
 # region = "na"  # Optional: auto-detected from player ID
 #
 # [games.wuthering_waves.notifications.waveplates]

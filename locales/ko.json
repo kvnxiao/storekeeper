@@ -75,8 +75,6 @@
   "settings_game_configure_wuwa": "명조 계정을 설정합니다.",
 
   "settings_wuwa_enable_tracking": "명조 추적 활성화",
-  "settings_wuwa_player_id": "플레이어 ID",
-  "settings_wuwa_player_id_placeholder": "플레이어 ID를 입력하세요",
 
   "settings_notifications_title": "알림",
   "settings_notifications_description": "이 게임 리소스에 대한 데스크톱 알림을 설정합니다.",

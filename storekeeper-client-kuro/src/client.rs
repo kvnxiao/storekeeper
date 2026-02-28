@@ -23,7 +23,8 @@ struct QueryRoleRequest<'a> {
     game_code: &'a str,
     account_id: &'a str,
     oauth_code: &'a str,
-    player_id: &'a str,
+    #[serde(rename = "playerId")]
+    uid: &'a str,
     region: &'a str,
 }
 
@@ -128,11 +129,7 @@ impl KuroClient {
     }
 
     /// Performs a single query role attempt without retries.
-    async fn query_role_once<T: DeserializeOwned>(
-        &self,
-        player_id: &str,
-        region: &str,
-    ) -> Result<T> {
+    async fn query_role_once<T: DeserializeOwned>(&self, uid: &str, region: &str) -> Result<T> {
         let timestamp = chrono::Utc::now().timestamp_millis();
         let url = format!("{}/game/queryRole?_t={timestamp}", self.base_url);
 
@@ -143,12 +140,12 @@ impl KuroClient {
             game_code: "2", // Wuthering Waves
             account_id: "",
             oauth_code: &self.oauth_code,
-            player_id,
+            uid,
             region,
         };
 
         tracing::debug!(
-            player_id = %player_id,
+            uid = %uid,
             region = %region,
             "Kuro API POST request to queryRole"
         );
@@ -215,11 +212,7 @@ impl KuroClient {
     /// # Errors
     ///
     /// Returns an error if the request fails or the response cannot be parsed.
-    pub async fn query_role<T: DeserializeOwned>(
-        &self,
-        player_id: &str,
-        region: &str,
-    ) -> Result<T> {
+    pub async fn query_role<T: DeserializeOwned>(&self, uid: &str, region: &str) -> Result<T> {
         let retry_config = RetryConfig::new(
             DEFAULT_MAX_RETRIES,
             KURO_API_DEFAULT_BASE_DELAY_MS,
@@ -240,7 +233,7 @@ impl KuroClient {
                 tokio::time::sleep(delay).await;
             }
 
-            match self.query_role_once(player_id, region).await {
+            match self.query_role_once(uid, region).await {
                 Ok(result) => {
                     if attempt > 0 {
                         tracing::info!(attempt = attempt, "Kuro API request succeeded after retry");
@@ -267,11 +260,8 @@ impl KuroClient {
     /// # Errors
     ///
     /// Returns an error if the authentication check fails.
-    pub async fn check_auth(&self, player_id: &str, region: &str) -> Result<bool> {
-        match self
-            .query_role::<serde_json::Value>(player_id, region)
-            .await
-        {
+    pub async fn check_auth(&self, uid: &str, region: &str) -> Result<bool> {
+        match self.query_role::<serde_json::Value>(uid, region).await {
             Ok(_) => Ok(true),
             Err(Error::Client(ClientError::ApiError { .. })) => Ok(false),
             Err(e) => Err(e),

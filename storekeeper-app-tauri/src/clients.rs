@@ -177,12 +177,11 @@ pub fn create_registry(config: &AppConfig, secrets: &SecretsConfig) -> GameClien
             if let Some(oauth_code) = oauth_code {
                 let region = wuwa_config
                     .region
-                    .or_else(|| Region::from_wuwa_player_id(&wuwa_config.player_id).ok());
+                    .or_else(|| Region::from_wuwa_uid(&wuwa_config.uid).ok());
                 if let Some(region) = region {
-                    if let Ok(client) = WuwaClient::new(&oauth_code, &wuwa_config.player_id, region)
-                    {
+                    if let Ok(client) = WuwaClient::new(&oauth_code, &wuwa_config.uid, region) {
                         tracing::info!(
-                            player_id = %wuwa_config.player_id,
+                            uid = %wuwa_config.uid,
                             region = ?region,
                             "Wuthering Waves client registered"
                         );
