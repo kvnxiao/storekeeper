@@ -103,6 +103,7 @@
 
   "daily_claimed": "已签到",
   "daily_unclaimed": "未签到",
+  "daily_claiming": "签到中...",
 
   "textfield_hide_password": "隐藏密码",
   "textfield_show_password": "显示密码"

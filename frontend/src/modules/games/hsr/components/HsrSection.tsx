@@ -18,7 +18,11 @@ export const HsrSection: React.FC = () => {
   const tbpTime = useAtomValue(atoms.games.hsr.trailblazePowerTime);
 
   return (
-    <GameSection title={m.game_hsr_name()} claimStatus={claimStatus}>
+    <GameSection
+      title={m.game_hsr_name()}
+      gameId={GameId.HonkaiStarRail}
+      claimStatus={claimStatus}
+    >
       <StaminaCard
         iconPath="/icons/game/hsr/Item_Trailblaze_Power.webp"
         name={getResourceDisplayName(HsrResource.TrailblazePower)}

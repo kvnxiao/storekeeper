@@ -103,6 +103,7 @@
 
   "daily_claimed": "Claimed",
   "daily_unclaimed": "Unclaimed",
+  "daily_claiming": "Claiming...",
 
   "textfield_hide_password": "Hide password",
   "textfield_show_password": "Show password"

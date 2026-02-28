@@ -1,19 +1,18 @@
 //! Scheduled auto-claim for daily rewards.
 
 use std::collections::HashMap;
-use std::future::Future;
 use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context;
 use chrono::{DateTime, Utc};
-use storekeeper_client_core::retry::RetryConfig;
 use storekeeper_core::{ClaimTime, DailyRewardStatus, GameId, next_claim_datetime_utc};
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::Notify;
 use tokio_util::sync::CancellationToken;
 
 use crate::events::AppEvent;
+use crate::retry_helpers::retry_with_backoff;
 use crate::state::AppState;
 
 /// Maximum chunk duration for wall-clock-bounded sleeps.
@@ -276,66 +275,6 @@ async fn claim_reward_with_retry(
     .await
 }
 
-/// Generic retry helper using existing `RetryConfig` infrastructure.
-async fn retry_with_backoff<F, Fut>(
-    mut operation: F,
-    operation_name: &str,
-    game_id: GameId,
-) -> anyhow::Result<serde_json::Value>
-where
-    F: FnMut() -> Fut,
-    Fut: Future<Output = anyhow::Result<serde_json::Value>>,
-{
-    let config = RetryConfig::default(); // 3 retries, 500ms base, 30s max
-    let mut attempt = 0;
-
-    loop {
-        match operation().await {
-            Ok(result) => return Ok(result),
-            Err(e) if is_retryable_error(&e) && config.should_retry(attempt) => {
-                let delay = config.delay_for_attempt(attempt);
-                tracing::warn!(
-                    game_id = ?game_id,
-                    operation = operation_name,
-                    attempt = attempt,
-                    delay_ms = delay.as_millis(),
-                    error = %e,
-                    "Request failed, retrying..."
-                );
-                tokio::time::sleep(delay).await;
-                attempt += 1;
-            }
-            Err(e) => return Err(e),
-        }
-    }
-}
-
-/// Determines if an error is retryable by inspecting the error chain.
-///
-/// Walks the `anyhow` error chain looking for `reqwest` errors that indicate
-/// transient network issues (timeouts, connection errors, etc.).
-fn is_retryable_error(error: &anyhow::Error) -> bool {
-    // Walk the error chain for typed reqwest errors
-    for cause in error.chain() {
-        if let Some(reqwest_err) = cause.downcast_ref::<reqwest::Error>() {
-            if reqwest_err.is_timeout() || reqwest_err.is_connect() || reqwest_err.is_request() {
-                return true;
-            }
-        }
-    }
-
-    // Fallback: pattern-match on the display string for errors that don't
-    // preserve typed info through the chain
-    let msg = error.to_string().to_lowercase();
-    msg.contains("timeout")
-        || msg.contains("connection")
-        || msg.contains("network")
-        || msg.contains("refused")
-        || msg.contains("dns")
-        || msg.contains("reset")
-        || msg.contains("unreachable")
-}
-
 /// Calculates the next claim time and which games to claim.
 ///
 /// Returns the target wall-clock datetime and the list of games to claim at
@@ -386,73 +325,4 @@ async fn calculate_next_claim(
 
     // If the target is in the past, `sleep_until` will return immediately
     Some((earliest, games_at_earliest))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    // =========================================================================
-    // is_retryable_error tests
-    // =========================================================================
-
-    #[test]
-    fn retryable_dns_in_message() {
-        let err = anyhow::anyhow!("dns resolution failed");
-        assert!(is_retryable_error(&err));
-    }
-
-    #[test]
-    fn retryable_reset_in_message() {
-        let err = anyhow::anyhow!("connection reset by peer");
-        assert!(is_retryable_error(&err));
-    }
-
-    #[test]
-    fn retryable_unreachable_in_message() {
-        let err = anyhow::anyhow!("host unreachable");
-        assert!(is_retryable_error(&err));
-    }
-
-    #[test]
-    fn retryable_timeout_in_message() {
-        let err = anyhow::anyhow!("request timeout");
-        assert!(is_retryable_error(&err));
-    }
-
-    #[test]
-    fn retryable_connection_in_message() {
-        let err = anyhow::anyhow!("connection dropped");
-        assert!(is_retryable_error(&err));
-    }
-
-    #[test]
-    fn retryable_network_in_message() {
-        let err = anyhow::anyhow!("temporary network issue");
-        assert!(is_retryable_error(&err));
-    }
-
-    #[test]
-    fn retryable_refused_in_message() {
-        let err = anyhow::anyhow!("connection refused by host");
-        assert!(is_retryable_error(&err));
-    }
-
-    #[test]
-    fn not_retryable_auth_error() {
-        let err = anyhow::anyhow!("authentication failed: invalid token");
-        assert!(!is_retryable_error(&err));
-    }
-
-    #[test]
-    fn not_retryable_rate_limit() {
-        let err = anyhow::anyhow!("rate limit exceeded");
-        assert!(!is_retryable_error(&err));
-    }
-
-    #[test]
-    fn not_retryable_empty() {
-        let err = anyhow::anyhow!("");
-        assert!(!is_retryable_error(&err));
-    }
 }

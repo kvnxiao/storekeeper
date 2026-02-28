@@ -1,18 +1,18 @@
 //! Tauri commands for frontend-backend communication.
 
-use std::collections::HashMap;
-
 use chrono::Utc;
 use serde::Serialize;
 use storekeeper_core::{AppConfig, GameId, SecretsConfig};
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_notification::NotificationExt;
 
 use crate::error::{CommandError, ErrorCode};
+use crate::events::AppEvent;
 use crate::i18n;
 use crate::notification;
 use crate::polling;
+use crate::retry_helpers::retry_with_backoff;
 use crate::state::{AllDailyRewardStatus, AllResources, AppState};
 
 /// Gets all cached resources.
@@ -209,31 +209,20 @@ pub async fn refresh_daily_reward_status(
     Ok(status)
 }
 
-/// Claims daily rewards for all configured games.
-///
-/// Returns a map of game ID to claim result.
-#[tauri::command]
-pub async fn claim_daily_rewards(
-    state: State<'_, AppState>,
-) -> Result<HashMap<GameId, serde_json::Value>, CommandError> {
-    tracing::info!("Manual daily reward claim requested");
-    let results = state.claim_all_daily_rewards().await;
-
-    // Refresh status after claiming
-    let status = state.fetch_all_daily_reward_status().await;
-    state.set_daily_reward_status(status).await;
-
-    Ok(results)
-}
-
-/// Claims daily reward for a specific game.
+/// Claims daily reward for a specific game with retry on network failures.
 #[tauri::command]
 pub async fn claim_daily_reward_for_game(
     game_id: GameId,
+    app_handle: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<serde_json::Value, CommandError> {
     tracing::info!(game_id = ?game_id, "Manual daily reward claim requested for specific game");
-    let result = state.claim_daily_reward_for_game(game_id).await?;
+    let result = retry_with_backoff(
+        || state.claim_daily_reward_for_game(game_id),
+        "claim reward",
+        game_id,
+    )
+    .await?;
 
     // Refresh status for this game after claiming
     if let Ok(game_status) = state.get_daily_reward_status_for_game(game_id).await {
@@ -242,6 +231,9 @@ pub async fn claim_daily_reward_for_game(
         current_status.last_checked = Some(chrono::Utc::now());
         state.set_daily_reward_status(current_status).await;
     }
+
+    // Notify frontend so atoms re-fetch claim status
+    let _ = app_handle.emit(AppEvent::DailyRewardClaimed.as_str(), &result);
 
     Ok(result)
 }

@@ -226,15 +226,6 @@ impl AppState {
         }
     }
 
-    /// Claims daily rewards from all configured games.
-    pub async fn claim_all_daily_rewards(&self) -> HashMap<GameId, serde_json::Value> {
-        let daily_reward_registry = {
-            let state = self.inner.read().await;
-            Arc::clone(&state.daily_reward_registry)
-        };
-        daily_reward_registry.claim_all().await
-    }
-
     /// Claims daily reward for a specific game.
     ///
     /// # Errors

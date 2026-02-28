@@ -1,5 +1,6 @@
+import { invoke } from "@tauri-apps/api/core";
 import { motion, useReducedMotion } from "motion/react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   Button,
   Disclosure,
@@ -7,6 +8,7 @@ import {
   Heading,
 } from "react-aria-components";
 import { tv } from "tailwind-variants";
+import type { GameId } from "@/modules/games/games.types";
 import { Badge } from "@/modules/ui/components/Badge";
 import {
   cardContainerVariants,
@@ -28,17 +30,35 @@ const triggerStyle = tv({
 
 interface GameSectionProps {
   title: string;
+  /** Required when `claimStatus` is provided, to support manual claiming. */
+  gameId?: GameId;
   claimStatus?: boolean | null;
   children: React.ReactNode;
 }
 
 export const GameSection: React.FC<GameSectionProps> = ({
   title,
+  gameId,
   claimStatus,
   children,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
+  const [isClaiming, setIsClaiming] = useState(false);
   const shouldReduceMotion = useReducedMotion();
+
+  const handleClaim = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (isClaiming || gameId == null) {
+        return;
+      }
+      setIsClaiming(true);
+      invoke("claim_daily_reward_for_game", { gameId })
+        .catch((err) => console.error("Failed to claim daily reward:", err))
+        .finally(() => setIsClaiming(false));
+    },
+    [gameId, isClaiming],
+  );
 
   return (
     <Disclosure
@@ -53,9 +73,12 @@ export const GameSection: React.FC<GameSectionProps> = ({
               {title}
             </span>
             {claimStatus != null && (
-              <Badge variant={claimStatus ? "success" : "warning"}>
-                {claimStatus ? m.daily_claimed() : m.daily_unclaimed()}
-              </Badge>
+              <ClaimBadge
+                claimed={claimStatus}
+                isClaiming={isClaiming}
+                canClaim={gameId != null}
+                onClaim={handleClaim}
+              />
             )}
           </span>
           <motion.span
@@ -79,4 +102,42 @@ export const GameSection: React.FC<GameSectionProps> = ({
       </DisclosurePanel>
     </Disclosure>
   );
+};
+
+interface ClaimBadgeProps {
+  claimed: boolean;
+  isClaiming: boolean;
+  canClaim: boolean;
+  onClaim: (e: React.MouseEvent) => void;
+}
+
+const ClaimBadge: React.FC<ClaimBadgeProps> = ({
+  claimed,
+  isClaiming,
+  canClaim,
+  onClaim,
+}) => {
+  if (isClaiming) {
+    return <Badge variant="default">{m.daily_claiming()}</Badge>;
+  }
+
+  if (claimed) {
+    return <Badge variant="success">{m.daily_claimed()}</Badge>;
+  }
+
+  if (canClaim) {
+    return (
+      <Badge
+        variant="warning"
+        role="button"
+        tabIndex={0}
+        className="cursor-pointer"
+        onClick={onClaim}
+      >
+        {m.daily_unclaimed()}
+      </Badge>
+    );
+  }
+
+  return <Badge variant="warning">{m.daily_unclaimed()}</Badge>;
 };
