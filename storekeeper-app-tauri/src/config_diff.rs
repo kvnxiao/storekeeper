@@ -54,38 +54,32 @@ pub(crate) fn compute(
     let mut games_to_reset_notifications = HashSet::new();
 
     // Check per-game client config changes
-    check_game_config(
-        GameId::GenshinImpact,
-        old_config.games.genshin_impact.as_ref(),
-        new_config.games.genshin_impact.as_ref(),
-        &mut needs_registry_rebuild,
-        &mut games_to_refresh,
-        &mut games_to_reset_notifications,
-    );
-    check_game_config(
-        GameId::HonkaiStarRail,
-        old_config.games.honkai_star_rail.as_ref(),
-        new_config.games.honkai_star_rail.as_ref(),
-        &mut needs_registry_rebuild,
-        &mut games_to_refresh,
-        &mut games_to_reset_notifications,
-    );
-    check_game_config(
-        GameId::ZenlessZoneZero,
-        old_config.games.zenless_zone_zero.as_ref(),
-        new_config.games.zenless_zone_zero.as_ref(),
-        &mut needs_registry_rebuild,
-        &mut games_to_refresh,
-        &mut games_to_reset_notifications,
-    );
-    check_game_config(
-        GameId::WutheringWaves,
-        old_config.games.wuthering_waves.as_ref(),
-        new_config.games.wuthering_waves.as_ref(),
-        &mut needs_registry_rebuild,
-        &mut games_to_refresh,
-        &mut games_to_reset_notifications,
-    );
+    for change in [
+        check_game_config(
+            GameId::GenshinImpact,
+            old_config.games.genshin_impact.as_ref(),
+            new_config.games.genshin_impact.as_ref(),
+        ),
+        check_game_config(
+            GameId::HonkaiStarRail,
+            old_config.games.honkai_star_rail.as_ref(),
+            new_config.games.honkai_star_rail.as_ref(),
+        ),
+        check_game_config(
+            GameId::ZenlessZoneZero,
+            old_config.games.zenless_zone_zero.as_ref(),
+            new_config.games.zenless_zone_zero.as_ref(),
+        ),
+        check_game_config(
+            GameId::WutheringWaves,
+            old_config.games.wuthering_waves.as_ref(),
+            new_config.games.wuthering_waves.as_ref(),
+        ),
+    ] {
+        needs_registry_rebuild |= change.needs_registry_rebuild;
+        games_to_refresh.extend(change.game_to_refresh);
+        games_to_reset_notifications.extend(change.game_to_reset_notifications);
+    }
 
     // Check secrets changes — affects all games of the corresponding provider
     if old_secrets.hoyolab != new_secrets.hoyolab {
@@ -211,41 +205,56 @@ impl ClientFields for storekeeper_core::WuwaConfig {
     }
 }
 
-/// Compares a single game's config and updates the diff accumulators.
+/// What changed for a single game's config.
+struct GameConfigChange {
+    needs_registry_rebuild: bool,
+    game_to_refresh: Option<GameId>,
+    game_to_reset_notifications: Option<GameId>,
+}
+
+/// Compares a single game's config and returns what changed.
 fn check_game_config<T: ClientFields>(
     game_id: GameId,
     old: Option<&T>,
     new: Option<&T>,
-    needs_registry_rebuild: &mut bool,
-    games_to_refresh: &mut HashSet<GameId>,
-    games_to_reset_notifications: &mut HashSet<GameId>,
-) {
-    match (old, new) {
-        (None, None) => {}
-        // Game added or removed — needs rebuild + refresh
-        (None, Some(cfg)) if cfg.enabled() => {
-            *needs_registry_rebuild = true;
-            games_to_refresh.insert(game_id);
-        }
-        (Some(cfg), None) if cfg.enabled() => {
-            *needs_registry_rebuild = true;
-        }
-        (None, Some(_)) | (Some(_), None) => {
-            // Disabled game added/removed — rebuild but no fetch needed
-            *needs_registry_rebuild = true;
-        }
-        (Some(old_cfg), Some(new_cfg)) => {
-            // Check client-relevant fields
-            if old_cfg.client_identity() != new_cfg.client_identity() {
-                *needs_registry_rebuild = true;
-                if new_cfg.enabled() {
-                    games_to_refresh.insert(game_id);
-                }
-            }
+) -> GameConfigChange {
+    let none = GameConfigChange {
+        needs_registry_rebuild: false,
+        game_to_refresh: None,
+        game_to_reset_notifications: None,
+    };
 
-            // Check notification config changes
-            if old_cfg.notification_changed(new_cfg) {
-                games_to_reset_notifications.insert(game_id);
+    match (old, new) {
+        (None, None) => none,
+        // Game added or removed — needs rebuild + refresh
+        (None, Some(cfg)) if cfg.enabled() => GameConfigChange {
+            needs_registry_rebuild: true,
+            game_to_refresh: Some(game_id),
+            ..none
+        },
+        (Some(cfg), None) if cfg.enabled() => GameConfigChange {
+            needs_registry_rebuild: true,
+            ..none
+        },
+        (None, Some(_)) | (Some(_), None) => GameConfigChange {
+            // Disabled game added/removed — rebuild but no fetch needed
+            needs_registry_rebuild: true,
+            ..none
+        },
+        (Some(old_cfg), Some(new_cfg)) => {
+            let identity_changed = old_cfg.client_identity() != new_cfg.client_identity();
+            GameConfigChange {
+                needs_registry_rebuild: identity_changed,
+                game_to_refresh: if identity_changed && new_cfg.enabled() {
+                    Some(game_id)
+                } else {
+                    None
+                },
+                game_to_reset_notifications: if old_cfg.notification_changed(new_cfg) {
+                    Some(game_id)
+                } else {
+                    None
+                },
             }
         }
     }

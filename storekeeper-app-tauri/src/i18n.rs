@@ -171,7 +171,14 @@ mod tests {
     #[test]
     fn test_format_time_today() {
         ensure_init();
-        let now = chrono::Local::now();
+        // Pin to noon so +1 hour never crosses midnight.
+        let today = chrono::Local::now().date_naive();
+        let now = today
+            .and_hms_opt(12, 0, 0)
+            .expect("valid time")
+            .and_local_timezone(chrono::Local)
+            .single()
+            .expect("noon is never ambiguous");
         let completion = now + chrono::TimeDelta::hours(1);
         let result = format_time(completion, now);
         // Same day: should produce time only (e.g. "3:45 PM" for en)
