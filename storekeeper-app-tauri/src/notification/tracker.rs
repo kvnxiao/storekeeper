@@ -7,19 +7,37 @@ use storekeeper_core::{GameId, ResourceNotificationConfig};
 
 use super::resource_extractor::ResourceInfo;
 
+/// Pre-built HashMap key for a (game, resource) pair.
+pub type NotifyKey = (GameId, String);
+
+/// Result of a `should_notify` check.
+pub enum NotifyAction {
+    /// Do not send a notification.
+    Skip,
+    /// Send a notification; includes the pre-built key for `record`.
+    Notify(NotifyKey),
+}
+
+#[cfg(test)]
+impl NotifyAction {
+    fn is_notify(&self) -> bool {
+        matches!(self, Self::Notify(_))
+    }
+}
+
 /// Tracks notification cooldown state per (game, resource) pair.
 #[derive(Default)]
 pub struct NotificationTracker {
-    cooldowns: HashMap<(GameId, String), DateTime<Utc>>,
+    cooldowns: HashMap<NotifyKey, DateTime<Utc>>,
 }
 
 impl NotificationTracker {
     /// Decides whether a notification should fire for this resource.
     ///
-    /// Returns `false` (and clears cooldown) when the resource is outside the
-    /// notification window. Returns `false` when still within cooldown. Returns
-    /// `true` when the resource is in-window/full and cooldown has expired or
-    /// no prior notification exists.
+    /// Returns `Skip` (and clears cooldown) when the resource is outside the
+    /// notification window. Returns `Skip` when still within cooldown. Returns
+    /// `Notify(key)` when the resource is in-window/full and cooldown has
+    /// expired or no prior notification exists.
     ///
     /// When `cooldown_minutes` is 0, only one notification fires per window
     /// entry — no recurring reminders until the resource leaves and re-enters.
@@ -30,7 +48,7 @@ impl NotificationTracker {
         config: &ResourceNotificationConfig,
         info: &ResourceInfo,
         now: DateTime<Utc>,
-    ) -> bool {
+    ) -> NotifyAction {
         let in_window = match (config.notify_at_value, config.notify_minutes_before_full) {
             // Value-threshold mode: convert to minutes via regen rate, fallback to direct comparison
             (Some(threshold), _) => {
@@ -59,37 +77,32 @@ impl NotificationTracker {
             (None, None) => info.is_complete,
         };
 
+        let key = (game_id, resource_type.to_string());
+
         // Not in notification window yet — reset cooldown tracking
         if !in_window {
-            self.clear(game_id, resource_type);
-            return false;
+            self.cooldowns.remove(&key);
+            return NotifyAction::Skip;
         }
 
         // In window or already full — check cooldown
-        let key = (game_id, resource_type.to_string());
         if let Some(last_notified) = self.cooldowns.get(&key).copied() {
             // cooldown_minutes == 0 means "notify once, don't repeat"
             if config.cooldown_minutes == 0 {
-                return false;
+                return NotifyAction::Skip;
             }
             let cooldown = TimeDelta::minutes(i64::from(config.cooldown_minutes));
             if (now - last_notified) < cooldown {
-                return false;
+                return NotifyAction::Skip;
             }
         }
 
-        true
+        NotifyAction::Notify(key)
     }
 
-    /// Records that a notification was sent now for this (game, resource) pair.
-    pub fn record(&mut self, game_id: GameId, resource_type: &str, now: DateTime<Utc>) {
-        self.cooldowns
-            .insert((game_id, resource_type.to_string()), now);
-    }
-
-    /// Clears the cooldown entry for this (game, resource) pair.
-    fn clear(&mut self, game_id: GameId, resource_type: &str) {
-        self.cooldowns.remove(&(game_id, resource_type.to_string()));
+    /// Records that a notification was sent for the given key.
+    pub fn record(&mut self, key: NotifyKey, now: DateTime<Utc>) {
+        self.cooldowns.insert(key, now);
     }
 
     /// Clears cooldown entries for a specific game.
@@ -133,6 +146,10 @@ mod tests {
         }
     }
 
+    fn key(game_id: GameId, resource_type: &str) -> NotifyKey {
+        (game_id, resource_type.to_string())
+    }
+
     #[test]
     fn test_not_in_window_clears_and_returns_false() {
         let mut tracker = NotificationTracker::default();
@@ -141,14 +158,22 @@ mod tests {
         let config = stub_config(60, 10);
 
         // Seed a prior cooldown entry
-        tracker.record(game, "resin", now - TimeDelta::hours(1));
+        tracker.record(key(game, "resin"), now - TimeDelta::hours(1));
 
         let info = stub_info(now + TimeDelta::hours(2), false);
-        assert!(!tracker.should_notify(game, "resin", &config, &info, now));
+        assert!(
+            !tracker
+                .should_notify(game, "resin", &config, &info, now)
+                .is_notify()
+        );
 
         // Internal state was cleared — next in-window check should return true
         let in_window_info = stub_info(now + TimeDelta::minutes(30), false);
-        assert!(tracker.should_notify(game, "resin", &config, &in_window_info, now));
+        assert!(
+            tracker
+                .should_notify(game, "resin", &config, &in_window_info, now)
+                .is_notify()
+        );
     }
 
     #[test]
@@ -158,7 +183,11 @@ mod tests {
         let config = stub_config(60, 10);
         let info = stub_info(now + TimeDelta::minutes(30), false);
 
-        assert!(tracker.should_notify(GameId::GenshinImpact, "resin", &config, &info, now));
+        assert!(
+            tracker
+                .should_notify(GameId::GenshinImpact, "resin", &config, &info, now)
+                .is_notify()
+        );
     }
 
     #[test]
@@ -168,12 +197,16 @@ mod tests {
         let game = GameId::GenshinImpact;
         let config = stub_config(60, 10);
 
-        tracker.record(game, "resin", now);
+        tracker.record(key(game, "resin"), now);
 
         let info = stub_info(now + TimeDelta::minutes(30), false);
         // 5 minutes later, still within 10-minute cooldown
         let later = now + TimeDelta::minutes(5);
-        assert!(!tracker.should_notify(game, "resin", &config, &info, later));
+        assert!(
+            !tracker
+                .should_notify(game, "resin", &config, &info, later)
+                .is_notify()
+        );
     }
 
     #[test]
@@ -183,12 +216,16 @@ mod tests {
         let game = GameId::HonkaiStarRail;
         let config = stub_config(60, 10);
 
-        tracker.record(game, "trailblaze_power", now);
+        tracker.record(key(game, "trailblaze_power"), now);
 
         let info = stub_info(now + TimeDelta::minutes(30), false);
         // 11 minutes later, past 10-minute cooldown
         let later = now + TimeDelta::minutes(11);
-        assert!(tracker.should_notify(game, "trailblaze_power", &config, &info, later));
+        assert!(
+            tracker
+                .should_notify(game, "trailblaze_power", &config, &info, later)
+                .is_notify()
+        );
     }
 
     #[test]
@@ -198,7 +235,11 @@ mod tests {
         let config = stub_config(60, 10);
         let info = stub_info(now - TimeDelta::seconds(1), true);
 
-        assert!(tracker.should_notify(GameId::ZenlessZoneZero, "battery", &config, &info, now));
+        assert!(
+            tracker
+                .should_notify(GameId::ZenlessZoneZero, "battery", &config, &info, now)
+                .is_notify()
+        );
     }
 
     #[test]
@@ -208,15 +249,23 @@ mod tests {
         let game = GameId::WutheringWaves;
         let config = stub_config(60, 10);
 
-        tracker.record(game, "waveplates", now);
+        tracker.record(key(game, "waveplates"), now);
 
         let info = stub_info(now + TimeDelta::minutes(30), false);
         // Within cooldown — should be false
-        assert!(!tracker.should_notify(game, "waveplates", &config, &info, now));
+        assert!(
+            !tracker
+                .should_notify(game, "waveplates", &config, &info, now)
+                .is_notify()
+        );
 
         // Manually clear — next check should return true
-        tracker.clear(game, "waveplates");
-        assert!(tracker.should_notify(game, "waveplates", &config, &info, now));
+        tracker.cooldowns.remove(&key(game, "waveplates"));
+        assert!(
+            tracker
+                .should_notify(game, "waveplates", &config, &info, now)
+                .is_notify()
+        );
     }
 
     #[test]
@@ -229,12 +278,20 @@ mod tests {
         let info = stub_info(now + TimeDelta::minutes(30), false);
 
         // First check — no prior notification, should fire
-        assert!(tracker.should_notify(game, "resin", &config, &info, now));
-        tracker.record(game, "resin", now);
+        assert!(
+            tracker
+                .should_notify(game, "resin", &config, &info, now)
+                .is_notify()
+        );
+        tracker.record(key(game, "resin"), now);
 
         // Subsequent checks — never re-notifies regardless of time elapsed
         let much_later = now + TimeDelta::hours(24);
-        assert!(!tracker.should_notify(game, "resin", &config, &info, much_later));
+        assert!(
+            !tracker
+                .should_notify(game, "resin", &config, &info, much_later)
+                .is_notify()
+        );
     }
 
     #[test]
@@ -246,15 +303,27 @@ mod tests {
 
         // In window — notifies
         let in_window = stub_info(now + TimeDelta::minutes(30), false);
-        assert!(tracker.should_notify(game, "resin", &config, &in_window, now));
-        tracker.record(game, "resin", now);
+        assert!(
+            tracker
+                .should_notify(game, "resin", &config, &in_window, now)
+                .is_notify()
+        );
+        tracker.record(key(game, "resin"), now);
 
         // Leaves window (resource consumed) — clears state
         let out_of_window = stub_info(now + TimeDelta::hours(5), false);
-        assert!(!tracker.should_notify(game, "resin", &config, &out_of_window, now));
+        assert!(
+            !tracker
+                .should_notify(game, "resin", &config, &out_of_window, now)
+                .is_notify()
+        );
 
         // Re-enters window — should notify again (one-shot reset)
-        assert!(tracker.should_notify(game, "resin", &config, &in_window, now));
+        assert!(
+            tracker
+                .should_notify(game, "resin", &config, &in_window, now)
+                .is_notify()
+        );
     }
 
     // =========================================================================
@@ -281,7 +350,11 @@ mod tests {
             regen_rate_seconds: Some(480),
         };
 
-        assert!(tracker.should_notify(GameId::GenshinImpact, "resin", &config, &info, now));
+        assert!(
+            tracker
+                .should_notify(GameId::GenshinImpact, "resin", &config, &info, now)
+                .is_notify()
+        );
     }
 
     #[test]
@@ -304,7 +377,11 @@ mod tests {
             regen_rate_seconds: Some(480),
         };
 
-        assert!(!tracker.should_notify(GameId::GenshinImpact, "resin", &config, &info, now));
+        assert!(
+            !tracker
+                .should_notify(GameId::GenshinImpact, "resin", &config, &info, now)
+                .is_notify()
+        );
     }
 
     #[test]
@@ -328,9 +405,15 @@ mod tests {
             max: Some(160),
             regen_rate_seconds: Some(480),
         };
-        assert!(tracker.should_notify(GameId::GenshinImpact, "resin", &config, &at_boundary, now));
+        assert!(
+            tracker
+                .should_notify(GameId::GenshinImpact, "resin", &config, &at_boundary, now)
+                .is_notify()
+        );
 
-        tracker.clear(GameId::GenshinImpact, "resin");
+        tracker
+            .cooldowns
+            .remove(&key(GameId::GenshinImpact, "resin"));
 
         // Just outside boundary (161 min to full) — should NOT notify
         let outside_boundary = ResourceInfo {
@@ -340,13 +423,17 @@ mod tests {
             max: Some(160),
             regen_rate_seconds: Some(480),
         };
-        assert!(!tracker.should_notify(
-            GameId::GenshinImpact,
-            "resin",
-            &config,
-            &outside_boundary,
-            now
-        ));
+        assert!(
+            !tracker
+                .should_notify(
+                    GameId::GenshinImpact,
+                    "resin",
+                    &config,
+                    &outside_boundary,
+                    now
+                )
+                .is_notify()
+        );
     }
 
     #[test]
@@ -369,7 +456,11 @@ mod tests {
             regen_rate_seconds: None,
         };
 
-        assert!(tracker.should_notify(GameId::GenshinImpact, "resin", &config, &info, now));
+        assert!(
+            tracker
+                .should_notify(GameId::GenshinImpact, "resin", &config, &info, now)
+                .is_notify()
+        );
     }
 
     #[test]
@@ -392,7 +483,11 @@ mod tests {
             regen_rate_seconds: None,
         };
 
-        assert!(!tracker.should_notify(GameId::GenshinImpact, "resin", &config, &info, now));
+        assert!(
+            !tracker
+                .should_notify(GameId::GenshinImpact, "resin", &config, &info, now)
+                .is_notify()
+        );
     }
 
     #[test]
@@ -408,10 +503,18 @@ mod tests {
 
         // Not full — should NOT notify
         let info = stub_info(now + TimeDelta::minutes(5), false);
-        assert!(!tracker.should_notify(GameId::GenshinImpact, "resin", &config, &info, now));
+        assert!(
+            !tracker
+                .should_notify(GameId::GenshinImpact, "resin", &config, &info, now)
+                .is_notify()
+        );
 
         // Full — should notify
         let full_info = stub_info(now - TimeDelta::seconds(1), true);
-        assert!(tracker.should_notify(GameId::GenshinImpact, "resin", &config, &full_info, now));
+        assert!(
+            tracker
+                .should_notify(GameId::GenshinImpact, "resin", &config, &full_info, now)
+                .is_notify()
+        );
     }
 }

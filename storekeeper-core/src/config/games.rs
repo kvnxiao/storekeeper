@@ -213,76 +213,24 @@ where
     Ok(notifications)
 }
 
-fn deserialize_genshin_tracked_resources<'de, D>(
-    deserializer: D,
-) -> Result<Vec<GenshinResourceType>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    deserialize_tracked_resources(deserializer, "Genshin Impact")
+macro_rules! game_deserializers {
+    ($($fn_tracked:ident, $fn_notif:ident, $ty:ty, $name:expr;)*) => {$(
+        fn $fn_tracked<'de, D: Deserializer<'de>>(d: D) -> Result<Vec<$ty>, D::Error> {
+            deserialize_tracked_resources(d, $name)
+        }
+        fn $fn_notif<'de, D: Deserializer<'de>>(
+            d: D,
+        ) -> Result<HashMap<$ty, ResourceNotificationConfig>, D::Error> {
+            deserialize_notifications(d, $name)
+        }
+    )*};
 }
 
-fn deserialize_hsr_tracked_resources<'de, D>(
-    deserializer: D,
-) -> Result<Vec<HsrResourceType>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    deserialize_tracked_resources(deserializer, "Honkai: Star Rail")
-}
-
-fn deserialize_zzz_tracked_resources<'de, D>(
-    deserializer: D,
-) -> Result<Vec<ZzzResourceType>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    deserialize_tracked_resources(deserializer, "Zenless Zone Zero")
-}
-
-fn deserialize_wuwa_tracked_resources<'de, D>(
-    deserializer: D,
-) -> Result<Vec<WuwaResourceType>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    deserialize_tracked_resources(deserializer, "Wuthering Waves")
-}
-
-fn deserialize_genshin_notifications<'de, D>(
-    deserializer: D,
-) -> Result<HashMap<GenshinResourceType, ResourceNotificationConfig>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    deserialize_notifications(deserializer, "Genshin Impact")
-}
-
-fn deserialize_hsr_notifications<'de, D>(
-    deserializer: D,
-) -> Result<HashMap<HsrResourceType, ResourceNotificationConfig>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    deserialize_notifications(deserializer, "Honkai: Star Rail")
-}
-
-fn deserialize_zzz_notifications<'de, D>(
-    deserializer: D,
-) -> Result<HashMap<ZzzResourceType, ResourceNotificationConfig>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    deserialize_notifications(deserializer, "Zenless Zone Zero")
-}
-
-fn deserialize_wuwa_notifications<'de, D>(
-    deserializer: D,
-) -> Result<HashMap<WuwaResourceType, ResourceNotificationConfig>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    deserialize_notifications(deserializer, "Wuthering Waves")
+game_deserializers! {
+    deserialize_genshin_tracked_resources, deserialize_genshin_notifications, GenshinResourceType, "Genshin Impact";
+    deserialize_hsr_tracked_resources, deserialize_hsr_notifications, HsrResourceType, "Honkai: Star Rail";
+    deserialize_zzz_tracked_resources, deserialize_zzz_notifications, ZzzResourceType, "Zenless Zone Zero";
+    deserialize_wuwa_tracked_resources, deserialize_wuwa_notifications, WuwaResourceType, "Wuthering Waves";
 }
 
 #[cfg(test)]

@@ -14,6 +14,7 @@ pub(crate) use message_builder::{
 };
 pub(crate) use resource_extractor::extract_resource_info;
 pub use tracker::NotificationTracker;
+use tracker::NotifyAction;
 
 use chrono::Utc;
 use storekeeper_core::GameId;
@@ -79,47 +80,56 @@ pub(crate) async fn check_and_notify(app_handle: &AppHandle) {
         inner.config.games.clone()
     };
 
+    // Step 1: Resolve all notifiable resources (no lock needed).
+    let mut candidates = Vec::new();
     for (game_id, resources_json) in &resources.games {
         if !games_config.has_notification_configs(*game_id) {
             continue;
         }
-
         let Some(resource_array) = resources_json.as_array() else {
             continue;
         };
-
         for resource_obj in resource_array {
             let Some((type_tag, config, resource_info)) =
                 resolve_notifiable_resource(resource_obj, &games_config, *game_id)
             else {
                 continue;
             };
+            candidates.push((*game_id, type_tag, config, resource_info));
+        }
+    }
 
-            let should_notify = {
-                let mut inner = state.inner.write().await;
-                inner.notification_tracker.should_notify(
-                    *game_id,
-                    type_tag,
-                    config,
-                    &resource_info,
-                    now,
-                )
-            };
-
-            if !should_notify {
-                continue;
-            }
-
-            if checker::send_resource_notification(
-                app_handle,
+    // Step 2: Batch should_notify checks (single write lock).
+    let mut to_notify = Vec::new();
+    {
+        let mut inner = state.inner.write().await;
+        for (i, (game_id, type_tag, config, resource_info)) in candidates.iter().enumerate() {
+            if let NotifyAction::Notify(key) = inner.notification_tracker.should_notify(
                 *game_id,
                 type_tag,
-                &resource_info,
+                config,
+                resource_info,
                 now,
             ) {
-                let mut inner = state.inner.write().await;
-                inner.notification_tracker.record(*game_id, type_tag, now);
+                to_notify.push((key, i));
             }
+        }
+    }
+
+    // Step 3: Send notifications (no lock held).
+    let mut sent_keys = Vec::new();
+    for (key, i) in to_notify {
+        let (game_id, type_tag, _, ref resource_info) = candidates[i];
+        if checker::send_resource_notification(app_handle, game_id, type_tag, resource_info, now) {
+            sent_keys.push(key);
+        }
+    }
+
+    // Step 4: Batch record sent notifications (single write lock).
+    if !sent_keys.is_empty() {
+        let mut inner = state.inner.write().await;
+        for key in sent_keys {
+            inner.notification_tracker.record(key, now);
         }
     }
 }
