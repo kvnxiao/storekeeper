@@ -30,6 +30,9 @@ export function formatTimeRemaining(
   }
 
   const totalSeconds = Math.floor(diffMs / 1000);
+  if (totalSeconds === 0) {
+    return m.time_remaining_full();
+  }
   const days = Math.floor(totalSeconds / 86400);
   const hours = Math.floor((totalSeconds % 86400) / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -38,8 +41,8 @@ export function formatTimeRemaining(
   return durationFmt.format({
     days: days > 0 ? days : undefined,
     hours: days > 0 || hours > 0 ? hours : undefined,
-    minutes: days > 0 || hours > 0 ? minutes : undefined,
-    seconds: days === 0 && hours === 0 ? seconds : undefined,
+    minutes: minutes > 0 ? minutes : undefined,
+    seconds: hours === 0 && seconds > 0 ? seconds : undefined,
   });
 }
 
