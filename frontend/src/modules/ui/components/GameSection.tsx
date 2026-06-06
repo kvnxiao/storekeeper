@@ -1,19 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import { motion, useReducedMotion } from "motion/react";
 import { useCallback, useState } from "react";
-import {
-  Button,
-  Disclosure,
-  DisclosurePanel,
-  Heading,
-} from "react-aria-components";
+import { Button, Disclosure, DisclosurePanel, Heading } from "react-aria-components";
 import { tv } from "tailwind-variants";
 import type { GameId } from "@/modules/games/games.types";
 import { Badge } from "@/modules/ui/components/Badge";
-import {
-  cardContainerVariants,
-  springTransition,
-} from "@/modules/ui/ui.animations";
+import { cardContainerVariants, springTransition } from "@/modules/ui/ui.animations";
 import * as m from "@/paraglide/messages";
 
 const disclosureStyle = tv({
@@ -69,9 +61,7 @@ export const GameSection: React.FC<GameSectionProps> = ({
       <Heading>
         <Button slot="trigger" className={triggerStyle()}>
           <span className="flex items-center gap-2">
-            <span className="text-base font-semibold text-zinc-950 dark:text-white">
-              {title}
-            </span>
+            <span className="text-base font-semibold text-zinc-950 dark:text-white">{title}</span>
             {claimStatus != null && (
               <ClaimBadge
                 claimed={claimStatus}
@@ -111,12 +101,7 @@ interface ClaimBadgeProps {
   onClaim: (e: React.MouseEvent) => void;
 }
 
-const ClaimBadge: React.FC<ClaimBadgeProps> = ({
-  claimed,
-  isClaiming,
-  canClaim,
-  onClaim,
-}) => {
+const ClaimBadge: React.FC<ClaimBadgeProps> = ({ claimed, isClaiming, canClaim, onClaim }) => {
   if (isClaiming) {
     return <Badge variant="default">{m.daily_claiming()}</Badge>;
   }
@@ -129,6 +114,8 @@ const ClaimBadge: React.FC<ClaimBadgeProps> = ({
     return (
       <Badge
         variant="warning"
+        // Badge renders a styled span, not a native button; keep the ARIA role.
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
         role="button"
         tabIndex={0}
         className="cursor-pointer"

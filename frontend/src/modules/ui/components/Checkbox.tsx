@@ -19,33 +19,24 @@ export interface CheckboxProps extends AriaCheckboxProps {
   className?: string;
 }
 
-export const Checkbox: React.FC<CheckboxProps> = ({
-  className,
-  children,
-  ...props
-}) => {
+export const Checkbox: React.FC<CheckboxProps> = ({ className, children, ...props }) => {
   return (
     <AriaCheckbox
       {...props}
-      className={composeRenderProps(className, (cn) =>
-        checkboxStyle({ className: cn }),
-      )}
+      className={composeRenderProps(className, (cn) => checkboxStyle({ className: cn }))}
     >
-      {composeRenderProps(
-        children,
-        (children, { isSelected, isIndeterminate }) => (
-          <>
-            <div className={checkboxBoxStyle()}>
-              {isIndeterminate ? (
-                <MinusIcon className="size-3 text-current" aria-hidden="true" />
-              ) : isSelected ? (
-                <CheckIcon className="size-3 text-current" aria-hidden="true" />
-              ) : null}
-            </div>
-            {children}
-          </>
-        ),
-      )}
+      {composeRenderProps(children, (children, { isSelected, isIndeterminate }) => (
+        <>
+          <div className={checkboxBoxStyle()}>
+            {isIndeterminate ? (
+              <MinusIcon className="size-3 text-current" aria-hidden="true" />
+            ) : isSelected ? (
+              <CheckIcon className="size-3 text-current" aria-hidden="true" />
+            ) : null}
+          </div>
+          {children}
+        </>
+      ))}
     </AriaCheckbox>
   );
 };

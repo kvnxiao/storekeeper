@@ -15,9 +15,7 @@ import * as m from "@/paraglide/messages";
 
 const DashboardPage: React.FC = () => {
   const { error } = useAtomValue(atoms.core.resourcesQuery);
-  const { isPending, mutate: refresh } = useAtomValue(
-    atoms.core.refreshResources,
-  );
+  const { isPending, mutate: refresh } = useAtomValue(atoms.core.refreshResources);
   const isConfigLoading = useAtomValue(atoms.core.isConfigLoading);
   const enabledGames = useAtomValue(atoms.core.enabledGames);
 
@@ -33,9 +31,7 @@ const DashboardPage: React.FC = () => {
   return (
     <div className="mx-auto min-h-screen max-w-sm p-3">
       <header className="mb-3 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-zinc-950 dark:text-white">
-          {m.app_title()}
-        </h1>
+        <h1 className="text-lg font-bold text-zinc-950 dark:text-white">{m.app_title()}</h1>
         <div className="flex items-center gap-1">
           <Button
             variant="plain"
@@ -53,8 +49,7 @@ const DashboardPage: React.FC = () => {
             variant="plain"
             aria-label={m.dashboard_settings()}
             onClick={() => {
-              document.documentElement.dataset.viewTransitionDirection =
-                "forward";
+              document.documentElement.dataset.viewTransitionDirection = "forward";
             }}
           >
             <Cog6ToothIcon aria-hidden="true" className="size-5" />

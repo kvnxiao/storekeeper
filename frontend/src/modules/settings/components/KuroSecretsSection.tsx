@@ -8,15 +8,9 @@ interface KuroSecretsSectionProps {
   onChange: (secrets: KuroSecrets) => void;
 }
 
-export const KuroSecretsSection: React.FC<KuroSecretsSectionProps> = ({
-  secrets,
-  onChange,
-}) => {
+export const KuroSecretsSection: React.FC<KuroSecretsSectionProps> = ({ secrets, onChange }) => {
   return (
-    <Section
-      title={m.settings_kuro_title()}
-      description={m.settings_kuro_description()}
-    >
+    <Section title={m.settings_kuro_title()} description={m.settings_kuro_description()}>
       <TextField
         label={m.settings_kuro_oauth_label()}
         type="password"

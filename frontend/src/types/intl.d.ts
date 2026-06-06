@@ -8,10 +8,7 @@ declare global {
   namespace Intl {
     type DurationFormat = DurationFormatImpl;
     const DurationFormat: {
-      new (
-        locales?: string | string[],
-        options?: DurationFormatOptions,
-      ): DurationFormat;
+      new (locales?: string | string[], options?: DurationFormatOptions): DurationFormat;
     };
   }
 }

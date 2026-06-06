@@ -2,15 +2,8 @@
   "name": "storekeeper-frontend",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@10.29.3",
   "scripts": {
-    "dev": "vite dev --port 3000",
-    "build": "vite build",
-    "preview": "vite preview",
-    "test": "vitest run",
-    "format": "biome format",
-    "lint": "biome check",
-    "fix": "biome check --write"
+    "postinstall": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.9",
@@ -20,9 +13,9 @@
     "@heroicons/react": "^2.2.0",
     "@tailwindcss/vite": "^4.3.0",
     "@tanstack/react-query": "^5.101.0",
-    "@tanstack/react-router": "^1.170.13",
-    "@tanstack/react-start": "^1.168.22",
-    "@tanstack/router-plugin": "^1.168.16",
+    "@tanstack/react-router": "^1.170.11",
+    "@tanstack/react-start": "^1.168.20",
+    "@tanstack/router-plugin": "^1.168.14",
     "@tauri-apps/api": "^2.11.0",
     "@tauri-apps/plugin-notification": "^2.3.3",
     "fast-equals": "^6.0.0",
@@ -41,18 +34,20 @@
     "tailwindcss-react-aria-components": "^2.1.1"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.16",
     "@inlang/paraglide-js": "^2.18.2",
+    "@inlang/plugin-message-format": "^4.4.0",
     "@tanstack/devtools-vite": "^0.7.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.2",
-    "@types/node": "^25.9.2",
-    "@types/react": "^19.2.17",
+    "@types/node": "^25.9.1",
+    "@types/react": "^19.2.16",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
     "jsdom": "^29.1.1",
     "typescript": "^6.0.3",
-    "vite": "^8.0.16",
-    "vitest": "^4.1.8"
-  }
+    "vite": "catalog:",
+    "vite-plus": "catalog:",
+    "vitest": "catalog:"
+  },
+  "packageManager": "pnpm@11.5.2"
 }

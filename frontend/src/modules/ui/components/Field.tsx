@@ -34,17 +34,8 @@ export interface DescriptionProps extends AriaTextProps {
   className?: string;
 }
 
-export const Description: React.FC<DescriptionProps> = ({
-  className,
-  ...props
-}) => {
-  return (
-    <AriaText
-      {...props}
-      slot="description"
-      className={descriptionStyle({ className })}
-    />
-  );
+export const Description: React.FC<DescriptionProps> = ({ className, ...props }) => {
+  return <AriaText {...props} slot="description" className={descriptionStyle({ className })} />;
 };
 
 // FieldError
@@ -56,13 +47,8 @@ export interface FieldErrorProps extends AriaFieldErrorProps {
   className?: string;
 }
 
-export const FieldError: React.FC<FieldErrorProps> = ({
-  className,
-  ...props
-}) => {
-  return (
-    <AriaFieldError {...props} className={fieldErrorStyle({ className })} />
-  );
+export const FieldError: React.FC<FieldErrorProps> = ({ className, ...props }) => {
+  return <AriaFieldError {...props} className={fieldErrorStyle({ className })} />;
 };
 
 // Field (wrapper)
@@ -78,9 +64,7 @@ export const Field: React.FC<FieldProps> = ({ className, ...props }) => {
   return (
     <Group
       {...props}
-      className={composeRenderProps(className, (cn) =>
-        fieldStyle({ className: cn }),
-      )}
+      className={composeRenderProps(className, (cn) => fieldStyle({ className: cn }))}
     />
   );
 };
@@ -92,9 +76,6 @@ const fieldGroupStyle = tv({
 
 export interface FieldGroupProps extends React.HTMLAttributes<HTMLDivElement> {}
 
-export const FieldGroup: React.FC<FieldGroupProps> = ({
-  className,
-  ...props
-}) => {
+export const FieldGroup: React.FC<FieldGroupProps> = ({ className, ...props }) => {
   return <div className={fieldGroupStyle({ className })} {...props} />;
 };

@@ -9,10 +9,7 @@ import {
   refreshResourcesMutationOptions,
   resourcesQueryOptions,
 } from "@/modules/resources/resources.query";
-import type {
-  AllResources,
-  GameResourcePayload,
-} from "@/modules/resources/resources.types";
+import type { AllResources, GameResourcePayload } from "@/modules/resources/resources.types";
 import { configQueryOptions } from "@/modules/settings/settings.query";
 import type { GamesConfig } from "@/modules/settings/settings.types";
 import "@formatjs/intl-durationformat/polyfill.js";
@@ -27,13 +24,11 @@ interface AllDailyRewardStatus {
   lastChecked?: string;
 }
 
-function extractClaimStatus(
-  status: AllDailyRewardStatus,
-): Map<GameId, boolean> {
+function extractClaimStatus(status: AllDailyRewardStatus): Map<GameId, boolean> {
   const map = new Map<GameId, boolean>();
   if (status.games) {
     for (const [gameId, data] of Object.entries(status.games)) {
-      if (data?.info?.is_signed != null) {
+      if (data.info?.is_signed != null) {
         map.set(gameId as GameId, data.info.is_signed);
       }
     }
@@ -137,9 +132,7 @@ export class CoreAtoms {
   // ---------------------------------------------------------------------------
 
   readonly resourcesQuery = atomWithQuery(() => resourcesQueryOptions());
-  readonly refreshResources = atomWithMutation(() =>
-    refreshResourcesMutationOptions(),
-  );
+  readonly refreshResources = atomWithMutation(() => refreshResourcesMutationOptions());
 
   // ---------------------------------------------------------------------------
   // Refresh state - tracks when a manual refresh is in progress
@@ -218,25 +211,19 @@ export class CoreAtoms {
   // Daily reward claim status - tracks whether today's reward has been claimed
   // ---------------------------------------------------------------------------
 
-  private readonly dailyRewardStatusBase = atom<Map<GameId, boolean>>(
-    new Map(),
-  );
+  private readonly dailyRewardStatusBase = atom<Map<GameId, boolean>>(new Map());
 
   private readonly dailyRewardEffect = atomEffect((_get, set) => {
     // On mount: fetch initial status
-    void invoke<AllDailyRewardStatus>("refresh_daily_reward_status").then(
-      (status) => {
-        set(this.dailyRewardStatusBase, extractClaimStatus(status));
-      },
-    );
+    void invoke<AllDailyRewardStatus>("refresh_daily_reward_status").then((status) => {
+      set(this.dailyRewardStatusBase, extractClaimStatus(status));
+    });
 
     // Listen for claim events: re-fetch status
     const unlistenPromise = listen("daily-reward-claimed", () => {
-      void invoke<AllDailyRewardStatus>("get_daily_reward_status").then(
-        (status) => {
-          set(this.dailyRewardStatusBase, extractClaimStatus(status));
-        },
-      );
+      void invoke<AllDailyRewardStatus>("get_daily_reward_status").then((status) => {
+        set(this.dailyRewardStatusBase, extractClaimStatus(status));
+      });
     });
 
     // Daily reset watcher: detect UTC+8 date change and re-fetch claim status
@@ -249,11 +236,9 @@ export class CoreAtoms {
         lastUtc8Date = currentDate;
         // Buffer for game server reset propagation
         resetTimeout = setTimeout(() => {
-          void invoke<AllDailyRewardStatus>("refresh_daily_reward_status").then(
-            (status) => {
-              set(this.dailyRewardStatusBase, extractClaimStatus(status));
-            },
-          );
+          void invoke<AllDailyRewardStatus>("refresh_daily_reward_status").then((status) => {
+            set(this.dailyRewardStatusBase, extractClaimStatus(status));
+          });
         }, 60_000);
       }
     }, 60_000);
@@ -294,9 +279,7 @@ export class CoreAtoms {
   readonly enabledGames = atom((get) => {
     const { data: config } = get(this.configQuery);
     return new Set<GameId>(
-      GAME_CONFIG_KEYS.filter(([, key]) => config?.games[key]?.enabled).map(
-        ([id]) => id,
-      ),
+      GAME_CONFIG_KEYS.filter(([, key]) => config?.games[key]?.enabled).map(([id]) => id),
     );
   });
 
@@ -305,14 +288,12 @@ export class CoreAtoms {
   // ---------------------------------------------------------------------------
 
   private readonly localeSyncEffect = atomEffect((_get, set) => {
-    void invoke<string>("get_effective_locale").then(
-      async (effectiveLocale) => {
-        if (isLocale(effectiveLocale)) {
-          await setLocale(effectiveLocale, { reload: false });
-          set(this.locale, effectiveLocale);
-        }
-      },
-    );
+    void invoke<string>("get_effective_locale").then(async (effectiveLocale) => {
+      if (isLocale(effectiveLocale)) {
+        await setLocale(effectiveLocale, { reload: false });
+        set(this.locale, effectiveLocale);
+      }
+    });
   });
 
   readonly localeSync = atom((get) => {

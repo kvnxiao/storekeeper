@@ -1,10 +1,6 @@
 import { mutationOptions, queryOptions } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import type {
-  AppConfig,
-  SaveResult,
-  SecretsConfig,
-} from "@/modules/settings/settings.types";
+import type { AppConfig, SaveResult, SecretsConfig } from "@/modules/settings/settings.types";
 
 /** Query options for fetching config from backend */
 export function configQueryOptions() {

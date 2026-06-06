@@ -1,9 +1,6 @@
 import { useAtomValue } from "jotai";
 import { atoms } from "@/modules/atoms";
-import {
-  getResourceDisplayName,
-  ZzzResource,
-} from "@/modules/games/games.constants";
+import { getResourceDisplayName, ZzzResource } from "@/modules/games/games.constants";
 import { GameId } from "@/modules/games/games.types";
 import { StaminaCard } from "@/modules/resources/components/StaminaCard";
 import { GameSection } from "@/modules/ui/components/GameSection";

@@ -26,17 +26,11 @@ export interface InputProps extends AriaInputProps, InputStyleProps {
   className?: string;
 }
 
-export const Input: React.FC<InputProps> = ({
-  inputSize,
-  className,
-  ...props
-}) => {
+export const Input: React.FC<InputProps> = ({ inputSize, className, ...props }) => {
   return (
     <AriaInput
       {...props}
-      className={composeRenderProps(className, (cn) =>
-        inputStyle({ inputSize, className: cn }),
-      )}
+      className={composeRenderProps(className, (cn) => inputStyle({ inputSize, className: cn }))}
     />
   );
 };

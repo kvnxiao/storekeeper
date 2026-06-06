@@ -130,7 +130,6 @@ code {
   font-family: var(--font-mono);
 }
 
-
 /* Prevent horizontal scrollbar during page transitions */
 body {
   overflow-x: hidden;
@@ -217,13 +216,21 @@ body {
 
 /* Simple fade fallbacks */
 @keyframes fade-out {
-  from { opacity: 1; }
-  to { opacity: 0; }
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
 @keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* =============================================================================
@@ -231,17 +238,16 @@ body {
    ============================================================================= */
 
 @utility mask-shimmer {
-  mask-image: linear-gradient(
-    120deg,
-    #000 25%,
-    rgba(0, 0, 0, 0.5) 50%,
-    #000 75%
-  );
+  mask-image: linear-gradient(120deg, #000 25%, rgba(0, 0, 0, 0.5) 50%, #000 75%);
   mask-size: 300% 100%;
   animation: mask-shimmer 1.2s ease-in-out infinite;
 }
 
 @keyframes mask-shimmer {
-  from { mask-position: 100% 0; }
-  to { mask-position: 0 0; }
+  from {
+    mask-position: 100% 0;
+  }
+  to {
+    mask-position: 0 0;
+  }
 }

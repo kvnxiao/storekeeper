@@ -1,10 +1,7 @@
 import { atom, type Getter } from "jotai";
 import type { CoreAtoms } from "@/modules/core/core.atoms";
 import type { FormattedTime } from "@/modules/resources/resources.types";
-import {
-  formatAbsoluteDateTime,
-  formatTimeRemaining,
-} from "@/modules/resources/resources.utils";
+import { formatAbsoluteDateTime, formatTimeRemaining } from "@/modules/resources/resources.utils";
 
 /**
  * Creates a derived atom that computes formatted time for a resource.
@@ -25,12 +22,7 @@ export function atomFormattedTime(
 
     return {
       relativeTime: formatTimeRemaining(datetime, nowMs, durationFmt),
-      absoluteTime: formatAbsoluteDateTime(
-        datetime,
-        nowMs,
-        timeOnlyFmt,
-        weekdayTimeFmt,
-      ),
+      absoluteTime: formatAbsoluteDateTime(datetime, nowMs, timeOnlyFmt, weekdayTimeFmt),
     };
   });
 }

@@ -25,14 +25,8 @@ const badgeStyle = tv({
 
 type BadgeStyleProps = VariantProps<typeof badgeStyle>;
 
-export interface BadgeProps
-  extends React.HTMLAttributes<HTMLSpanElement>,
-    BadgeStyleProps {}
+export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement>, BadgeStyleProps {}
 
-export const Badge: React.FC<BadgeProps> = ({
-  variant,
-  className,
-  ...props
-}) => {
+export const Badge: React.FC<BadgeProps> = ({ variant, className, ...props }) => {
   return <span className={badgeStyle({ variant, className })} {...props} />;
 };

@@ -37,7 +37,7 @@ Build and test tools only:
 ```json
 {
   "devDependencies": {
-    "@biomejs/biome": "^2.0.2",
+    "vite-plus": "catalog:",
     "typescript": "^5.8.2",
     "vitest": "^3.1.4"
   }

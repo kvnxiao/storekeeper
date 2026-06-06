@@ -17,9 +17,7 @@ export const Tooltip: React.FC<TooltipProps> = ({ className, ...props }) => {
     <AriaTooltip
       offset={8}
       {...props}
-      className={composeRenderProps(className, (className) =>
-        tooltipStyle({ className }),
-      )}
+      className={composeRenderProps(className, (className) => tooltipStyle({ className }))}
     >
       {composeRenderProps(props.children, (children) => (
         <>

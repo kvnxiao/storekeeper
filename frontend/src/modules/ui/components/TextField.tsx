@@ -51,9 +51,7 @@ type FieldStyleProps = VariantProps<typeof fieldStyle>;
 type InputStyleProps = VariantProps<typeof inputStyle>;
 
 export interface TextFieldProps
-  extends Omit<AriaTextFieldProps, "type">,
-    FieldStyleProps,
-    InputStyleProps {
+  extends Omit<AriaTextFieldProps, "type">, FieldStyleProps, InputStyleProps {
   label?: string;
   description?: string;
   placeholder?: string;
@@ -74,24 +72,18 @@ export const TextField: React.FC<TextFieldProps> = ({
   return (
     <AriaTextField
       {...props}
-      className={composeRenderProps(className, (cn) =>
-        fieldStyle({ className: cn }),
-      )}
+      className={composeRenderProps(className, (cn) => fieldStyle({ className: cn }))}
     >
       {label && <Label className={labelStyle()}>{label}</Label>}
       <div className="relative">
         <Input
           type={isPassword && revealed ? "text" : type}
           placeholder={placeholder}
-          className={inputStyle({ type: type as "text" | "password" })}
+          className={inputStyle({ type })}
         />
         {isPassword && (
           <AriaButton
-            aria-label={
-              revealed
-                ? m.textfield_hide_password()
-                : m.textfield_show_password()
-            }
+            aria-label={revealed ? m.textfield_hide_password() : m.textfield_show_password()}
             onPress={() => setRevealed((v) => !v)}
             className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300"
           >

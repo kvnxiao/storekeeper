@@ -1,9 +1,6 @@
 import { useAtomValue } from "jotai";
 import { atoms } from "@/modules/atoms";
-import {
-  GenshinResource,
-  getResourceDisplayName,
-} from "@/modules/games/games.constants";
+import { GenshinResource, getResourceDisplayName } from "@/modules/games/games.constants";
 import { GameId } from "@/modules/games/games.types";
 import { ExpeditionsCard } from "@/modules/games/genshin/components/ExpeditionsCard";
 import { CooldownCard } from "@/modules/resources/components/CooldownCard";

@@ -30,9 +30,7 @@ export const TimeRemaining: React.FC<TimeRemainingProps> = ({
 
   return (
     <TooltipTrigger delay={300}>
-      <Button className={cn(!plain && interactiveStyle(), className)}>
-        {relativeTime}
-      </Button>
+      <Button className={cn(!plain && interactiveStyle(), className)}>{relativeTime}</Button>
       <Tooltip>{absoluteTime}</Tooltip>
     </TooltipTrigger>
   );

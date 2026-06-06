@@ -37,9 +37,7 @@ const progressBarStyle = tv({
 
 type ProgressBarStyleProps = VariantProps<typeof progressBarStyle>;
 
-export interface ProgressBarProps
-  extends AriaProgressBarProps,
-    ProgressBarStyleProps {
+export interface ProgressBarProps extends AriaProgressBarProps, ProgressBarStyleProps {
   className?: string;
   label?: string;
   showValue?: boolean;
@@ -64,18 +62,14 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   return (
     <AriaProgressBar
       {...props}
-      className={composeRenderProps(className, (cn) =>
-        styles.root({ className: cn }),
-      )}
+      className={composeRenderProps(className, (cn) => styles.root({ className: cn }))}
     >
       {({ percentage = 0, valueText }) => (
         <>
           {(label || showValue) && (
             <div className="flex justify-between">
               {label && <span className={styles.label()}>{label}</span>}
-              {showValue && (
-                <span className={styles.valueText()}>{valueText}</span>
-              )}
+              {showValue && <span className={styles.valueText()}>{valueText}</span>}
             </div>
           )}
           <div className={styles.track()}>
