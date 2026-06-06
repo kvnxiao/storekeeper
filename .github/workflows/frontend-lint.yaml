@@ -25,7 +25,7 @@ jobs:
       - name: Set up Vite+ and install dependencies
         uses: voidzero-dev/setup-vp@v1
         with:
-          node-version-file: frontend/.node-version
+          node-version-file: .node-version
           working-directory: frontend
           cache: true
 
