@@ -5,7 +5,6 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import { nitro } from "nitro/vite";
 import { defineConfig } from "vite";
-import viteTsConfigPaths from "vite-tsconfig-paths";
 
 type TanStackStartInputConfig = NonNullable<
   Parameters<typeof tanstackStart>[0]
@@ -34,9 +33,6 @@ export default defineConfig(async () => ({
     }),
     devtools(),
     nitro(),
-    viteTsConfigPaths({
-      projects: ["./tsconfig.json"],
-    }),
     tailwindcss(),
     tanstackStart({
       spa: spaWithPrerenderOptions,
@@ -45,6 +41,9 @@ export default defineConfig(async () => ({
   ],
 
   clearScreen: false,
+  resolve: {
+    tsconfigPaths: true,
+  },
   server: {
     port: 3000,
     strictPort: true,

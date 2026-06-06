@@ -38,8 +38,7 @@
     "tailwind-merge": "^3.6.0",
     "tailwind-variants": "^3.2.2",
     "tailwindcss": "^4.3.0",
-    "tailwindcss-react-aria-components": "^2.1.1",
-    "vite-tsconfig-paths": "^6.1.1"
+    "tailwindcss-react-aria-components": "^2.1.1"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.16",
