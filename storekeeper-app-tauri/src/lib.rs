@@ -42,6 +42,16 @@ pub fn run() -> Result<()> {
     init_tracing();
 
     let app = tauri::Builder::default()
+        // Must be registered first so it runs before any other plugin. When a
+        // second instance is launched, this fires in the already-running
+        // instance and the new process exits; reveal the existing window.
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.unminimize();
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_autostart::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
         .setup(|app| {
