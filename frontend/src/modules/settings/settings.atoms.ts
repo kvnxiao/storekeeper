@@ -153,7 +153,7 @@ export class SettingsAtoms {
 
       // Sync frontend locale from backend's effective locale
       if (isLocale(result.effective_locale)) {
-        setLocale(result.effective_locale, { reload: false });
+        await setLocale(result.effective_locale, { reload: false });
         set(this.core.locale, result.effective_locale);
       }
     } catch (e) {

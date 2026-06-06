@@ -20,7 +20,8 @@
       "!!.output",
       "!!.tanstack",
       "!src/routeTree.gen.ts",
-      "!src/paraglide"
+      "!src/paraglide",
+      "!project.inlang/.meta.json"
     ]
   },
   "formatter": {
