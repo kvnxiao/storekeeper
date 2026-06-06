@@ -2,16 +2,6 @@
   "name": "storekeeper-frontend",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@10.29.3",
-  "scripts": {
-    "dev": "vite dev --port 3000",
-    "build": "vite build",
-    "preview": "vite preview",
-    "test": "vitest run",
-    "format": "biome format",
-    "lint": "biome check",
-    "fix": "biome check --write"
-  },
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.9",
     "@fontsource-variable/geist-mono": "^5.2.8",
@@ -41,7 +31,6 @@
     "tailwindcss-react-aria-components": "^2.1.1"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.16",
     "@inlang/paraglide-js": "^2.18.2",
     "@tanstack/devtools-vite": "^0.7.0",
     "@testing-library/dom": "^10.4.1",
@@ -52,7 +41,9 @@
     "@vitejs/plugin-react": "^6.0.2",
     "jsdom": "^29.1.1",
     "typescript": "^6.0.3",
-    "vite": "^8.0.16",
-    "vitest": "^4.1.8"
-  }
+    "vite": "catalog:",
+    "vite-plus": "catalog:",
+    "vitest": "catalog:"
+  },
+  "packageManager": "pnpm@10.29.3"
 }

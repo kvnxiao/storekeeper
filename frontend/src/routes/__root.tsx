@@ -1,10 +1,5 @@
 import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  createRootRouteWithContext,
-  HeadContent,
-  Outlet,
-  Scripts,
-} from "@tanstack/react-router";
+import { createRootRouteWithContext, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
 import { Provider as JotaiProvider, useAtomValue } from "jotai";
 import { useHydrateAtoms } from "jotai/utils";
 import { queryClientAtom } from "jotai-tanstack-query";
@@ -17,9 +12,7 @@ interface RouterContext {
 }
 
 /** Hydrates the shared QueryClient into jotai-tanstack-query synchronously */
-const HydrateQueryClient: React.FC<React.PropsWithChildren> = ({
-  children,
-}) => {
+const HydrateQueryClient: React.FC<React.PropsWithChildren> = ({ children }) => {
   useHydrateAtoms([[queryClientAtom, queryClient]]);
   return <>{children}</>;
 };

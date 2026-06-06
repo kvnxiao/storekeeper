@@ -1,35 +1,20 @@
-import {
-  ArrowLeftIcon,
-  ExclamationCircleIcon,
-} from "@heroicons/react/24/outline";
+import { ArrowLeftIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { createFileRoute } from "@tanstack/react-router";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useMemo } from "react";
 import { Button as AriaButton, TooltipTrigger } from "react-aria-components";
 import { atoms } from "@/modules/atoms";
-import {
-  GenshinResource,
-  HsrResource,
-  ZzzResource,
-} from "@/modules/games/games.constants";
+import { GenshinResource, HsrResource, ZzzResource } from "@/modules/games/games.constants";
 import { GameId } from "@/modules/games/games.types";
-import {
-  type AllResources,
-  isStaminaResource,
-} from "@/modules/resources/resources.types";
+import { type AllResources, isStaminaResource } from "@/modules/resources/resources.types";
 import { GeneralSection } from "@/modules/settings/components/GeneralSection";
 import { HoyolabGameSection } from "@/modules/settings/components/HoyolabGameSection";
 import { HoyolabSecretsSection } from "@/modules/settings/components/HoyolabSecretsSection";
 import { KuroSecretsSection } from "@/modules/settings/components/KuroSecretsSection";
 import type { ResourceLimits } from "@/modules/settings/components/NotificationResourceRow";
 import { WuwaSection } from "@/modules/settings/components/WuwaSection";
-import type {
-  AppConfig,
-  HoyolabConfigKey,
-  SecretsConfig,
-  WuwaConfig,
-} from "@/modules/settings/settings.types";
+import type { AppConfig, HoyolabConfigKey, SecretsConfig } from "@/modules/settings/settings.types";
 import { Button } from "@/modules/ui/components/Button";
 import { ButtonLink } from "@/modules/ui/components/ButtonLink";
 import { Tooltip } from "@/modules/ui/components/Tooltip";
@@ -124,18 +109,9 @@ const SettingsPage: React.FC = () => {
   const resourceLimits = useMemo(
     () => ({
       GENSHIN_IMPACT: getResourceLimitsForGame(resources, GameId.GenshinImpact),
-      HONKAI_STAR_RAIL: getResourceLimitsForGame(
-        resources,
-        GameId.HonkaiStarRail,
-      ),
-      ZENLESS_ZONE_ZERO: getResourceLimitsForGame(
-        resources,
-        GameId.ZenlessZoneZero,
-      ),
-      WUTHERING_WAVES: getResourceLimitsForGame(
-        resources,
-        GameId.WutheringWaves,
-      ),
+      HONKAI_STAR_RAIL: getResourceLimitsForGame(resources, GameId.HonkaiStarRail),
+      ZENLESS_ZONE_ZERO: getResourceLimitsForGame(resources, GameId.ZenlessZoneZero),
+      WUTHERING_WAVES: getResourceLimitsForGame(resources, GameId.WutheringWaves),
     }),
     [resources],
   );
@@ -161,13 +137,9 @@ const SettingsPage: React.FC = () => {
     return (
       <div className="flex min-h-screen items-center justify-center p-4">
         {loadError ? (
-          <p className="text-red-500">
-            {m.settings_failed_to_load({ error: String(loadError) })}
-          </p>
+          <p className="text-red-500">{m.settings_failed_to_load({ error: String(loadError) })}</p>
         ) : (
-          <p className="text-zinc-500 dark:text-zinc-400">
-            {m.settings_loading()}
-          </p>
+          <p className="text-zinc-500 dark:text-zinc-400">{m.settings_loading()}</p>
         )}
       </div>
     );
@@ -188,9 +160,7 @@ const SettingsPage: React.FC = () => {
           >
             <ArrowLeftIcon aria-hidden="true" className="size-5" />
           </ButtonLink>
-          <h1 className="text-xl font-bold text-zinc-950 dark:text-white">
-            {m.settings_title()}
-          </h1>
+          <h1 className="text-xl font-bold text-zinc-950 dark:text-white">{m.settings_title()}</h1>
         </div>
       </header>
 
@@ -232,7 +202,7 @@ const SettingsPage: React.FC = () => {
           onChange={(wuwa) =>
             updateConfig("games", {
               ...config.games,
-              wuthering_waves: wuwa as WuwaConfig,
+              wuthering_waves: wuwa,
             })
           }
         />
@@ -269,15 +239,10 @@ const SettingsPage: React.FC = () => {
                       ease: "easeInOut",
                     }}
                   >
-                    <ExclamationCircleIcon
-                      aria-hidden="true"
-                      className="size-5 text-amber-500"
-                    />
+                    <ExclamationCircleIcon aria-hidden="true" className="size-5 text-amber-500" />
                   </motion.div>
                 </AriaButton>
-                <Tooltip placement="top">
-                  {m.settings_unsaved_changes()}
-                </Tooltip>
+                <Tooltip placement="top">{m.settings_unsaved_changes()}</Tooltip>
               </TooltipTrigger>
 
               <div className="flex-1" />

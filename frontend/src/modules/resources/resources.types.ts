@@ -41,24 +41,15 @@ export interface AllResources {
 
 /** Type guards */
 export function isStaminaResource(data: unknown): data is StaminaResource {
-  return (
-    typeof data === "object" &&
-    data !== null &&
-    "current" in data &&
-    "max" in data
-  );
+  return typeof data === "object" && data !== null && "current" in data && "max" in data;
 }
 
 export function isCooldownResource(data: unknown): data is CooldownResource {
   return typeof data === "object" && data !== null && "isReady" in data;
 }
 
-export function isExpeditionResource(
-  data: unknown,
-): data is ExpeditionResource {
-  return (
-    typeof data === "object" && data !== null && "currentExpeditions" in data
-  );
+export function isExpeditionResource(data: unknown): data is ExpeditionResource {
+  return typeof data === "object" && data !== null && "currentExpeditions" in data;
 }
 
 /** Pre-computed formatted time for a resource */

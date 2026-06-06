@@ -8,10 +8,7 @@ import {
   saveAndApplyMutationOptions,
   secretsQueryOptions,
 } from "@/modules/settings/settings.query";
-import type {
-  AppConfig,
-  SecretsConfig,
-} from "@/modules/settings/settings.types";
+import type { AppConfig, SecretsConfig } from "@/modules/settings/settings.types";
 import { isLocale, setLocale } from "@/paraglide/runtime";
 
 // =============================================================================
@@ -94,9 +91,7 @@ export class SettingsAtoms {
   // ---------------------------------------------------------------------------
 
   /** Save config + secrets and apply changes in a single IPC call */
-  private readonly saveAndApplyMutation = atomWithMutation(() =>
-    saveAndApplyMutationOptions(),
-  );
+  private readonly saveAndApplyMutation = atomWithMutation(() => saveAndApplyMutationOptions());
 
   // ---------------------------------------------------------------------------
   // Actions

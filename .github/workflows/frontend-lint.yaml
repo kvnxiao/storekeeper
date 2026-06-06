@@ -22,22 +22,13 @@ jobs:
       - name: Checkout repository code
         uses: actions/checkout@v6
 
-      - name: Set up pnpm package manager
-        uses: pnpm/action-setup@v4
-        with:
-          package_json_file: frontend/package.json
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
+      - name: Set up Vite+ and install dependencies
+        uses: voidzero-dev/setup-vp@v1
         with:
           node-version-file: frontend/.node-version
-          cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
+          working-directory: frontend
+          cache: true
 
-      - name: Install dependencies from lockfile
-        run: pnpm install --frozen-lockfile
-        working-directory: frontend
-
-      - name: Run lint step
-        run: pnpm lint
+      - name: Run format, lint, and type checks
+        run: vp check
         working-directory: frontend

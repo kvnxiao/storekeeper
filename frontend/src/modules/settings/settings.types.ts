@@ -39,9 +39,7 @@ export interface HoyolabGameConfig {
 
 /** Genshin Impact configuration */
 export interface GenshinConfig extends HoyolabGameConfig {
-  notifications?: Partial<
-    Record<GenshinResourceType, ResourceNotificationConfig>
-  >;
+  notifications?: Partial<Record<GenshinResourceType, ResourceNotificationConfig>>;
 }
 
 /** Honkai: Star Rail configuration */

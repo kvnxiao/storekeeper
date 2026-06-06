@@ -17,15 +17,8 @@ const iconPlaceholderStyle = tv({
 type IconPlaceholderStyleProps = VariantProps<typeof iconPlaceholderStyle>;
 
 export interface IconPlaceholderProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    IconPlaceholderStyleProps {}
+  extends React.HTMLAttributes<HTMLDivElement>, IconPlaceholderStyleProps {}
 
-export const IconPlaceholder: React.FC<IconPlaceholderProps> = ({
-  size,
-  className,
-  ...props
-}) => {
-  return (
-    <div className={iconPlaceholderStyle({ size, className })} {...props} />
-  );
+export const IconPlaceholder: React.FC<IconPlaceholderProps> = ({ size, className, ...props }) => {
+  return <div className={iconPlaceholderStyle({ size, className })} {...props} />;
 };

@@ -26,11 +26,7 @@ export interface TextareaProps extends AriaTextAreaProps, TextareaStyleProps {
   className?: string;
 }
 
-export const Textarea: React.FC<TextareaProps> = ({
-  textareaSize,
-  className,
-  ...props
-}) => {
+export const Textarea: React.FC<TextareaProps> = ({ textareaSize, className, ...props }) => {
   return (
     <AriaTextArea
       {...props}

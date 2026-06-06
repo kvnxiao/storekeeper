@@ -11,6 +11,7 @@ Install the following tools:
 | [Rust](https://rustup.rs/) | 1.85+ (2024 edition) | Backend compilation |
 | [fnm](https://github.com/Schniz/fnm) | Latest | Node.js version management |
 | [pnpm](https://pnpm.io/) | See `frontend/package.json` `packageManager` | Frontend package manager |
+| [Vite+](https://viteplus.dev/) | Latest (`vp` CLI) | Frontend toolchain: dev, build, lint, format, test |
 | [just](https://github.com/casey/just) | Latest | Command runner |
 | [tauri-cli](https://v2.tauri.app/reference/cli/) | v2 | Desktop app bundling |
 | [Platform deps](https://v2.tauri.app/start/prerequisites/) | — | OS-specific build tools |
@@ -55,8 +56,8 @@ This compiles the Rust backend and starts the Vite dev server for the frontend. 
 ```bash
 just lint      # Run clippy + format check (Rust)
 just fix       # Auto-fix lint issues + format (Rust)
-just lint-web  # Run Biome lint + TypeScript check (frontend)
-just fix-web   # Auto-fix lint + format (frontend)
+just lint-web  # Run format, lint + type checks (frontend, via Vite+)
+just fix-web   # Auto-fix lint + format (frontend, via Vite+)
 just test      # Run Rust tests
 just bundle    # Create release build
 ```

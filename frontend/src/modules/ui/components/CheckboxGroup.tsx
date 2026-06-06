@@ -14,16 +14,11 @@ export interface CheckboxGroupProps extends AriaCheckboxGroupProps {
   className?: string;
 }
 
-export const CheckboxGroup: React.FC<CheckboxGroupProps> = ({
-  className,
-  ...props
-}) => {
+export const CheckboxGroup: React.FC<CheckboxGroupProps> = ({ className, ...props }) => {
   return (
     <AriaCheckboxGroup
       {...props}
-      className={composeRenderProps(className, (cn) =>
-        checkboxGroupStyle({ className: cn }),
-      )}
+      className={composeRenderProps(className, (cn) => checkboxGroupStyle({ className: cn }))}
     />
   );
 };

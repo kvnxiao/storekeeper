@@ -41,9 +41,7 @@ const DEFAULT_CONFIG: ResourceNotificationConfig = {
   cooldown_minutes: 30,
 };
 
-export const NotificationResourceRow: React.FC<
-  NotificationResourceRowProps
-> = ({
+export const NotificationResourceRow: React.FC<NotificationResourceRowProps> = ({
   gameId,
   resourceType,
   label,
@@ -141,9 +139,7 @@ export const NotificationResourceRow: React.FC<
           onPress={() => void handlePreview()}
           isPending={isPreviewing}
         >
-          {!isPreviewing && (
-            <BellAlertIcon aria-hidden="true" className="size-4" />
-          )}
+          {!isPreviewing && <BellAlertIcon aria-hidden="true" className="size-4" />}
         </Button>
       </div>
       {enabled && config && (
@@ -172,11 +168,7 @@ export const NotificationResourceRow: React.FC<
                     }
                     minValue={0}
                     maxValue={
-                      limits
-                        ? Math.floor(
-                            (limits.maxValue * limits.regenRateSeconds) / 60,
-                          )
-                        : 999
+                      limits ? Math.floor((limits.maxValue * limits.regenRateSeconds) / 60) : 999
                     }
                     step={5}
                   />
@@ -208,9 +200,7 @@ export const NotificationResourceRow: React.FC<
               label={m.settings_notification_cooldown()}
               description={cooldownDescription}
               value={config.cooldown_minutes}
-              onChange={(value) =>
-                onChange({ ...config, cooldown_minutes: value })
-              }
+              onChange={(value) => onChange({ ...config, cooldown_minutes: value })}
               minValue={0}
               maxValue={120}
               step={1}

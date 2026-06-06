@@ -13,10 +13,7 @@ export const HoyolabSecretsSection: React.FC<HoyolabSecretsSectionProps> = ({
   onChange,
 }) => {
   return (
-    <Section
-      title={m.settings_hoyolab_title()}
-      description={m.settings_hoyolab_description()}
-    >
+    <Section title={m.settings_hoyolab_title()} description={m.settings_hoyolab_description()}>
       <TextField
         label="ltuid_v2"
         type="password"

@@ -24,8 +24,7 @@ export const WuwaResource = {
 } as const;
 
 /** Extracted resource type unions per game */
-export type GenshinResourceType =
-  (typeof GenshinResource)[keyof typeof GenshinResource];
+export type GenshinResourceType = (typeof GenshinResource)[keyof typeof GenshinResource];
 export type HsrResourceType = (typeof HsrResource)[keyof typeof HsrResource];
 export type ZzzResourceType = (typeof ZzzResource)[keyof typeof ZzzResource];
 export type WuwaResourceType = (typeof WuwaResource)[keyof typeof WuwaResource];
@@ -50,5 +49,8 @@ export function getResourceDisplayName(type: string): string {
     [ZzzResource.Battery]: m.resource_battery,
     [WuwaResource.Waveplates]: m.resource_waveplates,
   };
+  // names[type] is undefined at runtime for unknown resource types (Record
+  // index access is not modelled by the type), so this guard is intentional.
+  // oxlint-disable-next-line typescript/no-unnecessary-condition
   return names[type]?.() ?? type;
 }

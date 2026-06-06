@@ -39,11 +39,7 @@ export interface SwitchProps extends Omit<AriaSwitchProps, "children"> {
   className?: string;
 }
 
-export const Switch: React.FC<SwitchProps> = ({
-  children,
-  className,
-  ...props
-}) => {
+export const Switch: React.FC<SwitchProps> = ({ children, className, ...props }) => {
   return (
     <AriaSwitch
       {...props}

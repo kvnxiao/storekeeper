@@ -1,9 +1,6 @@
 import { useAtomValue } from "jotai";
 import { atoms } from "@/modules/atoms";
-import {
-  GenshinResource,
-  getResourceDisplayName,
-} from "@/modules/games/games.constants";
+import { GenshinResource, getResourceDisplayName } from "@/modules/games/games.constants";
 import { CooldownCard } from "@/modules/resources/components/CooldownCard";
 
 const RESOURCE_ICON = "/icons/game/genshin/Expeditions.webp";

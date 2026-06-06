@@ -1,5 +1,5 @@
 import "@formatjs/intl-durationformat/polyfill.js";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { formatTimeRemaining } from "./resources.utils";
 
 vi.mock("@/paraglide/messages", () => ({
@@ -37,9 +37,7 @@ describe("formatTimeRemaining — early returns", () => {
     ["exact now (diffMs = 0)", new Date(now).toISOString()],
     ["sub-second remaining", futureIso(now, 500)],
   ])("returns Full for %s", (_label, datetime) => {
-    expect(
-      formatTimeRemaining(datetime as string | null | undefined, now, fmt),
-    ).toBe("Full");
+    expect(formatTimeRemaining(datetime, now, fmt)).toBe("Full");
   });
 });
 
@@ -154,10 +152,7 @@ const DURATION_DELTAS: Record<string, number> = {
   "7d 12h": 7 * MS.d + 12 * MS.h,
 };
 
-describe.each(LOCALE_CONFIGS)("formatTimeRemaining — $locale", ({
-  locale,
-  expected,
-}) => {
+describe.each(LOCALE_CONFIGS)("formatTimeRemaining — $locale", ({ locale, expected }) => {
   const now = Date.now();
   const fmt = makeDurationFmt(locale);
 

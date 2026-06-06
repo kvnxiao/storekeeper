@@ -1,15 +1,9 @@
 import { motion, useReducedMotion } from "motion/react";
 import { ResourceIcon } from "@/modules/resources/components/ResourceIcon";
 import { TimeRemaining } from "@/modules/resources/components/TimeRemaining";
-import type {
-  FormattedTime,
-  StaminaResource,
-} from "@/modules/resources/resources.types";
+import type { FormattedTime, StaminaResource } from "@/modules/resources/resources.types";
 import { ProgressBar } from "@/modules/ui/components/ProgressBar";
-import {
-  cardItemVariants,
-  cardItemVariantsReduced,
-} from "@/modules/ui/ui.animations";
+import { cardItemVariants, cardItemVariantsReduced } from "@/modules/ui/ui.animations";
 import { cn } from "@/modules/ui/ui.styles";
 import * as m from "@/paraglide/messages";
 
@@ -29,9 +23,7 @@ export const StaminaCard: React.FC<StaminaCardProps> = ({
   isRefreshing,
 }) => {
   const shouldReduceMotion = useReducedMotion();
-  const variants = shouldReduceMotion
-    ? cardItemVariantsReduced
-    : cardItemVariants;
+  const variants = shouldReduceMotion ? cardItemVariantsReduced : cardItemVariants;
 
   // Loading state - show icon + name with shimmer placeholders
   if (!data) {
@@ -75,9 +67,7 @@ export const StaminaCard: React.FC<StaminaCardProps> = ({
             </span>
             <span className="shrink-0 text-sm tabular-nums text-zinc-950 dark:text-white">
               <span className="font-semibold">{data.current}</span>
-              <span className="text-zinc-500 dark:text-zinc-400">
-                /{data.max}
-              </span>
+              <span className="text-zinc-500 dark:text-zinc-400">/{data.max}</span>
             </span>
           </div>
         </div>

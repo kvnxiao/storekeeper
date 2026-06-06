@@ -1,9 +1,6 @@
 import { useAtomValue } from "jotai";
 import { atoms } from "@/modules/atoms";
-import {
-  getResourceDisplayName,
-  HsrResource,
-} from "@/modules/games/games.constants";
+import { getResourceDisplayName, HsrResource } from "@/modules/games/games.constants";
 import { GameId } from "@/modules/games/games.types";
 import { StaminaCard } from "@/modules/resources/components/StaminaCard";
 import { GameSection } from "@/modules/ui/components/GameSection";
@@ -18,11 +15,7 @@ export const HsrSection: React.FC = () => {
   const tbpTime = useAtomValue(atoms.games.hsr.trailblazePowerTime);
 
   return (
-    <GameSection
-      title={m.game_hsr_name()}
-      gameId={GameId.HonkaiStarRail}
-      claimStatus={claimStatus}
-    >
+    <GameSection title={m.game_hsr_name()} gameId={GameId.HonkaiStarRail} claimStatus={claimStatus}>
       <StaminaCard
         iconPath="/icons/game/hsr/Item_Trailblaze_Power.webp"
         name={getResourceDisplayName(HsrResource.TrailblazePower)}

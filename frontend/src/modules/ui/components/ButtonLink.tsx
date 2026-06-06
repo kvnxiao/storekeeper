@@ -5,10 +5,7 @@ import {
   Link as RACLink,
   type LinkProps as RACLinkProps,
 } from "react-aria-components";
-import {
-  type ButtonStyleProps,
-  buttonStyle,
-} from "@/modules/ui/components/Button";
+import { type ButtonStyleProps, buttonStyle } from "@/modules/ui/components/Button";
 
 interface ButtonLinkProps extends RACLinkProps, ButtonStyleProps {
   className?: string;
@@ -44,5 +41,4 @@ const ButtonLinkBase: React.FC<ButtonLinkProps> = ({
  * Link component styled as a button, integrated with TanStack Router.
  * Use this for navigation that should look like a button.
  */
-export const ButtonLink: LinkComponent<typeof ButtonLinkBase> =
-  createLink(ButtonLinkBase);
+export const ButtonLink: LinkComponent<typeof ButtonLinkBase> = createLink(ButtonLinkBase);

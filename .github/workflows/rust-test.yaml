@@ -1,4 +1,4 @@
-name: Linting
+name: Rust tests
 
 on:
   push:
@@ -45,7 +45,7 @@ jobs:
           cache: true
 
       - name: Install just command runner
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@v4
 
       - name: Run tests
         run: just test

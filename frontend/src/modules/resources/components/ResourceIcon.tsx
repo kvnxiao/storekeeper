@@ -22,16 +22,10 @@ export interface ResourceIconProps extends ResourceIconStyleProps {
   className?: string;
 }
 
-export const ResourceIcon: React.FC<ResourceIconProps> = ({
-  src,
-  size,
-  className,
-}) => {
+export const ResourceIcon: React.FC<ResourceIconProps> = ({ src, size, className }) => {
   if (!src) {
     return <IconPlaceholder size={size} className={className} />;
   }
 
-  return (
-    <img src={src} alt="" className={resourceIconStyle({ size, className })} />
-  );
+  return <img src={src} alt="" className={resourceIconStyle({ size, className })} />;
 };

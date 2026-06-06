@@ -62,9 +62,7 @@ const stepperDividerStyle = tv({
 
 type NumberFieldStyleProps = VariantProps<typeof fieldStyle>;
 
-export interface NumberFieldProps
-  extends AriaNumberFieldProps,
-    NumberFieldStyleProps {
+export interface NumberFieldProps extends AriaNumberFieldProps, NumberFieldStyleProps {
   label?: string;
   description?: string;
   placeholder?: string;
@@ -75,9 +73,7 @@ const StepperButton: React.FC<ButtonProps> = ({ className, ...props }) => {
   return (
     <Button
       {...props}
-      className={composeRenderProps(className, (cn) =>
-        stepperButtonStyle({ className: cn }),
-      )}
+      className={composeRenderProps(className, (cn) => stepperButtonStyle({ className: cn }))}
     />
   );
 };
@@ -92,9 +88,7 @@ export const NumberField: React.FC<NumberFieldProps> = ({
   return (
     <AriaNumberField
       {...props}
-      className={composeRenderProps(className, (cn) =>
-        fieldStyle({ className: cn }),
-      )}
+      className={composeRenderProps(className, (cn) => fieldStyle({ className: cn }))}
     >
       {label && <Label className={labelStyle()}>{label}</Label>}
       <Group className={groupStyle()}>

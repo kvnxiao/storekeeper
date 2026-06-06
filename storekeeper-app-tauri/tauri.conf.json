@@ -5,11 +5,11 @@
   "version": "0.1.0",
   "build": {
     "beforeDevCommand": {
-      "script": "pnpm run dev",
+      "script": "vp dev",
       "cwd": "../frontend"
     },
     "beforeBuildCommand": {
-      "script": "pnpm run build",
+      "script": "vp build",
       "cwd": "../frontend"
     },
     "devUrl": "http://localhost:3000",

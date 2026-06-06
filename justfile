@@ -18,15 +18,19 @@ bundle:
 build: bundle
 
 lint-web:
-    cd frontend && pnpm lint && pnpm tsc --noEmit
+    cd frontend && vp check
 
 fix-web:
-    cd frontend && pnpm fix
+    cd frontend && vp check --fix
 
 icon:
     cd storekeeper-app-tauri && cargo tauri icon icons/app-icon.svg
 
 upgrade-deps:
     cargo update
-    cd frontend && pnpm upgrade
+    cd frontend && vp update
+
+upgrade-vp:
+    vp upgrade
+    cd frontend && vp update vite-plus @voidzero-dev/vite-plus-core @voidzero-dev/vite-plus-test
 

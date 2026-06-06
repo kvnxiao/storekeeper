@@ -1,15 +1,9 @@
 import { motion, useReducedMotion } from "motion/react";
 import { ResourceIcon } from "@/modules/resources/components/ResourceIcon";
 import { TimeRemaining } from "@/modules/resources/components/TimeRemaining";
-import type {
-  CooldownResource,
-  FormattedTime,
-} from "@/modules/resources/resources.types";
+import type { CooldownResource, FormattedTime } from "@/modules/resources/resources.types";
 import { Badge } from "@/modules/ui/components/Badge";
-import {
-  cardItemVariants,
-  cardItemVariantsReduced,
-} from "@/modules/ui/ui.animations";
+import { cardItemVariants, cardItemVariantsReduced } from "@/modules/ui/ui.animations";
 import { cn } from "@/modules/ui/ui.styles";
 import * as m from "@/paraglide/messages";
 
@@ -29,9 +23,7 @@ export const CooldownCard: React.FC<CooldownCardProps> = ({
   isRefreshing,
 }) => {
   const shouldReduceMotion = useReducedMotion();
-  const variants = shouldReduceMotion
-    ? cardItemVariantsReduced
-    : cardItemVariants;
+  const variants = shouldReduceMotion ? cardItemVariantsReduced : cardItemVariants;
 
   // Loading state - show icon + name with shimmer badge placeholder
   if (!data) {

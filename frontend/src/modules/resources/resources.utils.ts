@@ -52,10 +52,7 @@ export function formatTimeRemaining(
  * @param datetime - ISO 8601 datetime string
  * @param nowMs - Current time in milliseconds (from tick atom)
  */
-export function isPastDateTime(
-  datetime: string | null | undefined,
-  nowMs: number,
-): boolean {
+export function isPastDateTime(datetime: string | null | undefined, nowMs: number): boolean {
   if (!datetime) {
     return true;
   }

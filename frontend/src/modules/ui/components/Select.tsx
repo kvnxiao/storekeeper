@@ -65,8 +65,7 @@ const selectItemStyle = tv({
   ],
 });
 
-export interface SelectProps<T extends object>
-  extends Omit<AriaSelectProps<T>, "children"> {
+export interface SelectProps<T extends object> extends Omit<AriaSelectProps<T>, "children"> {
   className?: string;
   label?: string;
   placeholder?: string;
@@ -93,10 +92,7 @@ export const Select = <T extends object>({
             )
           }
         </AriaSelectValue>
-        <ChevronDownIcon
-          className="size-4 text-zinc-500 dark:text-zinc-400"
-          aria-hidden="true"
-        />
+        <ChevronDownIcon className="size-4 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
       </Button>
       <Popover className={selectPopoverStyle()}>
         <ListBox className={selectListBoxStyle()}>{children}</ListBox>
@@ -109,20 +105,13 @@ export interface SelectItemProps extends ListBoxItemProps {
   className?: string;
 }
 
-export const SelectItem: React.FC<SelectItemProps> = ({
-  className,
-  children,
-  ...props
-}) => {
-  const textValue =
-    props.textValue || (typeof children === "string" ? children : undefined);
+export const SelectItem: React.FC<SelectItemProps> = ({ className, children, ...props }) => {
+  const textValue = props.textValue || (typeof children === "string" ? children : undefined);
   return (
     <ListBoxItem
       {...props}
       textValue={textValue}
-      className={composeRenderProps(className, (cn) =>
-        selectItemStyle({ className: cn }),
-      )}
+      className={composeRenderProps(className, (cn) => selectItemStyle({ className: cn }))}
     >
       {composeRenderProps(children, (children, { isSelected }) => (
         <>

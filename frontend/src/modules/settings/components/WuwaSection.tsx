@@ -16,19 +16,12 @@ interface WuwaSectionProps {
   onChange: (config: WuwaConfig) => void;
 }
 
-export const WuwaSection: React.FC<WuwaSectionProps> = ({
-  config,
-  resourceLimits,
-  onChange,
-}) => {
+export const WuwaSection: React.FC<WuwaSectionProps> = ({ config, resourceLimits, onChange }) => {
   const enabled = config?.enabled ?? false;
   const uid = config?.uid ?? "";
 
   return (
-    <Section
-      title={m.game_wuwa_name()}
-      description={m.settings_game_configure_wuwa()}
-    >
+    <Section title={m.game_wuwa_name()} description={m.settings_game_configure_wuwa()}>
       <Switch
         isSelected={enabled}
         onChange={(isSelected) =>

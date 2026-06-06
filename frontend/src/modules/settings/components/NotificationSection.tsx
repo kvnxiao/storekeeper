@@ -1,7 +1,4 @@
-import {
-  getResourceDisplayName,
-  STAMINA_RESOURCE_TYPES,
-} from "@/modules/games/games.constants";
+import { getResourceDisplayName, STAMINA_RESOURCE_TYPES } from "@/modules/games/games.constants";
 import type { GameId } from "@/modules/games/games.types";
 import {
   NotificationResourceRow,
@@ -13,13 +10,9 @@ import * as m from "@/paraglide/messages";
 interface NotificationSectionProps {
   gameId: GameId;
   resourceTypes: readonly string[];
-  notifications:
-    | Partial<Record<string, ResourceNotificationConfig>>
-    | undefined;
+  notifications: Partial<Record<string, ResourceNotificationConfig>> | undefined;
   resourceLimits?: Partial<Record<string, ResourceLimits>>;
-  onChange: (
-    notifications: Partial<Record<string, ResourceNotificationConfig>>,
-  ) => void;
+  onChange: (notifications: Partial<Record<string, ResourceNotificationConfig>>) => void;
 }
 
 export const NotificationSection: React.FC<NotificationSectionProps> = ({
@@ -48,9 +41,7 @@ export const NotificationSection: React.FC<NotificationSectionProps> = ({
           config={notifications?.[type]}
           isStaminaResource={STAMINA_RESOURCE_TYPES.has(type)}
           limits={resourceLimits?.[type]}
-          onChange={(resourceConfig) =>
-            onChange({ ...notifications, [type]: resourceConfig })
-          }
+          onChange={(resourceConfig) => onChange({ ...notifications, [type]: resourceConfig })}
         />
       ))}
     </div>
