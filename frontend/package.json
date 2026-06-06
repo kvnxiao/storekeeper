@@ -2,6 +2,9 @@
   "name": "storekeeper-frontend",
   "private": true,
   "type": "module",
+  "scripts": {
+    "postinstall": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide"
+  },
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.9",
     "@fontsource-variable/geist-mono": "^5.2.8",
