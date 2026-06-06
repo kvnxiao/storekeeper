@@ -305,12 +305,14 @@ export class CoreAtoms {
   // ---------------------------------------------------------------------------
 
   private readonly localeSyncEffect = atomEffect((_get, set) => {
-    void invoke<string>("get_effective_locale").then((effectiveLocale) => {
-      if (isLocale(effectiveLocale)) {
-        setLocale(effectiveLocale, { reload: false });
-        set(this.locale, effectiveLocale);
-      }
-    });
+    void invoke<string>("get_effective_locale").then(
+      async (effectiveLocale) => {
+        if (isLocale(effectiveLocale)) {
+          await setLocale(effectiveLocale, { reload: false });
+          set(this.locale, effectiveLocale);
+        }
+      },
+    );
   });
 
   readonly localeSync = atom((get) => {
