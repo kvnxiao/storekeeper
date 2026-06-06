@@ -100,6 +100,9 @@ importers:
       '@inlang/paraglide-js':
         specifier: ^2.18.2
         version: 2.18.2(typescript@6.0.3)
+      '@inlang/plugin-message-format':
+        specifier: ^4.4.0
+        version: 4.4.0
       '@tanstack/devtools-vite':
         specifier: ^0.7.0
         version: 0.7.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@voidzero-dev/vite-plus-core@0.1.24(@types/node@25.9.1)(jiti@2.7.0)(typescript@6.0.3))
@@ -337,6 +340,9 @@ packages:
     peerDependenciesMeta:
       typescript:
         optional: true
+
+  '@inlang/plugin-message-format@4.4.0':
+    resolution: {integrity: sha512-n4aXt6XVg5kxhKoLAhi9nMgZtCA9iS0QOaXte56VqxWHcfj9O4c4gOkyVQZH7H9D8h7OZufCrO1sZGYOypPwEA==}
 
   '@inlang/recommend-sherlock@0.2.1':
     resolution: {integrity: sha512-ckv8HvHy/iTqaVAEKrr+gnl+p3XFNwe5D2+6w6wJk2ORV2XkcRkKOJ/XsTUJbPSiyi4PI+p+T3bqbmNx/rDUlg==}
@@ -1622,6 +1628,11 @@ packages:
   fetchdts@0.1.7:
     resolution: {integrity: sha512-YoZjBdafyLIop9lSxXVI33oLD5kN31q4Td+CasofLLYeLXRFeOsuOw0Uo+XNRi9PZlbfdlN2GmRtm4tCEQ9/KA==}
 
+  flat@6.0.1:
+    resolution: {integrity: sha512-/3FfIa8mbrg3xE7+wAhWeV+bd7L2Mof+xtZb5dRDKZ+wDvYJK4WDYeIOuOhre5Yv5aQObZrlbRmk3RTSiuQBtw==}
+    engines: {node: '>=18'}
+    hasBin: true
+
   framer-motion@12.40.0:
     resolution: {integrity: sha512-uaBd3qC1v3KQqBEjwTUd183K6PbS+j0yR9w9VmEOLWA/tnUcSn8Xa3uck7t4dgpDoUss8xQTcj8W2L07lrnLFg==}
     peerDependencies:
@@ -2582,6 +2593,10 @@ snapshots:
     transitivePeerDependencies:
       - babel-plugin-macros
 
+  '@inlang/plugin-message-format@4.4.0':
+    dependencies:
+      flat: 6.0.1
+
   '@inlang/recommend-sherlock@0.2.1':
     dependencies:
       comment-json: 4.6.2
@@ -3517,6 +3532,8 @@ snapshots:
       picomatch: 4.0.4
 
   fetchdts@0.1.7: {}
+
+  flat@6.0.1: {}
 
   framer-motion@12.40.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
     dependencies:
