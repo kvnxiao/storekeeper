@@ -72,7 +72,7 @@ strum = { version = "0.27", features = ["derive"] }
 futures = "0.3"
 
 # HTTP middleware and retry
-reqwest-middleware = { version = "0.4", features = ["json"] }
+reqwest-middleware = { version = "0.5", features = ["json"] }
 reqwest-retry = "0.8"
 
 # Random number generation (for jitter)
