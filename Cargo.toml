@@ -73,7 +73,7 @@ futures = "0.3"
 
 # HTTP middleware and retry
 reqwest-middleware = { version = "0.4", features = ["json"] }
-reqwest-retry = "0.8"
+reqwest-retry = "0.9"
 
 # Random number generation (for jitter)
 rand = "0.8"
