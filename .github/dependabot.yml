@@ -1,0 +1,35 @@
+version: 2
+
+updates:
+  # React frontend (pnpm) - frontend/package.json
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore(frontend)"
+    groups:
+      frontend-minor-patch:
+        update-types: ["minor", "patch"]
+
+  # Tauri / Rust workspace - root Cargo.toml and all member crates
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore(rust)"
+    groups:
+      rust-minor-patch:
+        update-types: ["minor", "patch"]
+
+  # GitHub Actions versions used in .github/workflows
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore(ci)"
+    groups:
+      actions-minor-patch:
+        update-types: ["minor", "patch"]
