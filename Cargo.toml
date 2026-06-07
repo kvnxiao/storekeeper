@@ -66,7 +66,7 @@ icu_time = { git = "https://github.com/unicode-org/icu4x", rev = "bd6b9179" }
 sys-locale = "0.3"
 
 # Enum utilities
-strum = { version = "0.27", features = ["derive"] }
+strum = { version = "0.28", features = ["derive"] }
 
 # Async utilities (for join_all)
 futures = "0.3"
