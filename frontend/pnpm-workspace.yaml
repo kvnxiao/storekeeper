@@ -1,3 +1,7 @@
+# Minimum release age (in minutes) before a published version is installable.
+# 10080 = 7 days. Mirrors the Dependabot `cooldown` so the pnpm/Vite+ side
+# (incl. the catalog packages below) also waits out fresh releases.
+minimumReleaseAge: 10080
 catalog:
   vite: npm:@voidzero-dev/vite-plus-core@latest
   vitest: npm:@voidzero-dev/vite-plus-test@latest
