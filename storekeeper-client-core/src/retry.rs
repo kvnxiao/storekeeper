@@ -3,7 +3,7 @@
 use std::future::Future;
 use std::time::Duration;
 
-use rand::Rng;
+use rand::RngExt;
 
 /// Default maximum number of retry attempts.
 pub const DEFAULT_MAX_RETRIES: u32 = 3;
@@ -56,7 +56,7 @@ impl RetryConfig {
         let capped = base.min(self.max_delay_ms);
 
         // Add bounded jitter: random value between 0 and base_delay_ms
-        let jitter = rand::thread_rng().gen_range(0..=self.base_delay_ms);
+        let jitter = rand::rng().random_range(0..=self.base_delay_ms);
         let with_jitter = capped.saturating_add(jitter).min(self.max_delay_ms);
 
         Duration::from_millis(with_jitter)

@@ -6,7 +6,7 @@
 use std::fmt::Write;
 
 use md5::{Digest, Md5};
-use rand::Rng;
+use rand::RngExt;
 
 /// Salt for overseas (global) HoYoLab API.
 const SALT_OVERSEAS: &str = "6s25p5ox5y14umn1p61aqyyvbvvl3lrt";
@@ -52,16 +52,15 @@ pub fn generate_dynamic_secret_chinese(body: &str, query: &str) -> String {
 
 /// Generates a random string of lowercase ASCII letters.
 fn generate_random_lowercase_string(len: usize) -> String {
-    rand::thread_rng()
-        .sample_iter(rand::distributions::Uniform::new_inclusive(b'a', b'z'))
-        .take(len)
-        .map(char::from)
+    let mut rng = rand::rng();
+    (0..len)
+        .map(|_| char::from(rng.random_range(b'a'..=b'z')))
         .collect()
 }
 
 /// Generates a random integer between 100001 and 200000 (inclusive).
 fn generate_random_int() -> u32 {
-    rand::thread_rng().gen_range(100_001..=200_000)
+    rand::rng().random_range(100_001..=200_000)
 }
 
 /// Computes MD5 hash for overseas DS header.
