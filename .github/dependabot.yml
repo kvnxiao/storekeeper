@@ -9,8 +9,10 @@ updates:
     commit-message:
       prefix: "chore(frontend)"
     groups:
-      frontend-minor-patch:
-        update-types: ["minor", "patch"]
+      # Single PR per ecosystem: catch all update types (incl. major) so
+      # updates are batched into one PR rather than opened individually.
+      frontend:
+        patterns: ["*"]
 
   # Tauri / Rust workspace - root Cargo.toml and all member crates
   - package-ecosystem: "cargo"
@@ -20,8 +22,8 @@ updates:
     commit-message:
       prefix: "chore(rust)"
     groups:
-      rust-minor-patch:
-        update-types: ["minor", "patch"]
+      rust:
+        patterns: ["*"]
 
   # GitHub Actions versions used in .github/workflows
   - package-ecosystem: "github-actions"
@@ -31,5 +33,5 @@ updates:
     commit-message:
       prefix: "chore(ci)"
     groups:
-      actions-minor-patch:
-        update-types: ["minor", "patch"]
+      actions:
+        patterns: ["*"]
