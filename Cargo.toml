@@ -31,7 +31,7 @@ tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "macros"
 tokio-util = { version = "0.7", features = ["rt"] }
 
 # HTTP & serialization
-reqwest = { version = "0.12", features = ["json", "cookies"] }
+reqwest = { version = "0.13", default-features = false, features = ["native-tls", "charset", "http2", "system-proxy", "json", "cookies"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 toml = "0.8"
@@ -72,11 +72,11 @@ strum = { version = "0.28", features = ["derive"] }
 futures = "0.3"
 
 # HTTP middleware and retry
-reqwest-middleware = { version = "0.4", features = ["json"] }
-reqwest-retry = "0.8"
+reqwest-middleware = { version = "0.5", features = ["json"] }
+reqwest-retry = "0.9"
 
 # Random number generation (for jitter)
-rand = "0.8"
+rand = "0.10"
 
 # Workspace crates (for inter-crate dependencies)
 storekeeper-core = { path = "storekeeper-core", version = "0.1.0" }
