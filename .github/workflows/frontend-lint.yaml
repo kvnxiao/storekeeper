@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: Checkout repository code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.3
 
       - name: Set up Vite+ and install dependencies
         uses: voidzero-dev/setup-vp@v1
