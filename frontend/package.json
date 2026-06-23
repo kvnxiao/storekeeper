@@ -9,12 +9,12 @@
     "@fontsource-variable/geist": "^5.2.9",
     "@fontsource-variable/geist-mono": "^5.2.8",
     "@fontsource-variable/inter": "^5.2.8",
-    "@formatjs/intl-durationformat": "^0.10.14",
+    "@formatjs/intl-durationformat": "^0.10.15",
     "@heroicons/react": "^2.2.0",
     "@tailwindcss/vite": "^4.3.1",
     "@tanstack/react-query": "^5.101.0",
-    "@tanstack/react-router": "^1.170.15",
-    "@tanstack/react-start": "^1.168.25",
+    "@tanstack/react-router": "^1.170.16",
+    "@tanstack/react-start": "^1.168.26",
     "@tanstack/router-plugin": "^1.168.18",
     "@tauri-apps/api": "^2.11.0",
     "@tauri-apps/plugin-notification": "^2.3.3",
@@ -45,9 +45,9 @@
     "@vitejs/plugin-react": "^6.0.2",
     "jsdom": "^29.1.1",
     "typescript": "^6.0.3",
-    "vite": "catalog:",
+    "vite": "npm:@voidzero-dev/vite-plus-core@^0.1.24",
     "vite-plus": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "npm:@voidzero-dev/vite-plus-test@^0.1.24"
   },
   "packageManager": "pnpm@11.5.2"
 }
