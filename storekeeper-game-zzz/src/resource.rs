@@ -13,7 +13,7 @@ game_resource_enum! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::Local;
+    use jiff::Timestamp;
     use storekeeper_core::DisplayableResource;
 
     // =========================================================================
@@ -22,13 +22,13 @@ mod tests {
 
     #[test]
     fn test_battery_display_name() {
-        let resource = ZzzResource::Battery(StaminaResource::new(200, 240, Local::now(), 360));
+        let resource = ZzzResource::Battery(StaminaResource::new(200, 240, Timestamp::now(), 360));
         assert_eq!(resource.display_name(), "Battery");
     }
 
     #[test]
     fn test_battery_icon() {
-        let resource = ZzzResource::Battery(StaminaResource::new(200, 240, Local::now(), 360));
+        let resource = ZzzResource::Battery(StaminaResource::new(200, 240, Timestamp::now(), 360));
         assert_eq!(resource.icon(), "battery");
     }
 
@@ -38,7 +38,7 @@ mod tests {
 
     #[test]
     fn test_battery_serialization_format() {
-        let resource = ZzzResource::Battery(StaminaResource::new(200, 240, Local::now(), 360));
+        let resource = ZzzResource::Battery(StaminaResource::new(200, 240, Timestamp::now(), 360));
         let json = serde_json::to_string(&resource).expect("should serialize");
 
         // Verify tagged format
@@ -58,7 +58,7 @@ mod tests {
 
     #[test]
     fn test_battery_serde_roundtrip() {
-        let original = ZzzResource::Battery(StaminaResource::new(200, 240, Local::now(), 360));
+        let original = ZzzResource::Battery(StaminaResource::new(200, 240, Timestamp::now(), 360));
         let json = serde_json::to_string(&original).expect("should serialize");
         let deserialized: ZzzResource = serde_json::from_str(&json).expect("should deserialize");
 
@@ -68,13 +68,24 @@ mod tests {
         assert_eq!(resource.regen_rate_seconds, 360);
     }
 
+    #[test]
+    fn test_battery_serializes_full_at_as_utc_z() {
+        // Locks the JSON datetime contract consumed by the frontend: the nested
+        // `data.fullAt` is an RFC3339 string in UTC with a trailing `Z`.
+        let ts = Timestamp::from_second(1_704_067_200).expect("valid timestamp");
+        let resource = ZzzResource::Battery(StaminaResource::new(200, 240, ts, 360));
+        let value = serde_json::to_value(&resource).expect("should serialize");
+        assert_eq!(value["type"], "battery");
+        assert_eq!(value["data"]["fullAt"], "2024-01-01T00:00:00Z");
+    }
+
     // =========================================================================
     // Debug trait tests
     // =========================================================================
 
     #[test]
     fn test_resource_is_debug() {
-        let resource = ZzzResource::Battery(StaminaResource::new(200, 240, Local::now(), 360));
+        let resource = ZzzResource::Battery(StaminaResource::new(200, 240, Timestamp::now(), 360));
         let debug = format!("{resource:?}");
         assert!(debug.contains("Battery"));
     }
@@ -85,7 +96,7 @@ mod tests {
 
     #[test]
     fn test_resource_is_clone() {
-        let resource = ZzzResource::Battery(StaminaResource::new(200, 240, Local::now(), 360));
+        let resource = ZzzResource::Battery(StaminaResource::new(200, 240, Timestamp::now(), 360));
         let cloned = resource.clone();
 
         let ZzzResource::Battery(r) = cloned;

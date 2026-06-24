@@ -1,6 +1,6 @@
 //! Resource types representing in-game stamina and cooldown resources.
 
-use chrono::{DateTime, Local};
+use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 
 /// Trait for game resources that can be displayed in the UI.
@@ -25,8 +25,8 @@ pub struct StaminaResource {
     pub current: u32,
     /// Maximum capacity of the resource.
     pub max: u32,
-    /// DateTime when the resource will be fully recovered.
-    pub full_at: DateTime<Local>,
+    /// Instant when the resource will be fully recovered.
+    pub full_at: Timestamp,
     /// How many seconds it takes to regenerate one unit.
     pub regen_rate_seconds: u32,
 }
@@ -34,7 +34,7 @@ pub struct StaminaResource {
 impl StaminaResource {
     /// Creates a new stamina resource.
     #[must_use = "this returns a new StaminaResource"]
-    pub fn new(current: u32, max: u32, full_at: DateTime<Local>, regen_rate_seconds: u32) -> Self {
+    pub fn new(current: u32, max: u32, full_at: Timestamp, regen_rate_seconds: u32) -> Self {
         Self {
             current,
             max,
@@ -65,14 +65,14 @@ impl StaminaResource {
 pub struct CooldownResource {
     /// Whether the item is ready to use.
     pub is_ready: bool,
-    /// DateTime when the item will be ready.
-    pub ready_at: DateTime<Local>,
+    /// Instant when the item will be ready.
+    pub ready_at: Timestamp,
 }
 
 impl CooldownResource {
     /// Creates a new cooldown resource.
     #[must_use = "this returns a new CooldownResource"]
-    pub fn new(is_ready: bool, ready_at: DateTime<Local>) -> Self {
+    pub fn new(is_ready: bool, ready_at: Timestamp) -> Self {
         Self { is_ready, ready_at }
     }
 
@@ -81,13 +81,13 @@ impl CooldownResource {
     pub fn ready() -> Self {
         Self {
             is_ready: true,
-            ready_at: Local::now(),
+            ready_at: Timestamp::now(),
         }
     }
 
     /// Creates a cooldown resource that is on cooldown.
     #[must_use = "this returns a new CooldownResource"]
-    pub fn on_cooldown(ready_at: DateTime<Local>) -> Self {
+    pub fn on_cooldown(ready_at: Timestamp) -> Self {
         Self {
             is_ready: false,
             ready_at,
@@ -103,8 +103,8 @@ pub struct ExpeditionResource {
     pub current_expeditions: u32,
     /// Maximum number of expeditions allowed.
     pub max_expeditions: u32,
-    /// DateTime when the earliest expedition finishes.
-    pub earliest_finish_at: DateTime<Local>,
+    /// Instant when the earliest expedition finishes.
+    pub earliest_finish_at: Timestamp,
 }
 
 impl ExpeditionResource {
@@ -113,7 +113,7 @@ impl ExpeditionResource {
     pub fn new(
         current_expeditions: u32,
         max_expeditions: u32,
-        earliest_finish_at: DateTime<Local>,
+        earliest_finish_at: Timestamp,
     ) -> Self {
         Self {
             current_expeditions,
@@ -131,14 +131,14 @@ impl ExpeditionResource {
     /// Returns true if any expedition is ready to collect.
     #[must_use]
     pub fn has_completed(&self) -> bool {
-        self.earliest_finish_at <= Local::now()
+        self.earliest_finish_at <= Timestamp::now()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::TimeDelta;
+    use jiff::SignedDuration;
 
     // =========================================================================
     // StaminaResource tests
@@ -146,7 +146,7 @@ mod tests {
 
     #[test]
     fn test_stamina_resource_new() {
-        let now = Local::now();
+        let now = Timestamp::now();
         let resource = StaminaResource::new(100, 160, now, 480);
 
         assert_eq!(resource.current, 100);
@@ -157,14 +157,14 @@ mod tests {
 
     #[test]
     fn test_stamina_is_full_when_current_equals_max() {
-        let resource = StaminaResource::new(160, 160, Local::now(), 480);
+        let resource = StaminaResource::new(160, 160, Timestamp::now(), 480);
         assert!(resource.is_full(), "Should be full when current equals max");
     }
 
     #[test]
     fn test_stamina_is_full_when_current_exceeds_max() {
         // Some games allow overflow (e.g., from fragile resin)
-        let resource = StaminaResource::new(180, 160, Local::now(), 480);
+        let resource = StaminaResource::new(180, 160, Timestamp::now(), 480);
         assert!(
             resource.is_full(),
             "Should be full when current exceeds max"
@@ -173,7 +173,7 @@ mod tests {
 
     #[test]
     fn test_stamina_is_not_full_when_current_less_than_max() {
-        let resource = StaminaResource::new(100, 160, Local::now(), 480);
+        let resource = StaminaResource::new(100, 160, Timestamp::now(), 480);
         assert!(
             !resource.is_full(),
             "Should not be full when current is less than max"
@@ -182,13 +182,13 @@ mod tests {
 
     #[test]
     fn test_stamina_is_not_full_at_zero() {
-        let resource = StaminaResource::new(0, 160, Local::now(), 480);
+        let resource = StaminaResource::new(0, 160, Timestamp::now(), 480);
         assert!(!resource.is_full(), "Should not be full at zero");
     }
 
     #[test]
     fn test_fill_percentage_at_zero() {
-        let resource = StaminaResource::new(0, 160, Local::now(), 480);
+        let resource = StaminaResource::new(0, 160, Timestamp::now(), 480);
         assert!(
             (resource.fill_percentage() - 0.0).abs() < f64::EPSILON,
             "Fill percentage should be 0.0 at zero"
@@ -197,7 +197,7 @@ mod tests {
 
     #[test]
     fn test_fill_percentage_at_half() {
-        let resource = StaminaResource::new(80, 160, Local::now(), 480);
+        let resource = StaminaResource::new(80, 160, Timestamp::now(), 480);
         assert!(
             (resource.fill_percentage() - 0.5).abs() < f64::EPSILON,
             "Fill percentage should be 0.5 at half"
@@ -206,7 +206,7 @@ mod tests {
 
     #[test]
     fn test_fill_percentage_at_full() {
-        let resource = StaminaResource::new(160, 160, Local::now(), 480);
+        let resource = StaminaResource::new(160, 160, Timestamp::now(), 480);
         assert!(
             (resource.fill_percentage() - 1.0).abs() < f64::EPSILON,
             "Fill percentage should be 1.0 at full"
@@ -215,7 +215,7 @@ mod tests {
 
     #[test]
     fn test_fill_percentage_over_max() {
-        let resource = StaminaResource::new(200, 160, Local::now(), 480);
+        let resource = StaminaResource::new(200, 160, Timestamp::now(), 480);
         assert!(
             resource.fill_percentage() > 1.0,
             "Fill percentage should be > 1.0 when over max"
@@ -229,7 +229,7 @@ mod tests {
     #[test]
     fn test_fill_percentage_with_max_zero() {
         // Edge case: max is zero (should return 0.0, not divide by zero)
-        let resource = StaminaResource::new(0, 0, Local::now(), 480);
+        let resource = StaminaResource::new(0, 0, Timestamp::now(), 480);
         assert!(
             (resource.fill_percentage() - 0.0).abs() < f64::EPSILON,
             "Fill percentage should be 0.0 when max is zero"
@@ -239,7 +239,7 @@ mod tests {
     #[test]
     fn test_fill_percentage_with_current_nonzero_max_zero() {
         // Edge case: current > 0 but max is 0
-        let resource = StaminaResource::new(100, 0, Local::now(), 480);
+        let resource = StaminaResource::new(100, 0, Timestamp::now(), 480);
         assert!(
             (resource.fill_percentage() - 0.0).abs() < f64::EPSILON,
             "Fill percentage should be 0.0 when max is zero (even with current > 0)"
@@ -252,7 +252,7 @@ mod tests {
 
     #[test]
     fn test_cooldown_resource_new() {
-        let now = Local::now();
+        let now = Timestamp::now();
         let resource = CooldownResource::new(true, now);
 
         assert!(resource.is_ready);
@@ -261,9 +261,9 @@ mod tests {
 
     #[test]
     fn test_cooldown_ready_factory() {
-        let before = Local::now();
+        let before = Timestamp::now();
         let resource = CooldownResource::ready();
-        let after = Local::now();
+        let after = Timestamp::now();
 
         assert!(resource.is_ready, "ready() should create a ready resource");
         assert!(
@@ -274,7 +274,7 @@ mod tests {
 
     #[test]
     fn test_cooldown_on_cooldown_factory() {
-        let future_time = Local::now() + TimeDelta::try_hours(24).expect("24 hours is valid");
+        let future_time = Timestamp::now() + SignedDuration::from_hours(24);
         let resource = CooldownResource::on_cooldown(future_time);
 
         assert!(
@@ -290,7 +290,7 @@ mod tests {
 
     #[test]
     fn test_expedition_resource_new() {
-        let now = Local::now();
+        let now = Timestamp::now();
         let resource = ExpeditionResource::new(3, 5, now);
 
         assert_eq!(resource.current_expeditions, 3);
@@ -300,7 +300,7 @@ mod tests {
 
     #[test]
     fn test_all_slots_used_when_full() {
-        let resource = ExpeditionResource::new(5, 5, Local::now());
+        let resource = ExpeditionResource::new(5, 5, Timestamp::now());
         assert!(
             resource.all_slots_used(),
             "Should be full when current equals max"
@@ -310,7 +310,7 @@ mod tests {
     #[test]
     fn test_all_slots_used_when_over_max() {
         // Edge case: current > max (shouldn't happen in practice)
-        let resource = ExpeditionResource::new(6, 5, Local::now());
+        let resource = ExpeditionResource::new(6, 5, Timestamp::now());
         assert!(
             resource.all_slots_used(),
             "Should be full when current exceeds max"
@@ -319,7 +319,7 @@ mod tests {
 
     #[test]
     fn test_all_slots_not_used_when_below_max() {
-        let resource = ExpeditionResource::new(3, 5, Local::now());
+        let resource = ExpeditionResource::new(3, 5, Timestamp::now());
         assert!(
             !resource.all_slots_used(),
             "Should not be full when current < max"
@@ -328,13 +328,13 @@ mod tests {
 
     #[test]
     fn test_all_slots_not_used_at_zero() {
-        let resource = ExpeditionResource::new(0, 5, Local::now());
+        let resource = ExpeditionResource::new(0, 5, Timestamp::now());
         assert!(!resource.all_slots_used(), "Should not be full at zero");
     }
 
     #[test]
     fn test_has_completed_when_finish_time_is_past() {
-        let past_time = Local::now() - TimeDelta::try_hours(1).expect("1 hour is valid");
+        let past_time = Timestamp::now() - SignedDuration::from_hours(1);
         let resource = ExpeditionResource::new(3, 5, past_time);
         assert!(
             resource.has_completed(),
@@ -345,9 +345,9 @@ mod tests {
     #[test]
     fn test_has_completed_when_finish_time_is_now() {
         // Note: This test is slightly flaky due to timing, but the logic is correct
-        let now = Local::now();
+        let now = Timestamp::now();
         let resource = ExpeditionResource::new(3, 5, now);
-        // The check is earliest_finish_at <= Local::now(), so it should be completed
+        // The check is earliest_finish_at <= Timestamp::now(), so it should be completed
         assert!(
             resource.has_completed(),
             "Should have completed when finish time is now"
@@ -356,7 +356,7 @@ mod tests {
 
     #[test]
     fn test_has_not_completed_when_finish_time_is_future() {
-        let future_time = Local::now() + TimeDelta::try_hours(1).expect("1 hour is valid");
+        let future_time = Timestamp::now() + SignedDuration::from_hours(1);
         let resource = ExpeditionResource::new(3, 5, future_time);
         assert!(
             !resource.has_completed(),
@@ -370,7 +370,7 @@ mod tests {
 
     #[test]
     fn test_stamina_resource_serde_roundtrip() {
-        let now = Local::now();
+        let now = Timestamp::now();
         let resource = StaminaResource::new(100, 160, now, 480);
 
         let json = serde_json::to_string(&resource).expect("should serialize");
@@ -380,14 +380,21 @@ mod tests {
         assert_eq!(resource.current, deserialized.current);
         assert_eq!(resource.max, deserialized.max);
         assert_eq!(resource.regen_rate_seconds, deserialized.regen_rate_seconds);
-        // DateTime comparison may have microsecond differences due to serialization
-        assert!(
-            (resource.full_at - deserialized.full_at)
-                .num_seconds()
-                .abs()
-                < 1,
-            "full_at should be approximately equal"
+        // jiff::Timestamp roundtrips losslessly through RFC3339, so the value is exact.
+        assert_eq!(
+            resource.full_at, deserialized.full_at,
+            "full_at should roundtrip exactly"
         );
+    }
+
+    #[test]
+    fn test_stamina_resource_serializes_full_at_as_utc_z() {
+        // Locks the JSON contract consumed by the frontend: the `fullAt` field
+        // is an RFC3339 string in UTC with a trailing `Z`.
+        let ts = Timestamp::from_second(1_704_067_200).expect("valid timestamp");
+        let resource = StaminaResource::new(100, 160, ts, 480);
+        let value = serde_json::to_value(&resource).expect("should serialize");
+        assert_eq!(value["fullAt"], "2024-01-01T00:00:00Z");
     }
 
     #[test]
@@ -403,7 +410,7 @@ mod tests {
 
     #[test]
     fn test_expedition_resource_serde_roundtrip() {
-        let now = Local::now();
+        let now = Timestamp::now();
         let resource = ExpeditionResource::new(3, 5, now);
 
         let json = serde_json::to_string(&resource).expect("should serialize");

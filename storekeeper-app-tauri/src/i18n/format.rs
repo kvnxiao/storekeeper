@@ -1,9 +1,9 @@
-use chrono::{DateTime, Datelike, Local, Timelike};
 use icu_datetime::fieldsets;
 use icu_experimental::duration::{
     DurationFormatter, DurationFormatterPreferences, ValidatedDurationFormatterOptions,
     options::{BaseStyle, DurationFormatterOptions, FieldDisplay},
 };
+use jiff::Zoned;
 
 use super::store::with_messages;
 
@@ -13,8 +13,8 @@ use super::store::with_messages;
 /// (e.g. "3:45 PM"). When on a different day, shows weekday + time
 /// (e.g. "Mon 3:45 PM" / "月 15:45") using ICU4X locale-aware formatting.
 #[must_use]
-pub fn format_time(completion: DateTime<Local>, now: DateTime<Local>) -> String {
-    let is_today = completion.date_naive() == now.date_naive();
+pub fn format_time(completion: &Zoned, now: &Zoned) -> String {
+    let is_today = completion.date() == now.date();
 
     if is_today {
         format_time_only(completion)
@@ -24,7 +24,7 @@ pub fn format_time(completion: DateTime<Local>, now: DateTime<Local>) -> String 
 }
 
 /// Formats just the time portion (hour + minute) using the current locale.
-fn format_time_only(dt: DateTime<Local>) -> String {
+fn format_time_only(dt: &Zoned) -> String {
     let hour = u8::try_from(dt.hour()).unwrap_or(0);
     let minute = u8::try_from(dt.minute()).unwrap_or(0);
     let fallback = || format!("{hour}:{minute:02}");
@@ -44,19 +44,18 @@ fn format_time_only(dt: DateTime<Local>) -> String {
 }
 
 /// Formats weekday + time (e.g. "Mon 3:45 PM") using ICU4X locale-aware formatting.
-#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-fn format_weekday_time(dt: DateTime<Local>) -> String {
+fn format_weekday_time(dt: &Zoned) -> String {
     let hour = u8::try_from(dt.hour()).unwrap_or(0);
     let minute = u8::try_from(dt.minute()).unwrap_or(0);
     let fallback = || {
-        let weekday = dt.format("%a").to_string();
+        let weekday = dt.strftime("%a").to_string();
         format!("{weekday} {hour}:{minute:02}")
     };
 
     with_messages(|m| {
-        let year = dt.year();
-        let month = dt.month() as u8;
-        let day = dt.day() as u8;
+        let year = i32::from(dt.year());
+        let month = u8::try_from(dt.month()).unwrap_or(1);
+        let day = u8::try_from(dt.day()).unwrap_or(1);
         let Ok(date) = icu_calendar::Date::try_new_iso(year, month, day) else {
             return fallback();
         };

@@ -130,7 +130,7 @@ impl KuroClient {
 
     /// Performs a single query role attempt without retries.
     async fn query_role_once<T: DeserializeOwned>(&self, uid: &str, region: &str) -> Result<T> {
-        let timestamp = chrono::Utc::now().timestamp_millis();
+        let timestamp = jiff::Timestamp::now().as_millisecond();
         let url = format!("{}/game/queryRole?_t={timestamp}", self.base_url);
 
         // Send CORS preflight request first

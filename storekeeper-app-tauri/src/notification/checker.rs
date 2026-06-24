@@ -1,6 +1,6 @@
 //! Single-resource notification check and OS notification send logic.
 
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use storekeeper_core::GameId;
 use tauri::AppHandle;
 use tauri_plugin_notification::NotificationExt;
@@ -18,7 +18,7 @@ pub(crate) fn send_resource_notification(
     game_id: GameId,
     resource_type: &str,
     info: &ResourceInfo,
-    now: DateTime<Utc>,
+    now: Timestamp,
 ) -> bool {
     let game_name = game_display_name(game_id);
     let resource_name = resource_display_name(resource_type);

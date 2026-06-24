@@ -172,15 +172,18 @@ mod tests {
     fn test_format_time_today() {
         ensure_init();
         // Pin to noon so +1 hour never crosses midnight.
-        let today = chrono::Local::now().date_naive();
-        let now = today
-            .and_hms_opt(12, 0, 0)
-            .expect("valid time")
-            .and_local_timezone(chrono::Local)
-            .single()
-            .expect("noon is never ambiguous");
-        let completion = now + chrono::TimeDelta::hours(1);
-        let result = format_time(completion, now);
+        let now = jiff::Zoned::now()
+            .with()
+            .hour(12)
+            .minute(0)
+            .second(0)
+            .subsec_nanosecond(0)
+            .build()
+            .expect("noon is a valid time");
+        let completion = now
+            .checked_add(jiff::SignedDuration::from_hours(1))
+            .expect("adding one hour is valid");
+        let result = format_time(&completion, &now);
         // Same day: should produce time only (e.g. "3:45 PM" for en)
         assert!(!result.is_empty());
         // Should NOT contain a weekday abbreviation
@@ -198,9 +201,11 @@ mod tests {
     #[test]
     fn test_format_time_different_day() {
         ensure_init();
-        let now = chrono::Local::now();
-        let completion = now + chrono::TimeDelta::days(2);
-        let result = format_time(completion, now);
+        let now = jiff::Zoned::now();
+        let completion = now
+            .checked_add(jiff::SignedDuration::from_hours(48))
+            .expect("adding 48 hours is valid");
+        let result = format_time(&completion, &now);
         // Different day: should contain a weekday abbreviation
         assert!(!result.is_empty());
         let has_weekday = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]

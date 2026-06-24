@@ -1,6 +1,6 @@
 //! Tauri commands for frontend-backend communication.
 
-use chrono::Utc;
+use jiff::Timestamp;
 use serde::Serialize;
 use storekeeper_core::{AppConfig, GameId, SecretsConfig};
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -159,7 +159,7 @@ pub fn open_config_folder() -> Result<(), CommandError> {
 
     // Create directory if it doesn't exist
     if !config_dir.exists() {
-        std::fs::create_dir_all(&config_dir)?;
+        fs_err::create_dir_all(&config_dir)?;
     }
 
     // Open in file manager
@@ -223,7 +223,7 @@ pub async fn claim_daily_reward_for_game(
     if let Ok(game_status) = state.get_daily_reward_status_for_game(game_id).await {
         let mut current_status = state.get_daily_reward_status().await;
         current_status.games.insert(game_id, game_status);
-        current_status.last_checked = Some(chrono::Utc::now());
+        current_status.last_checked = Some(Timestamp::now());
         state.set_daily_reward_status(current_status).await;
     }
 
@@ -273,7 +273,7 @@ pub async fn send_preview_notification(
         .and_then(|obj| obj.get("data"))
         .and_then(|data| {
             let info = notification::extract_resource_info(&resource_type, data)?;
-            let now = Utc::now();
+            let now = Timestamp::now();
             Some(notification::build_notification_body(&info, now))
         })
         .unwrap_or_else(|| i18n::t("notification_no_data"));

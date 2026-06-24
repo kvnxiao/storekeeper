@@ -16,9 +16,11 @@ serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
-chrono.workspace = true
+jiff.workspace = true
 governor.workspace = true
 dirs.workspace = true
+fs-err.workspace = true
+camino.workspace = true
 tracing.workspace = true
 
 [lints]

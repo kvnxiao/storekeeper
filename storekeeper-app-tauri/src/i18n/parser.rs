@@ -16,40 +16,42 @@ pub(super) fn format_message(
 ) -> String {
     let arg_map: HashMap<&str, &Value> = args.iter().map(|(k, v)| (*k, v)).collect();
     let mut result = String::with_capacity(template.len());
-    let chars: Vec<char> = template.chars().collect();
-    let len = chars.len();
-    let mut i = 0;
+    let mut rest = template;
 
-    while i < len {
-        if chars[i] == '{' {
-            if let Some(close) = find_matching_brace(&chars, i) {
-                let inner: String = chars[i + 1..close].iter().collect();
-                let formatted = format_placeholder(&inner, &arg_map, plural_rules);
-                result.push_str(&formatted);
-                i = close + 1;
-            } else {
-                result.push(chars[i]);
-                i += 1;
-            }
+    while let Some(open) = rest.find('{') {
+        // Emit everything before the opening brace verbatim.
+        result.push_str(&rest[..open]);
+        let from_open = &rest[open..];
+
+        if let Some(close) = find_matching_brace(from_open, 0) {
+            let inner = &from_open[1..close];
+            let formatted = format_placeholder(inner, &arg_map, plural_rules);
+            result.push_str(&formatted);
+            rest = &from_open[close + 1..];
         } else {
-            result.push(chars[i]);
-            i += 1;
+            // Unbalanced brace: emit it literally and continue scanning.
+            result.push('{');
+            rest = &from_open['{'.len_utf8()..];
         }
     }
 
+    result.push_str(rest);
     result
 }
 
-/// Finds the matching closing brace, respecting nested braces.
-fn find_matching_brace(chars: &[char], start: usize) -> Option<usize> {
-    let mut depth = 0;
-    for (idx, &ch) in chars.iter().enumerate().skip(start) {
+/// Finds the byte offset of the matching closing brace, respecting nesting.
+///
+/// `start` must be the byte offset of an opening `{` within `s`. Returns the
+/// byte offset (relative to `s`) of the `}` that closes it.
+fn find_matching_brace(s: &str, start: usize) -> Option<usize> {
+    let mut depth: i32 = 0;
+    for (offset, ch) in s[start..].char_indices() {
         match ch {
             '{' => depth += 1,
             '}' => {
                 depth -= 1;
                 if depth == 0 {
-                    return Some(idx);
+                    return Some(start + offset);
                 }
             }
             _ => {}
@@ -115,44 +117,32 @@ fn format_placeholder(
 
 /// Selects the content for a plural branch like `one {# minute}` from the branches string.
 fn select_plural_branch(branches: &str, category: &str) -> Option<String> {
-    // Find "category {content}" pattern, handling nested braces
-    let chars: Vec<char> = branches.chars().collect();
-    let len = chars.len();
-    let mut i = 0;
+    // Walk "keyword {content}" pairs, handling nested braces in each block.
+    let mut rest = branches;
 
-    while i < len {
-        // Skip whitespace
-        while i < len && chars[i].is_whitespace() {
-            i += 1;
+    loop {
+        rest = rest.trim_start();
+        if rest.is_empty() {
+            return None;
         }
 
-        // Read keyword
-        let kw_start = i;
-        while i < len && !chars[i].is_whitespace() && chars[i] != '{' {
-            i += 1;
-        }
-        let keyword: String = chars[kw_start..i].iter().collect();
+        // Read the keyword: up to the next whitespace or opening brace.
+        let kw_end = rest
+            .find(|c: char| c.is_whitespace() || c == '{')
+            .unwrap_or(rest.len());
+        let keyword = &rest[..kw_end];
+        rest = rest[kw_end..].trim_start();
 
-        // Skip whitespace before '{'
-        while i < len && chars[i].is_whitespace() {
-            i += 1;
+        // The keyword must be followed by a braced block.
+        if !rest.starts_with('{') {
+            return None;
         }
+        let close = find_matching_brace(rest, 0)?;
+        let content = &rest[1..close];
 
-        // Read braced content
-        if i < len && chars[i] == '{' {
-            if let Some(close) = find_matching_brace(&chars, i) {
-                let content: String = chars[i + 1..close].iter().collect();
-                if keyword == category {
-                    return Some(content);
-                }
-                i = close + 1;
-            } else {
-                break;
-            }
-        } else {
-            break;
+        if keyword == category {
+            return Some(content.to_string());
         }
+        rest = &rest[close + 1..];
     }
-
-    None
 }

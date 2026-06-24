@@ -25,7 +25,7 @@ const SALT_CHINESE: &str = "xV8v4Qu54lUKrEYFZkJhB8cuOh9Asafs";
 /// - hash: MD5("salt={salt}&t={t}&r={r}")
 #[must_use]
 pub fn generate_dynamic_secret_overseas() -> String {
-    let timestamp = chrono::Utc::now().timestamp();
+    let timestamp = jiff::Timestamp::now().as_second();
     let random = generate_random_lowercase_string(6);
     let hash = compute_md5_overseas(timestamp, &random);
 
@@ -43,7 +43,7 @@ pub fn generate_dynamic_secret_overseas() -> String {
 #[must_use]
 #[allow(dead_code)]
 pub fn generate_dynamic_secret_chinese(body: &str, query: &str) -> String {
-    let timestamp = chrono::Utc::now().timestamp();
+    let timestamp = jiff::Timestamp::now().as_second();
     let random = generate_random_int();
     let hash = compute_md5_chinese(timestamp, random, body, query);
 
@@ -154,9 +154,9 @@ mod tests {
 
     #[test]
     fn test_overseas_ds_timestamp_is_current() {
-        let before = chrono::Utc::now().timestamp();
+        let before = jiff::Timestamp::now().as_second();
         let ds = generate_dynamic_secret_overseas();
-        let after = chrono::Utc::now().timestamp();
+        let after = jiff::Timestamp::now().as_second();
 
         let parts: Vec<&str> = ds.split(',').collect();
         let timestamp: i64 = parts[0].parse().expect("should parse timestamp");

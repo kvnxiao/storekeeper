@@ -1,25 +1,55 @@
-//! Common serde utilities for deserialization.
+//! Common serde utilities for deserializing API timestamp fields.
+//!
+//! HoYoLab and Kuro APIs encode resource completion times in three shapes:
+//! a seconds-from-now string, a seconds-from-now `u64`, and an absolute
+//! millisecond `u64` timestamp. Each shape gets its own thin public module
+//! (serde's `with =`/`deserialize_with =` requires a module path) that does the
+//! shape-specific parsing and delegates the conversion to the shared helpers
+//! below.
 
-/// Deserializes a string containing seconds to `DateTime<Local>`.
+use jiff::{SignedDuration, Timestamp};
+
+/// Converts a non-negative count of seconds-from-now into an absolute instant.
 ///
-/// Adds the seconds to the current local time to produce a future DateTime.
-/// If the value is "0" or empty, returns the current local time.
+/// Returns the current instant when `secs` is zero. Overflow past the
+/// representable [`Timestamp`] range is reported as an error rather than
+/// panicking, since `secs` originates from an external API response.
+fn timestamp_from_secs_from_now(secs: i64) -> Result<Timestamp, &'static str> {
+    if secs == 0 {
+        return Ok(Timestamp::now());
+    }
+    Timestamp::now()
+        .checked_add(SignedDuration::from_secs(secs))
+        .map_err(|_| "seconds value out of representable range")
+}
+
+/// Converts an absolute Unix millisecond timestamp into an instant.
 ///
-/// # Errors
+/// Returns the current instant when `millis` is zero.
+fn timestamp_from_millis(millis: i64) -> Result<Timestamp, &'static str> {
+    if millis == 0 {
+        return Ok(Timestamp::now());
+    }
+    Timestamp::from_millisecond(millis).map_err(|_| "invalid millisecond timestamp")
+}
+
+/// Deserializes a string containing seconds-from-now into a [`Timestamp`].
 ///
-/// Returns an error if the value is negative or cannot be parsed.
+/// Adds the seconds to the current instant to produce a future timestamp.
+/// If the value is `"0"`, returns the current instant.
 pub mod seconds_string_to_datetime {
-    use chrono::{DateTime, Local, TimeDelta};
+    use jiff::Timestamp;
     use serde::{Deserialize, Deserializer};
 
-    /// Deserializes a string of seconds into `DateTime<Local>`.
+    /// Deserializes a string of seconds-from-now into a [`Timestamp`].
     ///
-    /// Returns `Local::now()` if the value is zero.
+    /// Returns `Timestamp::now()` if the value is zero.
     ///
     /// # Errors
     ///
-    /// Returns a deserialization error if the seconds value is negative or invalid.
-    pub fn deserialize<'de, D>(deserializer: D) -> std::result::Result<DateTime<Local>, D::Error>
+    /// Returns a deserialization error if the value is not an integer, is
+    /// negative, or would overflow the representable timestamp range.
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Timestamp, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -30,90 +60,67 @@ pub mod seconds_string_to_datetime {
         if secs < 0 {
             return Err(serde::de::Error::custom("seconds must not be negative"));
         }
-        if secs == 0 {
-            return Ok(Local::now());
-        }
-        let delta = TimeDelta::try_seconds(secs)
-            .ok_or_else(|| serde::de::Error::custom("invalid seconds value"))?;
-        Ok(Local::now() + delta)
+        super::timestamp_from_secs_from_now(secs).map_err(serde::de::Error::custom)
     }
 }
 
-/// Deserializes a `u64` containing seconds to `DateTime<Local>`.
+/// Deserializes a `u64` containing seconds-from-now into a [`Timestamp`].
 ///
-/// Adds the seconds to the current local time to produce a future DateTime.
-/// If the value is 0, returns the current local time.
-///
-/// # Errors
-///
-/// Returns an error if conversion fails.
+/// Adds the seconds to the current instant to produce a future timestamp.
+/// If the value is 0, returns the current instant.
 pub mod seconds_u64_to_datetime {
-    use chrono::{DateTime, Local, TimeDelta};
+    use jiff::Timestamp;
     use serde::{Deserialize, Deserializer};
 
-    /// Deserializes a u64 of seconds into `DateTime<Local>`.
+    /// Deserializes a `u64` of seconds-from-now into a [`Timestamp`].
     ///
-    /// Returns `Local::now()` if the value is zero.
+    /// Returns `Timestamp::now()` if the value is zero.
     ///
     /// # Errors
     ///
-    /// Returns a deserialization error if the seconds value is invalid.
-    pub fn deserialize<'de, D>(deserializer: D) -> std::result::Result<DateTime<Local>, D::Error>
+    /// Returns a deserialization error if the seconds value exceeds [`i64::MAX`]
+    /// or would overflow the representable timestamp range.
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Timestamp, D::Error>
     where
         D: Deserializer<'de>,
     {
         let secs = u64::deserialize(deserializer)?;
-        if secs == 0 {
-            return Ok(Local::now());
-        }
-        let secs_i64 =
+        let secs =
             i64::try_from(secs).map_err(|_| serde::de::Error::custom("seconds value too large"))?;
-        let delta = TimeDelta::try_seconds(secs_i64)
-            .ok_or_else(|| serde::de::Error::custom("invalid seconds value"))?;
-        Ok(Local::now() + delta)
+        super::timestamp_from_secs_from_now(secs).map_err(serde::de::Error::custom)
     }
 }
 
-/// Deserializes a `u64` millisecond timestamp to `DateTime<Local>`.
+/// Deserializes a `u64` absolute millisecond timestamp into a [`Timestamp`].
 ///
-/// Converts the absolute timestamp to a local DateTime.
-/// If the value is 0, returns the current local time.
-///
-/// # Errors
-///
-/// Returns an error if conversion fails.
+/// Converts the absolute Unix-millisecond value to an instant.
+/// If the value is 0, returns the current instant.
 pub mod timestamp_ms_to_datetime {
-    use chrono::{DateTime, Local, TimeZone, Utc};
+    use jiff::Timestamp;
     use serde::{Deserialize, Deserializer};
 
-    /// Deserializes a u64 millisecond timestamp into `DateTime<Local>`.
+    /// Deserializes a `u64` millisecond timestamp into a [`Timestamp`].
     ///
-    /// Returns `Local::now()` if the value is zero.
+    /// Returns `Timestamp::now()` if the value is zero.
     ///
     /// # Errors
     ///
-    /// Returns a deserialization error if the timestamp is invalid.
-    pub fn deserialize<'de, D>(deserializer: D) -> std::result::Result<DateTime<Local>, D::Error>
+    /// Returns a deserialization error if the value exceeds [`i64::MAX`] or is
+    /// outside the representable timestamp range.
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Timestamp, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let timestamp_ms = u64::deserialize(deserializer)?;
-        if timestamp_ms == 0 {
-            return Ok(Local::now());
-        }
-        let timestamp_ms_i64 = i64::try_from(timestamp_ms)
+        let millis = u64::deserialize(deserializer)?;
+        let millis = i64::try_from(millis)
             .map_err(|_| serde::de::Error::custom("timestamp value too large"))?;
-
-        Utc.timestamp_millis_opt(timestamp_ms_i64)
-            .single()
-            .map(|dt| dt.with_timezone(&Local))
-            .ok_or_else(|| serde::de::Error::custom("invalid timestamp"))
+        super::timestamp_from_millis(millis).map_err(serde::de::Error::custom)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use chrono::Local;
+    use jiff::Timestamp;
     use serde::Deserialize;
 
     // =========================================================================
@@ -123,35 +130,35 @@ mod tests {
     #[derive(Debug, Deserialize)]
     struct TestSecondsString {
         #[serde(deserialize_with = "super::seconds_string_to_datetime::deserialize")]
-        value: chrono::DateTime<Local>,
+        value: Timestamp,
     }
 
     #[test]
     fn test_seconds_string_zero_returns_now() {
         let json = r#"{"value": "0"}"#;
-        let before = Local::now();
+        let before = Timestamp::now();
         let result: TestSecondsString =
             serde_json::from_str(json).expect("should deserialize zero");
-        let after = Local::now();
+        let after = Timestamp::now();
 
         // The result should be between before and after (i.e., approximately now)
         assert!(
             result.value >= before && result.value <= after,
-            "Zero seconds should return approximately Local::now()"
+            "Zero seconds should return approximately Timestamp::now()"
         );
     }
 
     #[test]
     fn test_seconds_string_positive_adds_to_now() {
         let json = r#"{"value": "60"}"#;
-        let before = Local::now();
+        let before = Timestamp::now();
         let result: TestSecondsString =
             serde_json::from_str(json).expect("should deserialize 60 seconds");
-        let after = Local::now();
+        let after = Timestamp::now();
 
         // Result should be approximately 60 seconds in the future
-        let diff_from_before = (result.value - before).num_seconds();
-        let diff_from_after = (result.value - after).num_seconds();
+        let diff_from_before = result.value.duration_since(before).as_secs();
+        let diff_from_after = result.value.duration_since(after).as_secs();
 
         assert!(
             (59..=61).contains(&diff_from_before),
@@ -190,33 +197,44 @@ mod tests {
     #[derive(Debug, Deserialize)]
     struct TestSecondsU64 {
         #[serde(deserialize_with = "super::seconds_u64_to_datetime::deserialize")]
-        value: chrono::DateTime<Local>,
+        value: Timestamp,
     }
 
     #[test]
     fn test_seconds_u64_zero_returns_now() {
         let json = r#"{"value": 0}"#;
-        let before = Local::now();
+        let before = Timestamp::now();
         let result: TestSecondsU64 = serde_json::from_str(json).expect("should deserialize zero");
-        let after = Local::now();
+        let after = Timestamp::now();
 
         assert!(
             result.value >= before && result.value <= after,
-            "Zero seconds should return approximately Local::now()"
+            "Zero seconds should return approximately Timestamp::now()"
         );
     }
 
     #[test]
     fn test_seconds_u64_positive_adds_to_now() {
         let json = r#"{"value": 120}"#;
-        let before = Local::now();
+        let before = Timestamp::now();
         let result: TestSecondsU64 =
             serde_json::from_str(json).expect("should deserialize 120 seconds");
 
-        let diff = (result.value - before).num_seconds();
+        let diff = result.value.duration_since(before).as_secs();
         assert!(
             (119..=121).contains(&diff),
             "120 seconds should add ~120s to now, got diff: {diff}"
+        );
+    }
+
+    #[test]
+    fn test_seconds_u64_overflow_fails() {
+        // u64::MAX exceeds i64::MAX, so the conversion must reject it.
+        let json = format!(r#"{{"value": {}}}"#, u64::MAX);
+        let result: Result<TestSecondsU64, _> = serde_json::from_str(&json);
+        assert!(
+            result.is_err(),
+            "u64::MAX seconds should fail deserialization"
         );
     }
 
@@ -227,47 +245,74 @@ mod tests {
     #[derive(Debug, Deserialize)]
     struct TestTimestampMs {
         #[serde(deserialize_with = "super::timestamp_ms_to_datetime::deserialize")]
-        value: chrono::DateTime<Local>,
+        value: Timestamp,
     }
 
     #[test]
     fn test_timestamp_ms_zero_returns_now() {
         let json = r#"{"value": 0}"#;
-        let before = Local::now();
+        let before = Timestamp::now();
         let result: TestTimestampMs = serde_json::from_str(json).expect("should deserialize zero");
-        let after = Local::now();
+        let after = Timestamp::now();
 
         assert!(
             result.value >= before && result.value <= after,
-            "Zero timestamp should return approximately Local::now()"
+            "Zero timestamp should return approximately Timestamp::now()"
         );
     }
 
     #[test]
-    fn test_timestamp_ms_valid_converts_correctly() {
+    fn test_timestamp_ms_valid_converts_to_exact_instant() {
         // Use a known timestamp: 2024-01-01 00:00:00 UTC = 1704067200000 ms
         let json = r#"{"value": 1704067200000}"#;
         let result: TestTimestampMs =
             serde_json::from_str(json).expect("should deserialize valid timestamp");
 
-        // The UTC time should be 2024-01-01 00:00:00
-        let utc = result.value.naive_utc();
-        assert_eq!(utc.and_utc().timestamp(), 1_704_067_200);
+        assert_eq!(result.value.as_millisecond(), 1_704_067_200_000);
+        assert_eq!(result.value.as_second(), 1_704_067_200);
+    }
+
+    #[test]
+    fn test_timestamp_ms_overflow_fails() {
+        // u64::MAX exceeds i64::MAX, so the conversion must reject it.
+        let json = format!(r#"{{"value": {}}}"#, u64::MAX);
+        let result: Result<TestTimestampMs, _> = serde_json::from_str(&json);
+        assert!(
+            result.is_err(),
+            "u64::MAX milliseconds should fail deserialization"
+        );
     }
 
     #[test]
     fn test_timestamp_ms_future_works() {
         // Use a future timestamp (current time + 1 hour in ms)
-        let future_ms = chrono::Utc::now().timestamp_millis() + 3_600_000;
+        let future_ms = Timestamp::now().as_millisecond() + 3_600_000;
         let json = format!(r#"{{"value": {future_ms}}}"#);
         let result: TestTimestampMs =
             serde_json::from_str(&json).expect("should deserialize future timestamp");
 
         // Should be approximately 1 hour in the future
-        let diff = (result.value - Local::now()).num_seconds();
+        let diff = result.value.duration_since(Timestamp::now()).as_secs();
         assert!(
             (3590..=3610).contains(&diff),
             "Future timestamp should be ~1 hour from now, got diff: {diff}s"
         );
+    }
+
+    // =========================================================================
+    // Serialization contract — locks the JSON shape the TS frontend parses
+    // =========================================================================
+
+    #[test]
+    fn test_timestamp_serializes_as_rfc3339_utc_z() {
+        // jiff::Timestamp serializes to RFC3339 with a trailing `Z` (UTC). The
+        // frontend parses this with `new Date(...)`; this test pins the shape so
+        // a future serde change can't silently break the contract.
+        let ts = Timestamp::from_second(1_704_067_200).expect("valid timestamp");
+        let json = serde_json::to_string(&ts).expect("serialize");
+        assert_eq!(json, r#""2024-01-01T00:00:00Z""#);
+
+        let back: Timestamp = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(back, ts);
     }
 }

@@ -1,6 +1,6 @@
 //! Wuthering Waves game client implementation.
 
-use chrono::{DateTime, Local};
+use jiff::Timestamp;
 use serde::Deserialize;
 use storekeeper_client_kuro::KuroClient;
 use storekeeper_core::{GameClient, GameId, Region, StaminaResource, serde_utils};
@@ -24,7 +24,7 @@ struct BaseInfo {
     energy: u32,
     max_energy: u32,
     #[serde(deserialize_with = "serde_utils::timestamp_ms_to_datetime::deserialize")]
-    energy_recover_time: DateTime<Local>,
+    energy_recover_time: Timestamp,
 }
 
 /// Wuthering Waves game client.

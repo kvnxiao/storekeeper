@@ -37,8 +37,14 @@ serde_json = "1"
 toml = "0.8"
 
 # Time & utilities
-chrono = { version = "0.4", features = ["serde"] }
+jiff = { version = "0.2", features = ["serde"] }
 dirs = "6"
+
+# Filesystem IO (errors carry path context)
+fs-err = "3"
+
+# UTF-8 paths
+camino = "1"
 
 # Error handling
 thiserror = "2"

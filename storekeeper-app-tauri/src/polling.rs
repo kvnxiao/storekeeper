@@ -3,7 +3,7 @@
 use std::collections::HashSet;
 use std::time::Duration;
 
-use chrono::Utc;
+use jiff::Timestamp;
 use storekeeper_core::GameId;
 use tauri::{AppHandle, Emitter, Manager};
 use tokio_util::sync::CancellationToken;
@@ -124,7 +124,7 @@ pub async fn refresh_now(app_handle: &AppHandle) -> Result<AllResources, String>
     if !state.has_clients().await {
         tracing::debug!("No game clients configured, returning empty resources");
         let mut resources = state.get_resources().await;
-        resources.last_updated = Some(chrono::Utc::now());
+        resources.last_updated = Some(Timestamp::now());
         return Ok(resources);
     }
 
@@ -166,14 +166,14 @@ pub async fn refresh_games(
     for (game_id, data) in new_resources {
         resources.games.insert(game_id, data);
     }
-    resources.last_updated = Some(Utc::now());
+    resources.last_updated = Some(Timestamp::now());
     state.set_resources(resources.clone()).await;
 
     let mut daily_status = state.get_daily_reward_status().await;
     for (game_id, data) in new_daily_status {
         daily_status.games.insert(game_id, data);
     }
-    daily_status.last_checked = Some(Utc::now());
+    daily_status.last_checked = Some(Timestamp::now());
     state.set_daily_reward_status(daily_status).await;
 
     // Emit full snapshot and run notification check

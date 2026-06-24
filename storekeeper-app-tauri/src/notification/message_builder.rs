@@ -1,6 +1,7 @@
 //! Notification message building and display name resolution.
 
-use chrono::{DateTime, Local, Utc};
+use jiff::Timestamp;
+use jiff::tz::TimeZone;
 use storekeeper_core::GameId;
 
 use crate::i18n;
@@ -32,8 +33,7 @@ pub(crate) fn game_display_name(game_id: GameId) -> String {
 ///
 /// The resource name is intentionally omitted — the notification title already
 /// contains both the game name and resource name.
-#[allow(clippy::cast_possible_wrap)]
-pub(crate) fn build_notification_body(info: &ResourceInfo, now: DateTime<Utc>) -> String {
+pub(crate) fn build_notification_body(info: &ResourceInfo, now: Timestamp) -> String {
     let is_stamina = info.max.is_some();
 
     if is_stamina {
@@ -45,11 +45,11 @@ pub(crate) fn build_notification_body(info: &ResourceInfo, now: DateTime<Utc>) -
             .estimated_current(now)
             .map_or_else(|| "?".to_string(), |v| v.to_string());
         let max = info.max.map_or_else(|| "?".to_string(), |v| v.to_string());
-        let mins_remaining = (info.completion_at - now).num_minutes();
+        let mins_remaining = info.completion_at.duration_since(now).as_mins();
         let duration = i18n::format_duration(mins_remaining);
-        let completion_local = info.completion_at.with_timezone(&Local);
-        let now_local = now.with_timezone(&Local);
-        let local_time = i18n::format_time(completion_local, now_local);
+        let completion_local = info.completion_at.to_zoned(TimeZone::system());
+        let now_local = now.to_zoned(TimeZone::system());
+        let local_time = i18n::format_time(&completion_local, &now_local);
 
         i18n::t_args(
             "notification_stamina_progress",
@@ -65,11 +65,11 @@ pub(crate) fn build_notification_body(info: &ResourceInfo, now: DateTime<Utc>) -
             return i18n::t("notification_cooldown_complete");
         }
 
-        let mins_remaining = (info.completion_at - now).num_minutes();
+        let mins_remaining = info.completion_at.duration_since(now).as_mins();
         let duration = i18n::format_duration(mins_remaining);
-        let completion_local = info.completion_at.with_timezone(&Local);
-        let now_local = now.with_timezone(&Local);
-        let local_time = i18n::format_time(completion_local, now_local);
+        let completion_local = info.completion_at.to_zoned(TimeZone::system());
+        let now_local = now.to_zoned(TimeZone::system());
+        let local_time = i18n::format_time(&completion_local, &now_local);
 
         i18n::t_args(
             "notification_cooldown_remaining",
@@ -83,7 +83,7 @@ pub(crate) fn build_notification_body(info: &ResourceInfo, now: DateTime<Utc>) -
 
 #[cfg(test)]
 mod tests {
-    use chrono::TimeDelta;
+    use jiff::SignedDuration;
 
     use super::*;
     use crate::notification::resource_extractor::ResourceInfo;
@@ -128,7 +128,7 @@ mod tests {
     #[test]
     fn test_stamina_full() {
         ensure_init();
-        let now = Utc::now();
+        let now = Timestamp::now();
         let info = ResourceInfo {
             completion_at: now,
             is_complete: true,
@@ -143,8 +143,8 @@ mod tests {
     #[test]
     fn test_stamina_not_full_shows_status() {
         ensure_init();
-        let now = Utc::now();
-        let completion_at = now + TimeDelta::minutes(75);
+        let now = Timestamp::now();
+        let completion_at = now + SignedDuration::from_mins(75);
         let info = ResourceInfo {
             completion_at,
             is_complete: false,
@@ -164,7 +164,7 @@ mod tests {
     #[test]
     fn test_cooldown_complete() {
         ensure_init();
-        let now = Utc::now();
+        let now = Timestamp::now();
         let info = ResourceInfo {
             completion_at: now,
             is_complete: true,
@@ -179,8 +179,8 @@ mod tests {
     #[test]
     fn test_cooldown_not_complete() {
         ensure_init();
-        let now = Utc::now();
-        let completion_at = now + TimeDelta::minutes(30);
+        let now = Timestamp::now();
+        let completion_at = now + SignedDuration::from_mins(30);
         let info = ResourceInfo {
             completion_at,
             is_complete: false,
@@ -199,9 +199,9 @@ mod tests {
     #[test]
     fn test_stamina_duration_over_24h() {
         ensure_init();
-        let now = Utc::now();
+        let now = Timestamp::now();
         // 3000 minutes = 2d 2h 0m
-        let completion_at = now + TimeDelta::minutes(3000);
+        let completion_at = now + SignedDuration::from_mins(3000);
         let info = ResourceInfo {
             completion_at,
             is_complete: false,
@@ -217,9 +217,9 @@ mod tests {
     #[test]
     fn test_cooldown_duration_over_24h() {
         ensure_init();
-        let now = Utc::now();
+        let now = Timestamp::now();
         // 3000 minutes = 2d 2h 0m
-        let completion_at = now + TimeDelta::minutes(3000);
+        let completion_at = now + SignedDuration::from_mins(3000);
         let info = ResourceInfo {
             completion_at,
             is_complete: false,
@@ -238,8 +238,8 @@ mod tests {
     #[test]
     fn test_completion_different_day_shows_weekday() {
         ensure_init();
-        let now = Utc::now();
-        let completion_at = now + TimeDelta::days(2);
+        let now = Timestamp::now();
+        let completion_at = now + SignedDuration::from_hours(48);
         let info = ResourceInfo {
             completion_at,
             is_complete: false,

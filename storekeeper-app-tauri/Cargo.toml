@@ -62,7 +62,10 @@ tracing.workspace = true
 tracing-subscriber.workspace = true
 
 # Time
-chrono.workspace = true
+jiff.workspace = true
+
+# Filesystem IO (errors carry path context)
+fs-err.workspace = true
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util"] }

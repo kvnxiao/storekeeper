@@ -16,7 +16,7 @@ pub(crate) use resource_extractor::extract_resource_info;
 pub use tracker::NotificationTracker;
 use tracker::NotifyAction;
 
-use chrono::Utc;
+use jiff::Timestamp;
 use storekeeper_core::GameId;
 use storekeeper_core::config::{GamesConfig, ResourceNotificationConfig};
 use tauri::{AppHandle, Manager};
@@ -71,7 +71,7 @@ pub fn start_notification_checker(app_handle: AppHandle, cancel_token: Cancellat
 /// Checks all cached resources against notification thresholds.
 pub(crate) async fn check_and_notify(app_handle: &AppHandle) {
     let state = app_handle.state::<AppState>();
-    let now = Utc::now();
+    let now = Timestamp::now();
     let resources = state.get_resources().await;
 
     // Snapshot configs so the checker loop does not hold state locks while formatting/sending.

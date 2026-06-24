@@ -1,6 +1,6 @@
 //! Zenless Zone Zero game client implementation.
 
-use chrono::{DateTime, Local};
+use jiff::Timestamp;
 use serde::Deserialize;
 use storekeeper_client_hoyolab::HoyolabClient;
 use storekeeper_core::{GameClient, GameId, Region, StaminaResource, serde_utils};
@@ -21,7 +21,7 @@ struct NoteResponse {
 struct EnergyInfo {
     progress: EnergyProgress,
     #[serde(deserialize_with = "serde_utils::seconds_u64_to_datetime::deserialize")]
-    restore: DateTime<Local>,
+    restore: Timestamp,
 }
 
 #[derive(Debug, Deserialize)]

@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use serde::{Deserialize, Serialize};
 use storekeeper_core::{AppConfig, ClaimTime, GameId, SecretsConfig, ensure_configs_exist};
 
@@ -30,7 +30,7 @@ pub struct AllResources {
     pub games: HashMap<GameId, serde_json::Value>,
 
     /// Last update timestamp.
-    pub last_updated: Option<DateTime<Utc>>,
+    pub last_updated: Option<Timestamp>,
 }
 
 /// All daily reward status from all games.
@@ -42,7 +42,7 @@ pub struct AllDailyRewardStatus {
     pub games: HashMap<GameId, serde_json::Value>,
 
     /// Last check timestamp.
-    pub last_checked: Option<DateTime<Utc>>,
+    pub last_checked: Option<Timestamp>,
 }
 
 /// Inner state data protected by RwLock.
@@ -178,7 +178,7 @@ impl AppState {
         let games = registry.fetch_all(app_handle).await;
         AllResources {
             games,
-            last_updated: Some(Utc::now()),
+            last_updated: Some(Timestamp::now()),
         }
     }
 
@@ -222,7 +222,7 @@ impl AppState {
         let games = daily_reward_registry.get_all_status().await;
         AllDailyRewardStatus {
             games,
-            last_checked: Some(Utc::now()),
+            last_checked: Some(Timestamp::now()),
         }
     }
 
@@ -377,7 +377,7 @@ mod tests {
         let mut r = AllResources::default();
         r.games
             .insert(GameId::GenshinImpact, serde_json::json!([{"stamina": 160}]));
-        r.last_updated = Some(Utc::now());
+        r.last_updated = Some(Timestamp::now());
 
         let json = serde_json::to_string(&r).expect("serialize");
         let r2: AllResources = serde_json::from_str(&json).expect("deserialize");
@@ -388,7 +388,7 @@ mod tests {
     #[test]
     fn all_resources_camel_case_keys() {
         let r = AllResources {
-            last_updated: Some(Utc::now()),
+            last_updated: Some(Timestamp::now()),
             ..AllResources::default()
         };
         let v = serde_json::to_value(&r).expect("serialize");
@@ -424,7 +424,7 @@ mod tests {
             GameId::HonkaiStarRail,
             serde_json::json!({"is_signed": true}),
         );
-        s.last_checked = Some(Utc::now());
+        s.last_checked = Some(Timestamp::now());
 
         let json = serde_json::to_string(&s).expect("serialize");
         let s2: AllDailyRewardStatus = serde_json::from_str(&json).expect("deserialize");
@@ -435,7 +435,7 @@ mod tests {
     #[test]
     fn all_daily_reward_status_camel_case_keys() {
         let s = AllDailyRewardStatus {
-            last_checked: Some(Utc::now()),
+            last_checked: Some(Timestamp::now()),
             ..AllDailyRewardStatus::default()
         };
         let v = serde_json::to_value(&s).expect("serialize");

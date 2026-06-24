@@ -5,6 +5,7 @@
 
 use std::path::PathBuf;
 
+use camino::Utf8PathBuf;
 use serde::Deserialize;
 
 use crate::error::{ClientError, Error, Result};
@@ -46,25 +47,21 @@ pub fn load_oauth_from_cache() -> Result<Option<String>> {
     let cache_path = get_cache_path()?;
 
     if !cache_path.exists() {
-        tracing::debug!("Kuro SDK cache file not found at: {}", cache_path.display());
+        tracing::debug!("Kuro SDK cache file not found at: {cache_path}");
         return Ok(None);
     }
 
-    tracing::debug!("Loading Kuro SDK cache from: {}", cache_path.display());
+    tracing::debug!("Loading Kuro SDK cache from: {cache_path}");
 
-    let content = std::fs::read_to_string(&cache_path).map_err(|e| {
+    let content = fs_err::read_to_string(&cache_path).map_err(|e| {
         Error::Client(ClientError::invalid_config(format!(
-            "Failed to read Kuro SDK cache file at {}: {}",
-            cache_path.display(),
-            e
+            "Failed to read Kuro SDK cache file at {cache_path}: {e}"
         )))
     })?;
 
     let cache_entries: Vec<KuroSdkCacheEntry> = serde_json::from_str(&content).map_err(|e| {
         Error::Client(ClientError::invalid_config(format!(
-            "Failed to parse Kuro SDK cache file at {}: {}",
-            cache_path.display(),
-            e
+            "Failed to parse Kuro SDK cache file at {cache_path}: {e}"
         )))
     })?;
 
@@ -87,8 +84,9 @@ pub fn load_oauth_from_cache() -> Result<Option<String>> {
 ///
 /// # Errors
 ///
-/// Returns an error if the roaming app data directory cannot be determined.
-fn get_cache_path() -> Result<PathBuf> {
+/// Returns an error if the roaming app data directory cannot be determined or
+/// is not valid UTF-8.
+fn get_cache_path() -> Result<Utf8PathBuf> {
     // On Windows, dirs::data_dir() returns %APPDATA% (Roaming)
     let data_dir = dirs::data_dir().ok_or_else(|| {
         Error::Client(ClientError::invalid_config(
@@ -96,7 +94,20 @@ fn get_cache_path() -> Result<PathBuf> {
         ))
     })?;
 
-    Ok(data_dir.join(KURO_SDK_CACHE_PATH))
+    Ok(to_utf8_data_dir(data_dir)?.join(KURO_SDK_CACHE_PATH))
+}
+
+/// Converts the OS data directory from `dirs` into a UTF-8 path.
+///
+/// This is the boundary where we leave `std::path` behind for `camino`.
+/// Non-UTF-8 paths are rejected rather than lossily coerced.
+fn to_utf8_data_dir(path: PathBuf) -> Result<Utf8PathBuf> {
+    Utf8PathBuf::from_path_buf(path).map_err(|p| {
+        Error::Client(ClientError::invalid_config(format!(
+            "App data directory is not valid UTF-8: {}",
+            p.display()
+        )))
+    })
 }
 
 #[cfg(test)]
@@ -128,5 +139,30 @@ mod tests {
                 assert_eq!(decoded, original, "Failed roundtrip for: {original}");
             }
         }
+    }
+
+    #[cfg(any(windows, unix))]
+    #[test]
+    fn to_utf8_data_dir_rejects_non_utf8() {
+        use crate::error::Error;
+
+        // Build a path that is not valid UTF-8 in a platform-specific way.
+        #[cfg(windows)]
+        let bad: std::path::PathBuf = {
+            use std::os::windows::ffi::OsStringExt;
+            // 0xD800 is an unpaired high surrogate, which is not valid UTF-8.
+            std::ffi::OsString::from_wide(&[0xD800]).into()
+        };
+        #[cfg(unix)]
+        let bad: std::path::PathBuf = {
+            use std::os::unix::ffi::OsStrExt;
+            std::ffi::OsStr::from_bytes(&[0xFF]).to_os_string().into()
+        };
+
+        let result = super::to_utf8_data_dir(bad);
+        assert!(
+            matches!(result, Err(Error::Client(_))),
+            "a non-UTF-8 data directory must be rejected"
+        );
     }
 }

@@ -6,7 +6,6 @@
 use std::future::Future;
 use std::pin::Pin;
 
-use chrono::Datelike;
 use serde::{Deserialize, Serialize};
 
 use crate::game_id::GameId;
@@ -41,15 +40,13 @@ impl DailyRewardInfo {
     /// Calculates based on the current day of month in UTC+8 timezone.
     #[must_use = "this returns the count of missed rewards"]
     pub fn missed_rewards(&self) -> u32 {
-        use chrono::{FixedOffset, Utc};
+        use jiff::Timestamp;
+        use jiff::tz::{Offset, TimeZone};
 
-        // Daily rewards reset at UTC+8 (China Standard Time)
-        // SAFETY: 8 * 3600 = 28800 seconds is always a valid offset
-        let Some(utc8) = FixedOffset::east_opt(8 * 3600) else {
-            return 0; // Fallback if offset creation fails (should never happen)
-        };
-        let now = Utc::now().with_timezone(&utc8);
-        let current_day = now.day();
+        // Daily rewards reset at UTC+8 (China Standard Time).
+        let utc8 = TimeZone::fixed(Offset::constant(8));
+        // Day-of-month is always in 1..=31, so the conversion never fails.
+        let current_day = u32::try_from(Timestamp::now().to_zoned(utc8).day()).unwrap_or(0);
 
         current_day.saturating_sub(self.total_sign_day)
     }
@@ -248,11 +245,8 @@ where
         &self,
     ) -> BoxFuture<'_, std::result::Result<serde_json::Value, BoxError>> {
         Box::pin(async {
-            let status = self
-                .get_reward_status()
-                .await
-                .map_err(|e| Box::new(e) as BoxError)?;
-            serde_json::to_value(status).map_err(|e| Box::new(e) as BoxError)
+            let status = self.get_reward_status().await.map_err(BoxError::from)?;
+            serde_json::to_value(status).map_err(BoxError::from)
         })
     }
 
@@ -260,11 +254,8 @@ where
         &self,
     ) -> BoxFuture<'_, std::result::Result<serde_json::Value, BoxError>> {
         Box::pin(async {
-            let result = self
-                .claim_daily_reward()
-                .await
-                .map_err(|e| Box::new(e) as BoxError)?;
-            serde_json::to_value(result).map_err(|e| Box::new(e) as BoxError)
+            let result = self.claim_daily_reward().await.map_err(BoxError::from)?;
+            serde_json::to_value(result).map_err(BoxError::from)
         })
     }
 }
@@ -295,12 +286,13 @@ mod tests {
 
     #[test]
     fn test_missed_rewards_calculation() {
-        use chrono::{FixedOffset, Utc};
+        use jiff::Timestamp;
+        use jiff::tz::{Offset, TimeZone};
 
         // Get the current day in UTC+8
-        let utc8 = FixedOffset::east_opt(8 * 3600).expect("UTC+8 is valid");
-        let now = Utc::now().with_timezone(&utc8);
-        let current_day = now.day();
+        let utc8 = TimeZone::fixed(Offset::constant(8));
+        let current_day =
+            u32::try_from(Timestamp::now().to_zoned(utc8).day()).expect("day in range");
 
         // If we've signed every day, missed should be 0
         let info = DailyRewardInfo::new(true, current_day);
@@ -528,6 +520,70 @@ mod tests {
         assert_eq!(
             status.monthly_rewards.len(),
             deserialized.monthly_rewards.len()
+        );
+    }
+
+    // =========================================================================
+    // DynDailyRewardClient error-propagation tests
+    // =========================================================================
+
+    /// Minimal error type for the failing stub client below.
+    #[derive(Debug)]
+    struct StubError;
+
+    impl std::fmt::Display for StubError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "stub client failure")
+        }
+    }
+
+    impl std::error::Error for StubError {}
+
+    /// A client whose every API call fails, used to verify that the JSON
+    /// adapters surface errors instead of silently dropping them.
+    struct FailingClient;
+
+    impl DailyRewardClient for FailingClient {
+        type Error = StubError;
+
+        fn game_id(&self) -> GameId {
+            GameId::GenshinImpact
+        }
+
+        async fn get_reward_info(&self) -> std::result::Result<DailyRewardInfo, StubError> {
+            Err(StubError)
+        }
+
+        async fn get_monthly_rewards(&self) -> std::result::Result<Vec<DailyReward>, StubError> {
+            Err(StubError)
+        }
+
+        async fn get_reward_status(&self) -> std::result::Result<DailyRewardStatus, StubError> {
+            Err(StubError)
+        }
+
+        async fn claim_daily_reward(&self) -> std::result::Result<ClaimResult, StubError> {
+            Err(StubError)
+        }
+    }
+
+    #[tokio::test]
+    async fn get_reward_status_json_surfaces_client_error() {
+        let client = FailingClient;
+        let result = DynDailyRewardClient::get_reward_status_json(&client).await;
+        assert!(
+            result.is_err(),
+            "client error must propagate through the JSON adapter, not be swallowed"
+        );
+    }
+
+    #[tokio::test]
+    async fn claim_daily_reward_json_surfaces_client_error() {
+        let client = FailingClient;
+        let result = DynDailyRewardClient::claim_daily_reward_json(&client).await;
+        assert!(
+            result.is_err(),
+            "client error must propagate through the JSON adapter, not be swallowed"
         );
     }
 }

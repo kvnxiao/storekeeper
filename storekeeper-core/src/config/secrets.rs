@@ -1,7 +1,6 @@
 //! Secrets configuration for sensitive credentials.
 
-use std::path::{Path, PathBuf};
-
+use camino::{Utf8Path, Utf8PathBuf};
 use serde::{Deserialize, Serialize};
 
 use crate::error::{Error, Result};
@@ -34,14 +33,14 @@ impl SecretsConfig {
     /// # Errors
     ///
     /// Returns an error if the secrets file cannot be read or parsed.
-    pub fn load_from_path(path: &Path) -> Result<Self> {
+    pub fn load_from_path(path: &Utf8Path) -> Result<Self> {
         if !path.exists() {
             return Err(Error::ConfigNotFound {
-                path: path.display().to_string(),
+                path: path.to_string(),
             });
         }
 
-        let content = std::fs::read_to_string(path)?;
+        let content = fs_err::read_to_string(path)?;
         let secrets: Self = toml::from_str(&content)?;
         Ok(secrets)
     }
@@ -50,8 +49,9 @@ impl SecretsConfig {
     ///
     /// # Errors
     ///
-    /// Returns an error if the config directory cannot be determined.
-    pub fn secrets_path() -> Result<PathBuf> {
+    /// Returns an error if the config directory cannot be determined or is not
+    /// valid UTF-8.
+    pub fn secrets_path() -> Result<Utf8PathBuf> {
         Ok(super::AppConfig::config_dir()?.join("secrets.toml"))
     }
 
@@ -70,16 +70,16 @@ impl SecretsConfig {
     /// # Errors
     ///
     /// Returns an error if the secrets file cannot be written.
-    pub fn save_to_path(&self, path: &Path) -> Result<()> {
+    pub fn save_to_path(&self, path: &Utf8Path) -> Result<()> {
         // Ensure the directory exists
         if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)?;
+            fs_err::create_dir_all(parent)?;
         }
 
         let content = toml::to_string_pretty(self).map_err(|e| Error::ConfigParseFailed {
             message: format!("Failed to serialize secrets: {e}"),
         })?;
-        std::fs::write(path, content)?;
+        fs_err::write(path, content)?;
         Ok(())
     }
 
@@ -99,17 +99,17 @@ impl SecretsConfig {
 
         // Ensure the directory exists
         if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)?;
+            fs_err::create_dir_all(parent)?;
         }
 
         // Write empty secrets with helpful comments
         let content = Self::default_secrets_content();
-        std::fs::write(&path, content)?;
+        fs_err::write(&path, content)?;
 
         // Verify it can be loaded
         let _ = Self::load_from_path(&path)?;
 
-        tracing::info!("Created default secrets file at: {}", path.display());
+        tracing::info!("Created default secrets file at: {path}");
         Ok(true)
     }
 
