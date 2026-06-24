@@ -1,28 +1,31 @@
 //! Scheduled auto-claim for daily rewards.
 
+use crate::events::AppEvent;
+use crate::retry_helpers::retry_with_backoff;
+use crate::state::AppState;
+use anyhow::Context;
+use jiff::Timestamp;
 use std::collections::HashMap;
 use std::ops::ControlFlow;
 use std::sync::Arc;
 use std::time::Duration;
-
-use anyhow::Context;
-use jiff::Timestamp;
-use storekeeper_core::{ClaimTime, DailyRewardStatus, GameId, next_claim_datetime_utc};
-use tauri::{AppHandle, Emitter, Manager};
+use storekeeper_core::ClaimTime;
+use storekeeper_core::DailyRewardStatus;
+use storekeeper_core::GameId;
+use storekeeper_core::next_claim_datetime_utc;
+use tauri::AppHandle;
+use tauri::Emitter;
+use tauri::Manager;
 use tokio::sync::Notify;
 use tokio_util::sync::CancellationToken;
-
-use crate::events::AppEvent;
-use crate::retry_helpers::retry_with_backoff;
-use crate::state::AppState;
 
 /// Maximum chunk duration for wall-clock-bounded sleeps.
 ///
 /// Prevents long `tokio::time::sleep` calls that can drift during OS suspend.
-const MAX_SLEEP_CHUNK: Duration = Duration::from_secs(15 * 60);
+const MAX_SLEEP_CHUNK: Duration = Duration::from_mins(15);
 
 /// Short sleep used when no games are configured or no claims are pending.
-const IDLE_SLEEP: Duration = Duration::from_secs(15 * 60);
+const IDLE_SLEEP: Duration = Duration::from_mins(15);
 
 /// Why the scheduler woke up from a sleep.
 enum WakeReason {
@@ -46,9 +49,9 @@ enum PostWake {
 /// Pure mapping from a wake reason to the loop's next control-flow step.
 ///
 /// `Break(())` means the scheduler should stop (cancellation). `Continue(_)`
-/// means keep looping, with the [`PostWake`] payload describing what bookkeeping
-/// the caller should perform first. Kept side-effect-free so it is unit-testable
-/// for every [`WakeReason`] variant.
+/// means keep looping, with the [`PostWake`] payload describing what
+/// bookkeeping the caller should perform first. Kept side-effect-free so it is
+/// unit-testable for every [`WakeReason`] variant.
 fn handle_wake_reason(reason: &WakeReason) -> ControlFlow<(), PostWake> {
     match reason {
         WakeReason::Cancelled => ControlFlow::Break(()),
@@ -216,9 +219,9 @@ async fn claim_games_and_emit(state: &AppState, app_handle: &AppHandle, game_ids
 
 /// Sleeps until the given wall-clock target, in bounded chunks.
 ///
-/// Sleeps in chunks of at most [`MAX_SLEEP_CHUNK`] and re-checks `Timestamp::now()`
-/// after each chunk. This ensures the scheduler fires promptly after OS
-/// suspend/resume, with at most one chunk of delay.
+/// Sleeps in chunks of at most [`MAX_SLEEP_CHUNK`] and re-checks
+/// `Timestamp::now()` after each chunk. This ensures the scheduler fires
+/// promptly after OS suspend/resume, with at most one chunk of delay.
 async fn sleep_until(
     target: Timestamp,
     cancel_token: &CancellationToken,
@@ -270,7 +273,8 @@ async fn sleep_short(cancel_token: &CancellationToken, notify: &Arc<Notify>) -> 
 
 /// Checks status and claims if not already claimed today.
 ///
-/// Returns `Ok(true)` if claimed, `Ok(false)` if already claimed, `Err` on failure.
+/// Returns `Ok(true)` if claimed, `Ok(false)` if already claimed, `Err` on
+/// failure.
 async fn claim_with_status_check(state: &AppState, game_id: GameId) -> anyhow::Result<bool> {
     // Step 1: Check status first
     let status = fetch_status_with_retry(state, game_id).await?;

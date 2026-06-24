@@ -1,7 +1,9 @@
 //! Resource info extraction from JSON data.
 
 use jiff::Timestamp;
-use storekeeper_core::{CooldownResource, ExpeditionResource, StaminaResource};
+use storekeeper_core::CooldownResource;
+use storekeeper_core::ExpeditionResource;
+use storekeeper_core::StaminaResource;
 
 /// Extracted timing info from a resource JSON object.
 pub(crate) struct ResourceInfo {
@@ -18,7 +20,8 @@ pub(crate) struct ResourceInfo {
 }
 
 impl ResourceInfo {
-    /// Estimates the current resource value from `completion_at` and regen rate.
+    /// Estimates the current resource value from `completion_at` and regen
+    /// rate.
     ///
     /// The cached `current` field can be stale (set at API-fetch time), so this
     /// computes the value from elapsed time instead.  Falls back to the cached
@@ -39,7 +42,8 @@ impl ResourceInfo {
         }
 
         // Ceiling division: partial progress toward the next unit hasn't ticked yet.
-        // Safety: secs_to_full is guaranteed positive by the check above.
+        // secs_to_full is guaranteed positive by the check above, so the
+        // conversion never falls back to 0 in practice.
         let secs = u64::try_from(secs_to_full).unwrap_or(0);
         let remaining_units = secs.div_ceil(rate);
         Some(max.saturating_sub(remaining_units))
@@ -89,9 +93,8 @@ pub(crate) fn extract_resource_info(
 
 #[cfg(test)]
 mod tests {
-    use jiff::SignedDuration;
-
     use super::*;
+    use jiff::SignedDuration;
 
     #[test]
     fn test_extract_stamina_resource() {

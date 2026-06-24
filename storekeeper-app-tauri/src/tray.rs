@@ -1,14 +1,17 @@
 //! System tray setup and event handling.
 
-use anyhow::{Context, Result};
-use tauri::{
-    App, AppHandle, Manager,
-    menu::{Menu, MenuItem},
-    tray::{MouseButton, MouseButtonState, TrayIconEvent},
-};
-use tokio_util::sync::CancellationToken;
-
 use crate::i18n;
+use anyhow::Context;
+use anyhow::Result;
+use tauri::App;
+use tauri::AppHandle;
+use tauri::Manager;
+use tauri::menu::Menu;
+use tauri::menu::MenuItem;
+use tauri::tray::MouseButton;
+use tauri::tray::MouseButtonState;
+use tauri::tray::TrayIconEvent;
+use tokio_util::sync::CancellationToken;
 
 /// Builds (or rebuilds) the tray menu with localized strings.
 ///
@@ -97,10 +100,16 @@ pub fn setup_tray(app: &App) -> Result<()> {
                 // Toggle window visibility on left click
                 if let Some(window) = tray.app_handle().get_webview_window("main") {
                     if window.is_visible().unwrap_or(false) {
-                        let _ = window.hide();
+                        if let Err(e) = window.hide() {
+                            tracing::debug!(error = %e, "Failed to hide window");
+                        }
                     } else {
-                        let _ = window.show();
-                        let _ = window.set_focus();
+                        if let Err(e) = window.show() {
+                            tracing::debug!(error = %e, "Failed to show window");
+                        }
+                        if let Err(e) = window.set_focus() {
+                            tracing::debug!(error = %e, "Failed to focus window");
+                        }
                     }
                 }
             }
@@ -110,8 +119,12 @@ pub fn setup_tray(app: &App) -> Result<()> {
             } => {
                 // Show window on double click
                 if let Some(window) = tray.app_handle().get_webview_window("main") {
-                    let _ = window.show();
-                    let _ = window.set_focus();
+                    if let Err(e) = window.show() {
+                        tracing::debug!(error = %e, "Failed to show window");
+                    }
+                    if let Err(e) = window.set_focus() {
+                        tracing::debug!(error = %e, "Failed to focus window");
+                    }
                 }
             }
             _ => {}

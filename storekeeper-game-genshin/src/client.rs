@@ -1,14 +1,20 @@
 //! Genshin Impact game client implementation.
 
-use jiff::{SignedDuration, Timestamp};
-use serde::{Deserialize, Deserializer};
-use storekeeper_client_hoyolab::HoyolabClient;
-use storekeeper_core::{
-    CooldownResource, ExpeditionResource, GameClient, GameId, Region, StaminaResource, serde_utils,
-};
-
-use crate::error::{Error, Result};
+use crate::error::Error;
+use crate::error::Result;
 use crate::resource::GenshinResource;
+use jiff::SignedDuration;
+use jiff::Timestamp;
+use serde::Deserialize;
+use serde::Deserializer;
+use storekeeper_client_hoyolab::HoyolabClient;
+use storekeeper_core::CooldownResource;
+use storekeeper_core::ExpeditionResource;
+use storekeeper_core::GameClient;
+use storekeeper_core::GameId;
+use storekeeper_core::Region;
+use storekeeper_core::StaminaResource;
+use storekeeper_core::serde_utils;
 
 /// Resin regeneration rate: 1 resin per 8 minutes = 480 seconds.
 const RESIN_REGEN_SECONDS: u32 = 480;
@@ -52,10 +58,16 @@ struct ExpeditionInfo {
     #[serde(deserialize_with = "serde_utils::seconds_string_to_datetime::deserialize")]
     remained_time: Timestamp,
     /// URL to the avatar's side icon.
-    #[allow(dead_code)]
+    #[expect(
+        dead_code,
+        reason = "deserialized from the API response but not yet surfaced to the UI"
+    )]
     avatar_side_icon: String,
     /// Current status of the expedition.
-    #[allow(dead_code)]
+    #[expect(
+        dead_code,
+        reason = "deserialized from the API response but not yet surfaced to the UI"
+    )]
     status: ExpeditionStatus,
 }
 
@@ -172,11 +184,11 @@ fn build_resources(note: &DailyNoteResponse, now: Timestamp) -> Vec<GenshinResou
     )));
 
     // Parametric Transformer
-    if let Some(ref transformer) = note.transformer {
-        if transformer.obtained {
-            let cooldown = CooldownResource::new(transformer.ready_at <= now, transformer.ready_at);
-            resources.push(GenshinResource::ParametricTransformer(cooldown));
-        }
+    if let Some(ref transformer) = note.transformer
+        && transformer.obtained
+    {
+        let cooldown = CooldownResource::new(transformer.ready_at <= now, transformer.ready_at);
+        resources.push(GenshinResource::ParametricTransformer(cooldown));
     }
 
     // Expeditions - find the earliest finish time
@@ -229,10 +241,9 @@ impl GameClient for GenshinClient {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use jiff::SignedDuration;
     use serde_json::json;
-
-    use super::*;
 
     fn make_note(
         transformer: Option<TransformerInfo>,

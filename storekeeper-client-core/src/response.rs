@@ -1,8 +1,7 @@
 //! API response handling traits and types.
 
-use serde::de::DeserializeOwned;
-
 use crate::error::ClientError;
+use serde::de::DeserializeOwned;
 
 /// Trait for API response wrappers.
 ///

@@ -1,11 +1,11 @@
 //! Notification cooldown tracker for (game, resource) pairs.
 
-use std::collections::HashMap;
-
-use jiff::{SignedDuration, Timestamp};
-use storekeeper_core::{GameId, ResourceNotificationConfig};
-
 use super::resource_extractor::ResourceInfo;
+use jiff::SignedDuration;
+use jiff::Timestamp;
+use std::collections::HashMap;
+use storekeeper_core::GameId;
+use storekeeper_core::ResourceNotificationConfig;
 
 /// Pre-built HashMap key for a (game, resource) pair.
 pub type NotifyKey = (GameId, String);
@@ -50,7 +50,8 @@ impl NotificationTracker {
         now: Timestamp,
     ) -> NotifyAction {
         let in_window = match (config.notify_at_value, config.notify_minutes_before_full) {
-            // Value-threshold mode: convert to minutes via regen rate, fallback to direct comparison
+            // Value-threshold mode: convert to minutes via regen rate, fallback to direct
+            // comparison
             (Some(threshold), _) => {
                 if let (Some(max), Some(rate)) = (info.max, info.regen_rate_seconds) {
                     let units_remaining = max.saturating_sub(threshold);
@@ -114,7 +115,10 @@ impl NotificationTracker {
     }
 
     /// Clears all cooldown entries.
-    #[allow(dead_code)]
+    #[expect(
+        dead_code,
+        reason = "kept for API symmetry with clear_for_game; not currently called"
+    )]
     pub fn clear_all(&mut self) {
         self.cooldowns.clear();
     }
@@ -342,7 +346,8 @@ mod tests {
             cooldown_minutes: 10,
         };
 
-        // Resin: max=160, rate=480s/unit. threshold=140, remaining=20 units, 20*480/60=160 min
+        // Resin: max=160, rate=480s/unit. threshold=140, remaining=20 units,
+        // 20*480/60=160 min
         let info = ResourceInfo {
             completion_at: now + SignedDuration::from_mins(100), // within 160 min window
             is_complete: false,

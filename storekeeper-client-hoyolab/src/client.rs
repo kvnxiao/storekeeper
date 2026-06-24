@@ -1,16 +1,18 @@
 //! HoYoLab HTTP client implementation.
 
+use crate::ds::generate_dynamic_secret_overseas;
+use crate::error::Error;
+use crate::error::Result;
 use reqwest::Method;
 use reqwest::header::COOKIE;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
+use storekeeper_client_core::ApiResponse;
+use storekeeper_client_core::ClientError;
+use storekeeper_client_core::ClientWithMiddleware;
+use storekeeper_client_core::HoyolabApiResponse;
+use storekeeper_client_core::HttpClientBuilder;
 use storekeeper_client_core::retry::DEFAULT_MAX_RETRIES;
-use storekeeper_client_core::{
-    ApiResponse, ClientError, ClientWithMiddleware, HoyolabApiResponse, HttpClientBuilder,
-};
-
-use crate::ds::generate_dynamic_secret_overseas;
-use crate::error::{Error, Result};
 
 /// HoYoLab API client.
 #[derive(Debug, Clone)]
@@ -82,7 +84,7 @@ impl HoyolabClient {
         // Try to fetch user info to verify credentials
         match self.get::<serde_json::Value>(&self.auth_check_url).await {
             Ok(_) => Ok(true),
-            Err(Error::Client(ClientError::ApiError { code: -100, .. })) => Ok(false), // Not logged in
+            Err(Error::Client(ClientError::ApiError { code: -100, .. })) => Ok(false), /* Not logged in */
             Err(e) => Err(e),
         }
     }
@@ -164,15 +166,16 @@ impl HoyolabClient {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use reqwest::Method;
     use std::collections::HashMap;
     use std::sync::Arc;
-
-    use reqwest::Method;
-    use tokio::io::{AsyncReadExt, AsyncWriteExt};
-    use tokio::net::{TcpListener, TcpStream};
-    use tokio::sync::{Mutex, oneshot};
-
-    use super::*;
+    use tokio::io::AsyncReadExt;
+    use tokio::io::AsyncWriteExt;
+    use tokio::net::TcpListener;
+    use tokio::net::TcpStream;
+    use tokio::sync::Mutex;
+    use tokio::sync::oneshot;
 
     #[derive(Debug, Clone)]
     struct TestRequest {
@@ -221,6 +224,10 @@ mod tests {
                                 if let Some(request) = read_request(&mut stream).await {
                                     requests.lock().await.push(request.clone());
                                     let response = handler(&request);
+                                    #[expect(
+                                        clippy::let_underscore_must_use,
+                                        reason = "best-effort response write to a test client that may have disconnected"
+                                    )]
                                     let _ = write_response(&mut stream, response).await;
                                 }
                             });
@@ -244,6 +251,10 @@ mod tests {
     impl Drop for TestServer {
         fn drop(&mut self) {
             if let Some(tx) = self.shutdown_tx.take() {
+                #[expect(
+                    clippy::let_underscore_must_use,
+                    reason = "shutdown receiver may already be gone when the server is dropped"
+                )]
                 let _ = tx.send(());
             }
         }
@@ -258,13 +269,18 @@ mod tests {
             if read == 0 {
                 return None;
             }
-            raw.extend_from_slice(&buf[..read]);
+            if let Some(chunk) = buf.get(..read) {
+                raw.extend_from_slice(chunk);
+            }
             if let Some(pos) = find_header_end(&raw) {
                 break pos;
             }
         };
 
-        let head = String::from_utf8_lossy(&raw[..header_end]).to_string();
+        let head_bytes = raw
+            .get(..header_end)
+            .expect("header_end is a valid offset within raw");
+        let head = String::from_utf8_lossy(head_bytes).to_string();
         let mut lines = head.split("\r\n");
         let request_line = lines.next()?.to_string();
         let mut request_line_parts = request_line.split_whitespace();
@@ -286,17 +302,25 @@ mod tests {
             .and_then(|v| v.parse::<usize>().ok())
             .unwrap_or(0);
 
-        let mut body = raw[header_end + 4..].to_vec();
+        let mut body = raw
+            .get(header_end + 4..)
+            .expect("header end offset is within raw")
+            .to_vec();
         while body.len() < content_length {
             let read = stream.read(&mut buf).await.ok()?;
             if read == 0 {
                 break;
             }
-            body.extend_from_slice(&buf[..read]);
+            if let Some(chunk) = buf.get(..read) {
+                body.extend_from_slice(chunk);
+            }
         }
 
         let body_len = content_length.min(body.len());
-        let body = String::from_utf8_lossy(&body[..body_len]).to_string();
+        let body_bytes = body
+            .get(..body_len)
+            .expect("body_len is within body length");
+        let body = String::from_utf8_lossy(body_bytes).to_string();
 
         Some(TestRequest {
             method,
@@ -371,7 +395,7 @@ mod tests {
 
         let requests = server.requests().await;
         assert_eq!(requests.len(), 1, "Expected a single request");
-        let request = &requests[0];
+        let request = requests.first().expect("expected a single request");
         assert_eq!(request.method, "POST");
         assert_eq!(
             request.headers.get("cookie"),

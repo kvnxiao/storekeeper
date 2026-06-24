@@ -1,18 +1,21 @@
 //! Notification configuration for tracked resources.
 
-use serde::{Deserialize, Serialize};
-
 use super::default_true;
+use serde::Deserialize;
+use serde::Serialize;
 
 /// Notification configuration for a specific resource.
 ///
-/// Controls when and how often OS notifications are sent for a tracked resource.
-/// Supports two threshold modes (mutually exclusive — set one, leave the other `None`):
+/// Controls when and how often OS notifications are sent for a tracked
+/// resource. Supports two threshold modes (mutually exclusive — set one, leave
+/// the other `None`):
 /// - `notify_minutes_before_full`: fire N minutes before the resource is full
-/// - `notify_at_value`: fire when the resource value reaches N (stamina resources only)
+/// - `notify_at_value`: fire when the resource value reaches N (stamina
+///   resources only)
 ///
 /// If both are `None`, notifications fire only when the resource is full/ready.
-/// If both are `Some` (e.g. manual config edit), `notify_at_value` takes priority.
+/// If both are `Some` (e.g. manual config edit), `notify_at_value` takes
+/// priority.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ResourceNotificationConfig {
     /// Whether notifications are enabled for this resource.

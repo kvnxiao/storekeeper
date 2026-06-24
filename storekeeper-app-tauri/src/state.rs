@@ -1,20 +1,25 @@
 //! Application state management.
 
-use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-
-use jiff::Timestamp;
-use serde::{Deserialize, Serialize};
-use storekeeper_core::{AppConfig, ClaimTime, GameId, SecretsConfig, ensure_configs_exist};
-
-use crate::notification::NotificationTracker;
-
-use tokio::sync::{Notify, RwLock};
-
-use crate::clients::{create_daily_reward_registry, create_registry};
+use crate::clients::create_daily_reward_registry;
+use crate::clients::create_registry;
 use crate::daily_reward_registry::DailyRewardRegistry;
+use crate::notification::NotificationTracker;
 use crate::registry::GameClientRegistry;
+use jiff::Timestamp;
+use serde::Deserialize;
+use serde::Serialize;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use storekeeper_core::AppConfig;
+use storekeeper_core::ClaimTime;
+use storekeeper_core::GameId;
+use storekeeper_core::SecretsConfig;
+use storekeeper_core::ensure_configs_exist;
+use tokio::sync::Notify;
+use tokio::sync::RwLock;
 
 /// All resources from all games.
 ///
@@ -156,7 +161,8 @@ impl AppState {
         self.refreshing.store(false, Ordering::Release);
     }
 
-    /// Wakes the scheduler to re-evaluate config (e.g. after auto-claim changes).
+    /// Wakes the scheduler to re-evaluate config (e.g. after auto-claim
+    /// changes).
     pub fn wake_scheduler(&self) {
         self.scheduler_notify.notify_one();
     }
@@ -272,9 +278,9 @@ impl AppState {
 
     /// Checks if auto-claim is enabled for a specific game.
     ///
-    /// Returns true if auto-claim is enabled in config and the game is registered
-    /// in the daily reward registry. Does not check if already claimed today -
-    /// that is determined by fetching status from the API.
+    /// Returns true if auto-claim is enabled in config and the game is
+    /// registered in the daily reward registry. Does not check if already
+    /// claimed today - that is determined by fetching status from the API.
     pub async fn should_auto_claim_game(&self, game_id: GameId) -> bool {
         let state = self.inner.read().await;
         state.config.games.auto_claim_enabled(game_id)
@@ -314,11 +320,13 @@ impl AppState {
     // Config Reload Methods
     // ========================================================================
 
-    /// Applies new config and secrets to state, optionally rebuilding registries.
+    /// Applies new config and secrets to state, optionally rebuilding
+    /// registries.
     ///
-    /// When `rebuild_registries` is true, game client and daily reward registries
-    /// are recreated from the new config/secrets. This is only needed when
-    /// game-level settings (uid, region, enabled) or credentials change.
+    /// When `rebuild_registries` is true, game client and daily reward
+    /// registries are recreated from the new config/secrets. This is only
+    /// needed when game-level settings (uid, region, enabled) or
+    /// credentials change.
     pub async fn apply_config(
         &self,
         config: AppConfig,

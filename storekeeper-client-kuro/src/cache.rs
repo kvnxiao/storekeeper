@@ -3,12 +3,12 @@
 //! This module provides functionality to load the OAuth code from the
 //! Kuro Games launcher's local cache file.
 
-use std::path::PathBuf;
-
+use crate::error::ClientError;
+use crate::error::Error;
+use crate::error::Result;
 use camino::Utf8PathBuf;
 use serde::Deserialize;
-
-use crate::error::{ClientError, Error, Result};
+use std::path::PathBuf;
 
 /// The expected path relative to AppData/Roaming for the Kuro SDK cache.
 const KURO_SDK_CACHE_PATH: &str = "KR_G153/A1730/KRSDKUserLauncherCache.json";
@@ -67,12 +67,12 @@ pub fn load_oauth_from_cache() -> Result<Option<String>> {
 
     // Find the first entry with a non-empty OAuth code
     for entry in cache_entries {
-        if let Some(encoded) = entry.oauth_code {
-            if !encoded.is_empty() {
-                let decoded = crate::decode_xor5(&encoded);
-                tracing::info!("Successfully loaded OAuth code from Kuro SDK cache");
-                return Ok(Some(decoded));
-            }
+        if let Some(encoded) = entry.oauth_code
+            && !encoded.is_empty()
+        {
+            let decoded = crate::decode_xor5(&encoded);
+            tracing::info!("Successfully loaded OAuth code from Kuro SDK cache");
+            return Ok(Some(decoded));
         }
     }
 
@@ -129,7 +129,8 @@ mod tests {
     fn test_decode_xor5_roundtrip() {
         let test_strings = ["", "a", "hello", "OAuth123!@#", "日本語"]; // Note: non-ASCII may have issues
         for original in test_strings {
-            // Only test ASCII strings as XOR-5 on bytes may produce invalid UTF-8 for non-ASCII
+            // Only test ASCII strings as XOR-5 on bytes may produce invalid UTF-8 for
+            // non-ASCII
             if original.is_ascii() {
                 let encoded: String = original
                     .chars()

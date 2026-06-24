@@ -1,11 +1,13 @@
-use std::collections::HashMap;
-use std::sync::{OnceLock, RwLock};
-
-use anyhow::{Context, Result, bail};
+use super::locale::DEFAULT_LOCALE;
+use super::locale::SUPPORTED_LOCALES;
+use anyhow::Context;
+use anyhow::Result;
+use anyhow::bail;
 use icu_locale::Locale;
 use icu_plurals::PluralRules;
-
-use super::locale::{DEFAULT_LOCALE, SUPPORTED_LOCALES};
+use std::collections::HashMap;
+use std::sync::OnceLock;
+use std::sync::RwLock;
 
 /// Embedded locale strings (loaded at compile time).
 const EN_LOCALE: &str = include_str!("../../../locales/en.json");
@@ -13,7 +15,8 @@ const ZH_CN_LOCALE: &str = include_str!("../../../locales/zh-CN.json");
 const KO_LOCALE: &str = include_str!("../../../locales/ko.json");
 const JA_LOCALE: &str = include_str!("../../../locales/ja.json");
 
-/// Global messages store, initialized once at startup and switchable at runtime.
+/// Global messages store, initialized once at startup and switchable at
+/// runtime.
 static MESSAGES: OnceLock<RwLock<Messages>> = OnceLock::new();
 
 /// Holds the loaded locale data: parsed strings and locale info.
@@ -77,13 +80,19 @@ fn load_messages(locale_str: &str) -> Result<Messages> {
 
 /// Initializes the i18n system with the given locale.
 ///
-/// Must be called once at startup. Subsequent calls are ignored (use `set_locale` instead).
+/// Must be called once at startup. Subsequent calls are ignored (use
+/// `set_locale` instead).
 ///
 /// # Errors
 ///
 /// Returns an error if the locale cannot be loaded or parsed.
 pub fn init(locale_str: &str) -> Result<()> {
     let messages = load_messages(locale_str)?;
+    // Subsequent calls after the first are intentionally ignored (see doc above).
+    #[expect(
+        clippy::let_underscore_must_use,
+        reason = "init is idempotent; a second call leaves the first value in place"
+    )]
     let _ = MESSAGES.set(RwLock::new(messages));
     tracing::info!(locale = locale_str, "i18n initialized");
     Ok(())

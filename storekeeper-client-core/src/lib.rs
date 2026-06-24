@@ -1,7 +1,7 @@
 //! Shared HTTP client abstractions for Storekeeper API clients.
 //!
-//! This crate provides common types and utilities for building game API clients,
-//! including:
+//! This crate provides common types and utilities for building game API
+//! clients, including:
 //!
 //! - Base error types that can be extended by specific clients
 //! - API response traits for handling different response formats
@@ -28,8 +28,14 @@ pub mod error;
 pub mod response;
 pub mod retry;
 
-pub use client::{DEFAULT_USER_AGENT, HttpClientBuilder};
-pub use error::{ClientError, Result};
+pub use client::DEFAULT_USER_AGENT;
+pub use client::HttpClientBuilder;
+pub use error::ClientError;
+pub use error::Result;
 pub use reqwest_middleware::ClientWithMiddleware;
-pub use response::{ApiResponse, HoyolabApiResponse, KuroApiResponse};
-pub use retry::{RetryConfig, is_transient_reqwest_error, retry_with_backoff};
+pub use response::ApiResponse;
+pub use response::HoyolabApiResponse;
+pub use response::KuroApiResponse;
+pub use retry::RetryConfig;
+pub use retry::is_transient_reqwest_error;
+pub use retry::retry_with_backoff;

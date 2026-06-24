@@ -1,11 +1,11 @@
 //! Daily reward client registry for managing reward claiming across games.
 
-use std::collections::{HashMap, HashSet};
-
-use anyhow::Context;
-use storekeeper_core::{DynDailyRewardClient, GameId};
-
 use crate::provider_batch;
+use anyhow::Context;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use storekeeper_core::DynDailyRewardClient;
+use storekeeper_core::GameId;
 
 /// Registry that holds type-erased daily reward clients.
 ///
@@ -41,7 +41,13 @@ impl DailyRewardRegistry {
 
     /// Returns true if no clients are registered.
     #[must_use]
-    #[allow(dead_code)]
+    #[cfg_attr(
+        not(test),
+        expect(
+            dead_code,
+            reason = "companion to len() for len_without_is_empty; only exercised in tests"
+        )
+    )]
     pub fn is_empty(&self) -> bool {
         self.clients.is_empty()
     }
@@ -101,7 +107,8 @@ impl DailyRewardRegistry {
         .await
     }
 
-    /// Gets reward status from all registered clients with rate limit awareness.
+    /// Gets reward status from all registered clients with rate limit
+    /// awareness.
     ///
     /// Returns a map from game ID to the JSON-serialized reward status.
     pub async fn get_all_status(&self) -> HashMap<GameId, serde_json::Value> {
@@ -120,10 +127,9 @@ impl Default for DailyRewardRegistry {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use std::future::Future;
     use std::pin::Pin;
-
-    use super::*;
     use storekeeper_core::ApiProvider;
 
     type BoxError = Box<dyn std::error::Error + Send + Sync>;
@@ -235,7 +241,7 @@ mod tests {
             GameId::GenshinImpact,
         )));
         let result = r.get_status_for_game(GameId::GenshinImpact).await;
-        assert!(result.is_ok());
+        result.expect("status should succeed");
     }
 
     #[tokio::test(start_paused = true)]
@@ -271,14 +277,14 @@ mod tests {
             GameId::HonkaiStarRail,
         )));
         let result = r.claim_for_game(GameId::HonkaiStarRail).await;
-        assert!(result.is_ok());
+        result.expect("claim should succeed");
     }
 
     #[tokio::test(start_paused = true)]
     async fn claim_for_game_not_registered() {
         let r = DailyRewardRegistry::new();
         let result = r.claim_for_game(GameId::HonkaiStarRail).await;
-        assert!(result.is_err());
+        result.expect_err("claim should fail for unregistered game");
     }
 
     // =========================================================================

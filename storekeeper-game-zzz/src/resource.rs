@@ -1,6 +1,7 @@
 //! Zenless Zone Zero resource types.
 
-use storekeeper_core::{StaminaResource, game_resource_enum};
+use storekeeper_core::StaminaResource;
+use storekeeper_core::game_resource_enum;
 
 game_resource_enum! {
     /// Zenless Zone Zero resource types.
@@ -75,8 +76,17 @@ mod tests {
         let ts = Timestamp::from_second(1_704_067_200).expect("valid timestamp");
         let resource = ZzzResource::Battery(StaminaResource::new(200, 240, ts, 360));
         let value = serde_json::to_value(&resource).expect("should serialize");
-        assert_eq!(value["type"], "battery");
-        assert_eq!(value["data"]["fullAt"], "2024-01-01T00:00:00Z");
+        assert_eq!(
+            value.get("type").and_then(serde_json::Value::as_str),
+            Some("battery")
+        );
+        assert_eq!(
+            value
+                .get("data")
+                .and_then(|data| data.get("fullAt"))
+                .and_then(serde_json::Value::as_str),
+            Some("2024-01-01T00:00:00Z")
+        );
     }
 
     // =========================================================================

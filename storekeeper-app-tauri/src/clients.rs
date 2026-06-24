@@ -1,18 +1,23 @@
 //! Game client initialization for the registry.
 
-use storekeeper_client_hoyolab::{
-    GENSHIN_DAILY_REWARD, HSR_DAILY_REWARD, HoyolabClient, HoyolabDailyRewardClient,
-    HoyolabDailyRewardConfig, ZZZ_DAILY_REWARD,
-};
+use crate::daily_reward_registry::DailyRewardRegistry;
+use crate::registry::GameClientRegistry;
+use storekeeper_client_hoyolab::GENSHIN_DAILY_REWARD;
+use storekeeper_client_hoyolab::HSR_DAILY_REWARD;
+use storekeeper_client_hoyolab::HoyolabClient;
+use storekeeper_client_hoyolab::HoyolabDailyRewardClient;
+use storekeeper_client_hoyolab::HoyolabDailyRewardConfig;
+use storekeeper_client_hoyolab::ZZZ_DAILY_REWARD;
 use storekeeper_client_kuro::load_oauth_from_cache;
-use storekeeper_core::{AppConfig, DynDailyRewardClient, DynGameClient, Region, SecretsConfig};
+use storekeeper_core::AppConfig;
+use storekeeper_core::DynDailyRewardClient;
+use storekeeper_core::DynGameClient;
+use storekeeper_core::Region;
+use storekeeper_core::SecretsConfig;
 use storekeeper_game_genshin::GenshinClient;
 use storekeeper_game_hsr::HsrClient;
 use storekeeper_game_wuwa::WuwaClient;
 use storekeeper_game_zzz::ZzzClient;
-
-use crate::daily_reward_registry::DailyRewardRegistry;
-use crate::registry::GameClientRegistry;
 
 type RegionDetector = fn(&str) -> std::result::Result<Region, storekeeper_core::Error>;
 type HoyolabGameFactory = fn(HoyolabClient, &str, Region) -> Box<dyn DynGameClient>;
@@ -160,40 +165,40 @@ pub fn create_registry(config: &AppConfig, secrets: &SecretsConfig) -> GameClien
     }
 
     // Initialize Kuro-based clients (Wuthering Waves)
-    if let Some(ref wuwa_config) = config.games.wuthering_waves {
-        if wuwa_config.enabled {
-            let oauth_code = secrets
-                .kuro
-                .oauth_code_override()
-                .map(String::from)
-                .or_else(|| match load_oauth_from_cache() {
-                    Ok(code) => code,
-                    Err(e) => {
-                        tracing::warn!("Failed to load Kuro OAuth code from cache: {e}");
-                        None
-                    }
-                });
-
-            if let Some(oauth_code) = oauth_code {
-                let region = wuwa_config
-                    .region
-                    .or_else(|| Region::from_wuwa_uid(&wuwa_config.uid).ok());
-                if let Some(region) = region {
-                    if let Ok(client) = WuwaClient::new(&oauth_code, &wuwa_config.uid, region) {
-                        tracing::info!(
-                            uid = %wuwa_config.uid,
-                            region = ?region,
-                            "Wuthering Waves client registered"
-                        );
-                        registry.register(Box::new(client) as Box<dyn DynGameClient>);
-                    }
+    if let Some(ref wuwa_config) = config.games.wuthering_waves
+        && wuwa_config.enabled
+    {
+        let oauth_code = secrets
+            .kuro
+            .oauth_code_override()
+            .map(String::from)
+            .or_else(|| match load_oauth_from_cache() {
+                Ok(code) => code,
+                Err(e) => {
+                    tracing::warn!("Failed to load Kuro OAuth code from cache: {e}");
+                    None
                 }
-            } else {
-                tracing::warn!(
-                    "Wuthering Waves is enabled but no OAuth code available. \
-                     Set oauth_code in secrets.toml or ensure the Kuro launcher cache exists."
+            });
+
+        if let Some(oauth_code) = oauth_code {
+            let region = wuwa_config
+                .region
+                .or_else(|| Region::from_wuwa_uid(&wuwa_config.uid).ok());
+            if let Some(region) = region
+                && let Ok(client) = WuwaClient::new(&oauth_code, &wuwa_config.uid, region)
+            {
+                tracing::info!(
+                    uid = %wuwa_config.uid,
+                    region = ?region,
+                    "Wuthering Waves client registered"
                 );
+                registry.register(Box::new(client) as Box<dyn DynGameClient>);
             }
+        } else {
+            tracing::warn!(
+                "Wuthering Waves is enabled but no OAuth code available. \
+                     Set oauth_code in secrets.toml or ensure the Kuro launcher cache exists."
+            );
         }
     }
 

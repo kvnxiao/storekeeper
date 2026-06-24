@@ -8,13 +8,17 @@ mod locale;
 mod parser;
 mod store;
 
+pub use format::format_duration;
+pub use format::format_time;
 use icu_plurals::PluralRules;
-
-pub use format::{format_duration, format_time};
 pub use locale::resolve_locale;
 use parser::format_message;
+pub use store::Value;
+pub use store::get_current_locale;
+pub use store::init;
+pub use store::set_locale;
+pub use store::supported_locales;
 use store::with_messages;
-pub use store::{Value, get_current_locale, init, set_locale, supported_locales};
 
 /// Looks up a simple message by key.
 ///
@@ -34,7 +38,8 @@ pub fn t(key: &str) -> String {
 ///
 /// Supports:
 /// - Simple substitution: `{var_name}` replaced by the string value
-/// - Plural: `{var_name, plural, one {# item} other {# items}}` where `#` is replaced by the count
+/// - Plural: `{var_name, plural, one {# item} other {# items}}` where `#` is
+///   replaced by the count
 #[must_use]
 pub fn t_args(key: &str, args: &[(&str, Value)]) -> String {
     with_messages(|m| {
@@ -51,13 +56,16 @@ pub fn t_args(key: &str, args: &[(&str, Value)]) -> String {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use icu_locale::Locale;
     use icu_plurals::PluralRules;
 
-    use super::*;
-
     /// Ensures i18n is initialized for tests.
     fn ensure_init() {
+        #[expect(
+            clippy::let_underscore_must_use,
+            reason = "test setup may run after i18n is already initialized"
+        )]
         let _ = init("en");
     }
 
@@ -133,7 +141,8 @@ mod tests {
     fn test_format_duration_hours_and_minutes() {
         ensure_init();
         let result = format_duration(75);
-        // ICU4X short style — exact format may vary but should contain hours and minutes
+        // ICU4X short style — exact format may vary but should contain hours and
+        // minutes
         assert!(!result.is_empty());
     }
 
@@ -156,7 +165,8 @@ mod tests {
     fn test_format_duration_zero() {
         ensure_init();
         let result = format_duration(0);
-        // ICU4X narrow style with FieldDisplay::Always on minutes should produce "0m" (en locale)
+        // ICU4X narrow style with FieldDisplay::Always on minutes should produce "0m"
+        // (en locale)
         assert_eq!(result, "0m");
     }
 
@@ -258,10 +268,12 @@ mod tests {
 
     #[test]
     fn test_format_duration_ja_uses_localized_units() {
-        use icu_experimental::duration::{
-            DurationFormatter, DurationFormatterPreferences, ValidatedDurationFormatterOptions,
-            options::{BaseStyle, DurationFormatterOptions, FieldDisplay},
-        };
+        use icu_experimental::duration::DurationFormatter;
+        use icu_experimental::duration::DurationFormatterPreferences;
+        use icu_experimental::duration::ValidatedDurationFormatterOptions;
+        use icu_experimental::duration::options::BaseStyle;
+        use icu_experimental::duration::options::DurationFormatterOptions;
+        use icu_experimental::duration::options::FieldDisplay;
 
         let ja_locale: icu_locale::Locale = "ja".parse().expect("valid locale");
         let mut opts = DurationFormatterOptions::default();

@@ -1,14 +1,14 @@
 //! Single-resource notification check and OS notification send logic.
 
+use super::message_builder::build_notification_body;
+use super::message_builder::game_display_name;
+use super::message_builder::resource_display_name;
+use super::resource_extractor::ResourceInfo;
+use crate::i18n;
 use jiff::Timestamp;
 use storekeeper_core::GameId;
 use tauri::AppHandle;
 use tauri_plugin_notification::NotificationExt;
-
-use crate::i18n;
-
-use super::message_builder::{build_notification_body, game_display_name, resource_display_name};
-use super::resource_extractor::ResourceInfo;
 
 /// Sends a notification for a single resource.
 ///

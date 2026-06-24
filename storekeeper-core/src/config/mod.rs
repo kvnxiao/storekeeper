@@ -9,21 +9,25 @@ pub mod games;
 pub mod notification;
 pub mod secrets;
 
-use std::path::PathBuf;
-
-use camino::{Utf8Path, Utf8PathBuf};
-use serde::{Deserialize, Serialize};
-
-use crate::error::{Error, Result};
-use crate::resource_types::{
-    GenshinResourceType, HsrResourceType, WuwaResourceType, ZzzResourceType,
-};
-
+use crate::error::Error;
+use crate::error::Result;
+use crate::resource_types::GenshinResourceType;
+use crate::resource_types::HsrResourceType;
+use crate::resource_types::WuwaResourceType;
+use crate::resource_types::ZzzResourceType;
+use camino::Utf8Path;
+use camino::Utf8PathBuf;
 // Re-exports: keep the same public surface as the original single-file module.
 pub use claim_time::{ClaimTime, DEFAULT_AUTO_CLAIM_TIME, next_claim_datetime_utc};
-pub use games::{GenshinConfig, HsrConfig, WuwaConfig, ZzzConfig};
+pub use games::GenshinConfig;
+pub use games::HsrConfig;
+pub use games::WuwaConfig;
+pub use games::ZzzConfig;
 pub use notification::ResourceNotificationConfig;
 pub use secrets::SecretsConfig;
+use serde::Deserialize;
+use serde::Serialize;
+use std::path::PathBuf;
 
 // ============================================================================
 // Shared serde default functions
@@ -152,7 +156,8 @@ impl AppConfig {
     ///
     /// # Errors
     ///
-    /// Returns an error if the directory cannot be created or the file cannot be written.
+    /// Returns an error if the directory cannot be created or the file cannot
+    /// be written.
     pub fn create_default_if_missing() -> Result<bool> {
         let path = Self::config_path()?;
 
@@ -377,7 +382,8 @@ impl GamesConfig {
         cfg.notifications.get(&resource)
     }
 
-    /// Converts a typed notification map to string-keyed map for the notification system.
+    /// Converts a typed notification map to string-keyed map for the
+    /// notification system.
     fn stringify_notification_map<K: AsRef<str>>(
         notifications: &std::collections::HashMap<K, ResourceNotificationConfig>,
     ) -> std::collections::HashMap<String, ResourceNotificationConfig> {
@@ -387,7 +393,8 @@ impl GamesConfig {
             .collect()
     }
 
-    /// Notification configs for a game, with string keys for the notification system.
+    /// Notification configs for a game, with string keys for the notification
+    /// system.
     ///
     /// Converts typed resource keys to strings via `AsRef<str>`.
     #[must_use]
@@ -446,7 +453,8 @@ impl GamesConfig {
         }
     }
 
-    /// Gets notification config for a game/resource pair without allocating a map.
+    /// Gets notification config for a game/resource pair without allocating a
+    /// map.
     #[must_use]
     pub fn notification_config(
         &self,
@@ -490,7 +498,8 @@ impl GamesConfig {
 
     /// Whether auto-claim is enabled for a game.
     ///
-    /// Wuthering Waves does not support daily rewards, so always returns `false`.
+    /// Wuthering Waves does not support daily rewards, so always returns
+    /// `false`.
     #[must_use]
     pub fn auto_claim_enabled(&self, game_id: crate::GameId) -> bool {
         use crate::GameId;
@@ -549,10 +558,10 @@ pub fn ensure_configs_exist() -> Result<()> {
     let config_created = AppConfig::create_default_if_missing()?;
     let secrets_created = SecretsConfig::create_default_if_missing()?;
 
-    if config_created || secrets_created {
-        if let Ok(config_dir) = AppConfig::config_dir() {
-            tracing::info!("Configuration files created in: {config_dir}");
-        }
+    if (config_created || secrets_created)
+        && let Ok(config_dir) = AppConfig::config_dir()
+    {
+        tracing::info!("Configuration files created in: {config_dir}");
     }
 
     Ok(())
@@ -564,7 +573,8 @@ mod tests {
 
     /// Returns a unique, non-colliding temp directory path for a test.
     fn unique_temp_dir(tag: &str) -> Utf8PathBuf {
-        use std::sync::atomic::{AtomicU32, Ordering};
+        use std::sync::atomic::AtomicU32;
+        use std::sync::atomic::Ordering;
         static COUNTER: AtomicU32 = AtomicU32::new(0);
         let n = COUNTER.fetch_add(1, Ordering::Relaxed);
         let base =
@@ -601,7 +611,9 @@ mod tests {
         assert_eq!(loaded, config);
 
         // Best-effort cleanup of the temp directory.
-        let _ = fs_err::remove_dir_all(&dir);
+        if let Err(err) = fs_err::remove_dir_all(&dir) {
+            eprintln!("failed to clean up temp dir {dir}: {err}");
+        }
     }
 
     #[test]

@@ -8,23 +8,23 @@ mod message_builder;
 mod resource_extractor;
 mod tracker;
 
-// Re-export public/pub(crate) items so they remain accessible at `notification::*`.
-pub(crate) use message_builder::{
-    build_notification_body, game_display_name, resource_display_name,
-};
+// Re-export public/pub(crate) items so they remain accessible at
+// `notification::*`.
+use self::resource_extractor::ResourceInfo;
+use crate::state::AppState;
+use jiff::Timestamp;
+pub(crate) use message_builder::build_notification_body;
+pub(crate) use message_builder::game_display_name;
+pub(crate) use message_builder::resource_display_name;
 pub(crate) use resource_extractor::extract_resource_info;
+use storekeeper_core::GameId;
+use storekeeper_core::config::GamesConfig;
+use storekeeper_core::config::ResourceNotificationConfig;
+use tauri::AppHandle;
+use tauri::Manager;
+use tokio_util::sync::CancellationToken;
 pub use tracker::NotificationTracker;
 use tracker::NotifyAction;
-
-use jiff::Timestamp;
-use storekeeper_core::GameId;
-use storekeeper_core::config::{GamesConfig, ResourceNotificationConfig};
-use tauri::{AppHandle, Manager};
-use tokio_util::sync::CancellationToken;
-
-use crate::state::AppState;
-
-use self::resource_extractor::ResourceInfo;
 
 /// Resolves a resource JSON object into its notification config and extracted
 /// timing info, returning `None` if the resource is missing fields, has no
@@ -60,7 +60,7 @@ pub fn start_notification_checker(app_handle: AppHandle, cancel_token: Cancellat
                     tracing::info!("Notification checker cancelled");
                     break;
                 }
-                () = tokio::time::sleep(std::time::Duration::from_secs(60)) => {
+                () = tokio::time::sleep(std::time::Duration::from_mins(1)) => {
                     check_and_notify(&app_handle).await;
                 }
             }
@@ -74,7 +74,8 @@ pub(crate) async fn check_and_notify(app_handle: &AppHandle) {
     let now = Timestamp::now();
     let resources = state.get_resources().await;
 
-    // Snapshot configs so the checker loop does not hold state locks while formatting/sending.
+    // Snapshot configs so the checker loop does not hold state locks while
+    // formatting/sending.
     let games_config = {
         let inner = state.inner.read().await;
         inner.config.games.clone()
@@ -119,7 +120,9 @@ pub(crate) async fn check_and_notify(app_handle: &AppHandle) {
     // Step 3: Send notifications (no lock held).
     let mut sent_keys = Vec::new();
     for (key, i) in to_notify {
-        let (game_id, type_tag, _, ref resource_info) = candidates[i];
+        let Some(&(game_id, type_tag, _, ref resource_info)) = candidates.get(i) else {
+            continue;
+        };
         if checker::send_resource_notification(app_handle, game_id, type_tag, resource_info, now) {
             sent_keys.push(key);
         }

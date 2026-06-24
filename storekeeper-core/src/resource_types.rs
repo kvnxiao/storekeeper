@@ -1,10 +1,12 @@
 //! Per-game resource type identifiers.
 //!
-//! These enums represent resource types as configuration keys (for tracked resources
-//! and notification settings). They serialize to snake_case strings matching
-//! the serde format of the corresponding data enums in each game crate.
+//! These enums represent resource types as configuration keys (for tracked
+//! resources and notification settings). They serialize to snake_case strings
+//! matching the serde format of the corresponding data enums in each game
+//! crate.
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 use strum::AsRefStr;
 
 /// Genshin Impact resource type identifiers.
@@ -172,7 +174,19 @@ mod tests {
         ";
         let w: TomlMapWrapper = toml::from_str(toml_str).expect("should parse");
         assert_eq!(w.data.len(), 2);
-        assert_eq!(w.data[&GenshinResourceType::Resin].value, 1);
-        assert_eq!(w.data[&GenshinResourceType::Expeditions].value, 2);
+        assert_eq!(
+            w.data
+                .get(&GenshinResourceType::Resin)
+                .expect("resin entry present")
+                .value,
+            1
+        );
+        assert_eq!(
+            w.data
+                .get(&GenshinResourceType::Expeditions)
+                .expect("expeditions entry present")
+                .value,
+            2
+        );
     }
 }

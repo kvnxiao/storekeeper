@@ -1,9 +1,11 @@
 //! Secrets configuration for sensitive credentials.
 
-use camino::{Utf8Path, Utf8PathBuf};
-use serde::{Deserialize, Serialize};
-
-use crate::error::{Error, Result};
+use crate::error::Error;
+use crate::error::Result;
+use camino::Utf8Path;
+use camino::Utf8PathBuf;
+use serde::Deserialize;
+use serde::Serialize;
 
 /// Secrets configuration loaded from `secrets.toml`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -89,7 +91,8 @@ impl SecretsConfig {
     ///
     /// # Errors
     ///
-    /// Returns an error if the directory cannot be created or the file cannot be written.
+    /// Returns an error if the directory cannot be created or the file cannot
+    /// be written.
     pub fn create_default_if_missing() -> Result<bool> {
         let path = Self::secrets_path()?;
 

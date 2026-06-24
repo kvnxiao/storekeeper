@@ -7,30 +7,31 @@
 //! shape-specific parsing and delegates the conversion to the shared helpers
 //! below.
 
-use jiff::{SignedDuration, Timestamp};
+use jiff::SignedDuration;
+use jiff::Timestamp;
 
 /// Converts a non-negative count of seconds-from-now into an absolute instant.
 ///
 /// Returns the current instant when `secs` is zero. Overflow past the
 /// representable [`Timestamp`] range is reported as an error rather than
 /// panicking, since `secs` originates from an external API response.
-fn timestamp_from_secs_from_now(secs: i64) -> Result<Timestamp, &'static str> {
+fn timestamp_from_secs_from_now(secs: i64) -> Result<Timestamp, String> {
     if secs == 0 {
         return Ok(Timestamp::now());
     }
     Timestamp::now()
         .checked_add(SignedDuration::from_secs(secs))
-        .map_err(|_| "seconds value out of representable range")
+        .map_err(|e| format!("seconds value out of representable range: {e}"))
 }
 
 /// Converts an absolute Unix millisecond timestamp into an instant.
 ///
 /// Returns the current instant when `millis` is zero.
-fn timestamp_from_millis(millis: i64) -> Result<Timestamp, &'static str> {
+fn timestamp_from_millis(millis: i64) -> Result<Timestamp, String> {
     if millis == 0 {
         return Ok(Timestamp::now());
     }
-    Timestamp::from_millisecond(millis).map_err(|_| "invalid millisecond timestamp")
+    Timestamp::from_millisecond(millis).map_err(|e| format!("invalid millisecond timestamp: {e}"))
 }
 
 /// Deserializes a string containing seconds-from-now into a [`Timestamp`].
@@ -39,7 +40,8 @@ fn timestamp_from_millis(millis: i64) -> Result<Timestamp, &'static str> {
 /// If the value is `"0"`, returns the current instant.
 pub mod seconds_string_to_datetime {
     use jiff::Timestamp;
-    use serde::{Deserialize, Deserializer};
+    use serde::Deserialize;
+    use serde::Deserializer;
 
     /// Deserializes a string of seconds-from-now into a [`Timestamp`].
     ///
@@ -56,7 +58,7 @@ pub mod seconds_string_to_datetime {
         let s = String::deserialize(deserializer)?;
         let secs: i64 = s
             .parse()
-            .map_err(|_| serde::de::Error::custom("invalid seconds string"))?;
+            .map_err(|e| serde::de::Error::custom(format!("invalid seconds string: {e}")))?;
         if secs < 0 {
             return Err(serde::de::Error::custom("seconds must not be negative"));
         }
@@ -70,7 +72,8 @@ pub mod seconds_string_to_datetime {
 /// If the value is 0, returns the current instant.
 pub mod seconds_u64_to_datetime {
     use jiff::Timestamp;
-    use serde::{Deserialize, Deserializer};
+    use serde::Deserialize;
+    use serde::Deserializer;
 
     /// Deserializes a `u64` of seconds-from-now into a [`Timestamp`].
     ///
@@ -78,15 +81,15 @@ pub mod seconds_u64_to_datetime {
     ///
     /// # Errors
     ///
-    /// Returns a deserialization error if the seconds value exceeds [`i64::MAX`]
-    /// or would overflow the representable timestamp range.
+    /// Returns a deserialization error if the seconds value exceeds
+    /// [`i64::MAX`] or would overflow the representable timestamp range.
     pub fn deserialize<'de, D>(deserializer: D) -> Result<Timestamp, D::Error>
     where
         D: Deserializer<'de>,
     {
         let secs = u64::deserialize(deserializer)?;
-        let secs =
-            i64::try_from(secs).map_err(|_| serde::de::Error::custom("seconds value too large"))?;
+        let secs = i64::try_from(secs)
+            .map_err(|e| serde::de::Error::custom(format!("seconds value too large: {e}")))?;
         super::timestamp_from_secs_from_now(secs).map_err(serde::de::Error::custom)
     }
 }
@@ -97,7 +100,8 @@ pub mod seconds_u64_to_datetime {
 /// If the value is 0, returns the current instant.
 pub mod timestamp_ms_to_datetime {
     use jiff::Timestamp;
-    use serde::{Deserialize, Deserializer};
+    use serde::Deserialize;
+    use serde::Deserializer;
 
     /// Deserializes a `u64` millisecond timestamp into a [`Timestamp`].
     ///
@@ -113,7 +117,7 @@ pub mod timestamp_ms_to_datetime {
     {
         let millis = u64::deserialize(deserializer)?;
         let millis = i64::try_from(millis)
-            .map_err(|_| serde::de::Error::custom("timestamp value too large"))?;
+            .map_err(|e| serde::de::Error::custom(format!("timestamp value too large: {e}")))?;
         super::timestamp_from_millis(millis).map_err(serde::de::Error::custom)
     }
 }

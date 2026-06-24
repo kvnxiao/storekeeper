@@ -1,14 +1,17 @@
 //! HTTP client builder utilities.
 
-use std::time::Duration;
-
-use reqwest::header::{HeaderMap, HeaderValue, USER_AGENT};
-use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
+use crate::error::ClientError;
+use crate::error::Result;
+use crate::retry::DEFAULT_BASE_DELAY_MS;
+use crate::retry::DEFAULT_MAX_DELAY_MS;
+use reqwest::header::HeaderMap;
+use reqwest::header::HeaderValue;
+use reqwest::header::USER_AGENT;
+use reqwest_middleware::ClientBuilder;
+use reqwest_middleware::ClientWithMiddleware;
 use reqwest_retry::RetryTransientMiddleware;
 use reqwest_retry::policies::ExponentialBackoff;
-
-use crate::error::{ClientError, Result};
-use crate::retry::{DEFAULT_BASE_DELAY_MS, DEFAULT_MAX_DELAY_MS};
+use std::time::Duration;
 
 /// Default User-Agent string for API clients.
 pub const DEFAULT_USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";

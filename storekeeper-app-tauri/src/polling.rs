@@ -1,16 +1,17 @@
 //! Background polling for periodic resource updates.
 
-use std::collections::HashSet;
-use std::time::Duration;
-
-use jiff::Timestamp;
-use storekeeper_core::GameId;
-use tauri::{AppHandle, Emitter, Manager};
-use tokio_util::sync::CancellationToken;
-
 use crate::events::AppEvent;
 use crate::notification;
-use crate::state::{AllResources, AppState};
+use crate::state::AllResources;
+use crate::state::AppState;
+use jiff::Timestamp;
+use std::collections::HashSet;
+use std::time::Duration;
+use storekeeper_core::GameId;
+use tauri::AppHandle;
+use tauri::Emitter;
+use tauri::Manager;
+use tokio_util::sync::CancellationToken;
 
 /// RAII guard that resets the refresh-in-progress flag on drop.
 struct RefreshGuard<'a> {
@@ -100,7 +101,9 @@ async fn do_refresh(app_handle: &AppHandle) -> AllResources {
 
     state.set_resources(resources.clone()).await;
 
-    let _ = app_handle.emit(AppEvent::ResourcesUpdated.as_str(), &resources);
+    if let Err(e) = app_handle.emit(AppEvent::ResourcesUpdated.as_str(), &resources) {
+        tracing::warn!(error = %e, "Failed to emit ResourcesUpdated event");
+    }
 
     notification::check_and_notify(app_handle).await;
 
@@ -129,7 +132,9 @@ pub async fn refresh_now(app_handle: &AppHandle) -> Result<AllResources, String>
     }
 
     // Emit refresh started event to frontend
-    let _ = app_handle.emit(AppEvent::RefreshStarted.as_str(), ());
+    if let Err(e) = app_handle.emit(AppEvent::RefreshStarted.as_str(), ()) {
+        tracing::warn!(error = %e, "Failed to emit RefreshStarted event");
+    }
 
     let resources = do_refresh(app_handle).await;
 
@@ -155,7 +160,9 @@ pub async fn refresh_games(
         return Err("Refresh already in progress".to_string());
     };
 
-    let _ = app_handle.emit(AppEvent::RefreshStarted.as_str(), ());
+    if let Err(e) = app_handle.emit(AppEvent::RefreshStarted.as_str(), ()) {
+        tracing::warn!(error = %e, "Failed to emit RefreshStarted event");
+    }
 
     // Fetch only the specified games
     let new_resources = state.fetch_resources_for_games(game_ids, app_handle).await;
@@ -177,7 +184,9 @@ pub async fn refresh_games(
     state.set_daily_reward_status(daily_status).await;
 
     // Emit full snapshot and run notification check
-    let _ = app_handle.emit(AppEvent::ResourcesUpdated.as_str(), &resources);
+    if let Err(e) = app_handle.emit(AppEvent::ResourcesUpdated.as_str(), &resources) {
+        tracing::warn!(error = %e, "Failed to emit ResourcesUpdated event");
+    }
     notification::check_and_notify(app_handle).await;
 
     tracing::info!("Selective refresh completed");

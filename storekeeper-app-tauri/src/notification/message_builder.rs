@@ -1,12 +1,10 @@
 //! Notification message building and display name resolution.
 
+use super::resource_extractor::ResourceInfo;
+use crate::i18n;
 use jiff::Timestamp;
 use jiff::tz::TimeZone;
 use storekeeper_core::GameId;
-
-use crate::i18n;
-
-use super::resource_extractor::ResourceInfo;
 
 /// Maps resource type tags to localized display names via i18n lookup.
 pub(crate) fn resource_display_name(resource_type: &str) -> String {
@@ -27,9 +25,10 @@ pub(crate) fn game_display_name(game_id: GameId) -> String {
 
 /// Builds the notification body text for a resource.
 ///
-/// Differentiates between stamina resources (have `max`) and cooldown/expedition
-/// resources (no `max`). Stamina resources show current/max + duration + clock time;
-/// cooldown resources show "ready" or "ready in {duration}".
+/// Differentiates between stamina resources (have `max`) and
+/// cooldown/expedition resources (no `max`). Stamina resources show
+/// current/max, duration, and clock time; cooldown resources show "ready"
+/// or "ready in {duration}".
 ///
 /// The resource name is intentionally omitted — the notification title already
 /// contains both the game name and resource name.
@@ -83,13 +82,16 @@ pub(crate) fn build_notification_body(info: &ResourceInfo, now: Timestamp) -> St
 
 #[cfg(test)]
 mod tests {
-    use jiff::SignedDuration;
-
     use super::*;
     use crate::notification::resource_extractor::ResourceInfo;
+    use jiff::SignedDuration;
 
     /// Ensures i18n is initialized for tests.
     fn ensure_init() {
+        #[expect(
+            clippy::let_underscore_must_use,
+            reason = "test setup may run after i18n is already initialized"
+        )]
         let _ = crate::i18n::init("en");
     }
 

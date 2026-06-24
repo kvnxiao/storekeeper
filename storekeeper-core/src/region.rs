@@ -4,10 +4,12 @@
 //! provides a unified `Region` enum that can be converted to game-specific
 //! region strings.
 
-use serde::{Deserialize, Serialize};
-use strum::{Display, EnumString};
-
-use crate::error::{Error, Result};
+use crate::error::Error;
+use crate::error::Result;
+use serde::Deserialize;
+use serde::Serialize;
+use strum::Display;
+use strum::EnumString;
 
 /// Unified region enum for all games.
 ///
@@ -93,7 +95,8 @@ impl Region {
     ///
     /// # Errors
     ///
-    /// Returns an error if the UID format is invalid or the region cannot be determined.
+    /// Returns an error if the UID format is invalid or the region cannot be
+    /// determined.
     pub fn from_genshin_uid(uid: &str) -> Result<Self> {
         let prefix = uid
             .get(..uid.len().saturating_sub(8))
@@ -114,7 +117,8 @@ impl Region {
     ///
     /// # Errors
     ///
-    /// Returns an error if the UID format is invalid or the region cannot be determined.
+    /// Returns an error if the UID format is invalid or the region cannot be
+    /// determined.
     pub fn from_hsr_uid(uid: &str) -> Result<Self> {
         let prefix = uid
             .get(..uid.len().saturating_sub(8))
@@ -133,11 +137,13 @@ impl Region {
 
     /// Parses region from a Zenless Zone Zero UID.
     ///
-    /// 8-digit UIDs are Chinese servers, 10-digit UIDs are global with prefix mapping.
+    /// 8-digit UIDs are Chinese servers, 10-digit UIDs are global with prefix
+    /// mapping.
     ///
     /// # Errors
     ///
-    /// Returns an error if the UID format is invalid or the region cannot be determined.
+    /// Returns an error if the UID format is invalid or the region cannot be
+    /// determined.
     pub fn from_zzz_uid(uid: &str) -> Result<Self> {
         match uid.len() {
             8 => Ok(Self::China),
@@ -164,7 +170,8 @@ impl Region {
     ///
     /// # Errors
     ///
-    /// Returns an error if the UID format is invalid or the region cannot be determined.
+    /// Returns an error if the UID format is invalid or the region cannot be
+    /// determined.
     pub fn from_wuwa_uid(uid: &str) -> Result<Self> {
         let first = uid
             .chars()

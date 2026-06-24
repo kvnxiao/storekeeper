@@ -1,11 +1,13 @@
 //! Resource types representing in-game stamina and cooldown resources.
 
 use jiff::Timestamp;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 /// Trait for game resources that can be displayed in the UI.
 ///
-/// This trait provides common methods for UI rendering across all game resource types.
+/// This trait provides common methods for UI rendering across all game resource
+/// types.
 pub trait DisplayableResource {
     /// Returns the human-readable display name for this resource.
     fn display_name(&self) -> &'static str;
@@ -347,7 +349,8 @@ mod tests {
         // Note: This test is slightly flaky due to timing, but the logic is correct
         let now = Timestamp::now();
         let resource = ExpeditionResource::new(3, 5, now);
-        // The check is earliest_finish_at <= Timestamp::now(), so it should be completed
+        // The check is earliest_finish_at <= Timestamp::now(), so it should be
+        // completed
         assert!(
             resource.has_completed(),
             "Should have completed when finish time is now"
@@ -394,7 +397,10 @@ mod tests {
         let ts = Timestamp::from_second(1_704_067_200).expect("valid timestamp");
         let resource = StaminaResource::new(100, 160, ts, 480);
         let value = serde_json::to_value(&resource).expect("should serialize");
-        assert_eq!(value["fullAt"], "2024-01-01T00:00:00Z");
+        assert_eq!(
+            value.get("fullAt").and_then(serde_json::Value::as_str),
+            Some("2024-01-01T00:00:00Z")
+        );
     }
 
     #[test]

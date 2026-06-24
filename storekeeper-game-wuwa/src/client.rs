@@ -1,12 +1,16 @@
 //! Wuthering Waves game client implementation.
 
+use crate::error::Error;
+use crate::error::Result;
+use crate::resource::WuwaResource;
 use jiff::Timestamp;
 use serde::Deserialize;
 use storekeeper_client_kuro::KuroClient;
-use storekeeper_core::{GameClient, GameId, Region, StaminaResource, serde_utils};
-
-use crate::error::{Error, Result};
-use crate::resource::WuwaResource;
+use storekeeper_core::GameClient;
+use storekeeper_core::GameId;
+use storekeeper_core::Region;
+use storekeeper_core::StaminaResource;
+use storekeeper_core::serde_utils;
 
 /// Waveplate regeneration rate: 1 waveplate per 6 minutes = 360 seconds.
 const WAVEPLATE_REGEN_SECONDS: u32 = 360;

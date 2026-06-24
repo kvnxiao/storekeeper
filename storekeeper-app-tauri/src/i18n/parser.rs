@@ -1,8 +1,7 @@
-use std::collections::HashMap;
-
-use icu_plurals::{PluralCategory, PluralRules};
-
 use super::store::Value;
+use icu_plurals::PluralCategory;
+use icu_plurals::PluralRules;
+use std::collections::HashMap;
 
 /// Formats a message template with arguments.
 ///
@@ -19,19 +18,21 @@ pub(super) fn format_message(
     let mut rest = template;
 
     while let Some(open) = rest.find('{') {
+        // Offsets come from `find` / `find_matching_brace`, so they always land
+        // on char boundaries; the `unwrap_or_default` fallbacks are unreachable.
         // Emit everything before the opening brace verbatim.
-        result.push_str(&rest[..open]);
-        let from_open = &rest[open..];
+        result.push_str(rest.get(..open).unwrap_or_default());
+        let from_open = rest.get(open..).unwrap_or_default();
 
         if let Some(close) = find_matching_brace(from_open, 0) {
-            let inner = &from_open[1..close];
+            let inner = from_open.get(1..close).unwrap_or_default();
             let formatted = format_placeholder(inner, &arg_map, plural_rules);
             result.push_str(&formatted);
-            rest = &from_open[close + 1..];
+            rest = from_open.get(close + 1..).unwrap_or_default();
         } else {
             // Unbalanced brace: emit it literally and continue scanning.
             result.push('{');
-            rest = &from_open['{'.len_utf8()..];
+            rest = from_open.get('{'.len_utf8()..).unwrap_or_default();
         }
     }
 
@@ -45,7 +46,7 @@ pub(super) fn format_message(
 /// byte offset (relative to `s`) of the `}` that closes it.
 fn find_matching_brace(s: &str, start: usize) -> Option<usize> {
     let mut depth: i32 = 0;
-    for (offset, ch) in s[start..].char_indices() {
+    for (offset, ch) in s.get(start..).unwrap_or_default().char_indices() {
         match ch {
             '{' => depth += 1,
             '}' => {
@@ -68,10 +69,10 @@ fn format_placeholder(
 ) -> String {
     let parts: Vec<&str> = inner.splitn(3, ',').collect();
 
-    match parts.len() {
+    match parts.as_slice() {
         // Simple: {name}
-        1 => {
-            let name = parts[0].trim();
+        [name] => {
+            let name = name.trim();
             match args.get(name) {
                 Some(Value::String(s)) => s.clone(),
                 Some(Value::Number(n)) => n.to_string(),
@@ -79,9 +80,9 @@ fn format_placeholder(
             }
         }
         // Plural: {name, plural, one {..} other {..}}
-        3 if parts[1].trim() == "plural" => {
-            let name = parts[0].trim();
-            let branches_str = parts[2].trim();
+        [name, kind, branches_str] if kind.trim() == "plural" => {
+            let name = name.trim();
+            let branches_str = branches_str.trim();
 
             let count = match args.get(name) {
                 Some(Value::Number(n)) => *n,
@@ -115,7 +116,8 @@ fn format_placeholder(
     }
 }
 
-/// Selects the content for a plural branch like `one {# minute}` from the branches string.
+/// Selects the content for a plural branch like `one {# minute}` from the
+/// branches string.
 fn select_plural_branch(branches: &str, category: &str) -> Option<String> {
     // Walk "keyword {content}" pairs, handling nested braces in each block.
     let mut rest = branches;
@@ -130,19 +132,21 @@ fn select_plural_branch(branches: &str, category: &str) -> Option<String> {
         let kw_end = rest
             .find(|c: char| c.is_whitespace() || c == '{')
             .unwrap_or(rest.len());
-        let keyword = &rest[..kw_end];
-        rest = rest[kw_end..].trim_start();
+        // `kw_end` / `close` are byte offsets on char boundaries, so the
+        // `unwrap_or_default` fallbacks below are unreachable.
+        let keyword = rest.get(..kw_end).unwrap_or_default();
+        rest = rest.get(kw_end..).unwrap_or_default().trim_start();
 
         // The keyword must be followed by a braced block.
         if !rest.starts_with('{') {
             return None;
         }
         let close = find_matching_brace(rest, 0)?;
-        let content = &rest[1..close];
+        let content = rest.get(1..close).unwrap_or_default();
 
         if keyword == category {
             return Some(content.to_string());
         }
-        rest = &rest[close + 1..];
+        rest = rest.get(close + 1..).unwrap_or_default();
     }
 }

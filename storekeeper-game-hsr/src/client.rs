@@ -1,12 +1,16 @@
 //! Honkai: Star Rail game client implementation.
 
+use crate::error::Error;
+use crate::error::Result;
+use crate::resource::HsrResource;
 use jiff::Timestamp;
 use serde::Deserialize;
 use storekeeper_client_hoyolab::HoyolabClient;
-use storekeeper_core::{GameClient, GameId, Region, StaminaResource, serde_utils};
-
-use crate::error::{Error, Result};
-use crate::resource::HsrResource;
+use storekeeper_core::GameClient;
+use storekeeper_core::GameId;
+use storekeeper_core::Region;
+use storekeeper_core::StaminaResource;
+use storekeeper_core::serde_utils;
 
 /// Trailblaze Power regeneration rate: 1 power per 6 minutes = 360 seconds.
 const POWER_REGEN_SECONDS: u32 = 360;

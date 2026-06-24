@@ -1,6 +1,7 @@
 //! Storekeeper - Gacha Game Stamina Tracker
 //!
-//! A cross-platform desktop tray application for tracking gacha game stamina resources.
+//! A cross-platform desktop tray application for tracking gacha game stamina
+//! resources.
 
 // Prevents additional console window on Windows in release
 #![cfg_attr(

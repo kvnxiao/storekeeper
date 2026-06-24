@@ -1,6 +1,7 @@
 //! Storekeeper Tauri Application Library
 //!
-//! This module provides the main entry point and setup for the Tauri application.
+//! This module provides the main entry point and setup for the Tauri
+//! application.
 
 mod clients;
 mod commands;
@@ -18,8 +19,10 @@ mod scheduled_claim;
 mod state;
 mod tray;
 
-use anyhow::{Context, Result};
-use tauri::{Manager, RunEvent};
+use anyhow::Context;
+use anyhow::Result;
+use tauri::Manager;
+use tauri::RunEvent;
 use tauri_plugin_autostart::ManagerExt;
 use tokio_util::sync::CancellationToken;
 use tracing_subscriber::EnvFilter;
@@ -47,9 +50,15 @@ pub fn run() -> Result<()> {
         // instance and the new process exits; reveal the existing window.
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
-                let _ = window.unminimize();
-                let _ = window.show();
-                let _ = window.set_focus();
+                if let Err(e) = window.unminimize() {
+                    tracing::debug!(error = %e, "Failed to unminimize window");
+                }
+                if let Err(e) = window.show() {
+                    tracing::debug!(error = %e, "Failed to show window");
+                }
+                if let Err(e) = window.set_focus() {
+                    tracing::debug!(error = %e, "Failed to focus window");
+                }
             }
         }))
         .plugin(tauri_plugin_autostart::Builder::new().build())
@@ -71,7 +80,9 @@ pub fn run() -> Result<()> {
             let effective_locale = i18n::resolve_locale(language.as_deref());
             if let Err(e) = i18n::init(effective_locale) {
                 tracing::warn!(error = %e, "Failed to initialize i18n, falling back to defaults");
-                let _ = i18n::init("en");
+                if let Err(e) = i18n::init("en") {
+                    tracing::error!(error = %e, "Failed to initialize i18n fallback locale");
+                }
             }
 
             app.manage(app_state);
@@ -132,7 +143,9 @@ pub fn run() -> Result<()> {
                 // Prevent the window from closing
                 api.prevent_close();
                 // Hide the window instead
-                let _ = window.hide();
+                if let Err(e) = window.hide() {
+                    tracing::debug!(error = %e, "Failed to hide window");
+                }
             }
         })
         .build(tauri::generate_context!())
@@ -144,11 +157,11 @@ pub fn run() -> Result<()> {
             tracing::info!(exit_code = ?code, "Application exit requested");
 
             // Cancel all background tasks
-            if let Some(cancel_token) = app_handle.try_state::<CancellationToken>() {
-                if !cancel_token.is_cancelled() {
-                    tracing::info!("Cancelling background tasks...");
-                    cancel_token.cancel();
-                }
+            if let Some(cancel_token) = app_handle.try_state::<CancellationToken>()
+                && !cancel_token.is_cancelled()
+            {
+                tracing::info!("Cancelling background tasks...");
+                cancel_token.cancel();
             }
 
             // Allow the exit to proceed (don't call api.prevent_exit())

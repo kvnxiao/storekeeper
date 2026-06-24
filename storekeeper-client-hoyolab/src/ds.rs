@@ -3,10 +3,10 @@
 //! The DS header is required for authenticated HoYoLab API requests.
 //! It consists of a timestamp, random string, and MD5 hash.
 
-use std::fmt::Write;
-
-use md5::{Digest, Md5};
+use md5::Digest;
+use md5::Md5;
 use rand::RngExt;
+use std::fmt::Write;
 
 /// Salt for overseas (global) HoYoLab API.
 const SALT_OVERSEAS: &str = "6s25p5ox5y14umn1p61aqyyvbvvl3lrt";
@@ -14,7 +14,6 @@ const SALT_OVERSEAS: &str = "6s25p5ox5y14umn1p61aqyyvbvvl3lrt";
 /// Salt for Chinese HoYoLab API (miyoushe).
 ///
 /// Currently unused — reserved for future Chinese server (miyoushe) support.
-#[allow(dead_code)]
 const SALT_CHINESE: &str = "xV8v4Qu54lUKrEYFZkJhB8cuOh9Asafs";
 
 /// Generates a DS header for overseas (global) HoYoLab API.
@@ -41,7 +40,6 @@ pub fn generate_dynamic_secret_overseas() -> String {
 ///
 /// Currently unused — reserved for future Chinese server (miyoushe) support.
 #[must_use]
-#[allow(dead_code)]
 pub fn generate_dynamic_secret_chinese(body: &str, query: &str) -> String {
     let timestamp = jiff::Timestamp::now().as_second();
     let random = generate_random_int();
@@ -83,7 +81,8 @@ fn md5_hex(input: &str) -> String {
 
     let mut hex = String::with_capacity(32);
     for byte in result {
-        let _ = write!(hex, "{byte:02x}");
+        // Writing formatted output to a String is infallible.
+        write!(hex, "{byte:02x}").unwrap_or_default();
     }
     hex
 }
@@ -142,14 +141,17 @@ mod tests {
     #[test]
     fn test_ds_format() {
         let ds = generate_dynamic_secret_overseas();
-        let parts: Vec<&str> = ds.split(',').collect();
-        assert_eq!(parts.len(), 3);
+        let mut parts = ds.split(',');
+        let timestamp = parts.next().expect("timestamp part");
+        let random = parts.next().expect("random part");
+        let hash = parts.next().expect("hash part");
+        assert!(parts.next().is_none(), "DS should have exactly 3 parts");
         // First part should be a timestamp (digits only)
-        assert!(parts[0].chars().all(|c| c.is_ascii_digit()));
+        assert!(timestamp.chars().all(|c| c.is_ascii_digit()));
         // Second part should be 6 letters
-        assert_eq!(parts[1].len(), 6);
+        assert_eq!(random.len(), 6);
         // Third part should be 32 hex chars
-        assert_eq!(parts[2].len(), 32);
+        assert_eq!(hash.len(), 32);
     }
 
     #[test]
@@ -158,8 +160,12 @@ mod tests {
         let ds = generate_dynamic_secret_overseas();
         let after = jiff::Timestamp::now().as_second();
 
-        let parts: Vec<&str> = ds.split(',').collect();
-        let timestamp: i64 = parts[0].parse().expect("should parse timestamp");
+        let timestamp: i64 = ds
+            .split(',')
+            .next()
+            .expect("timestamp part")
+            .parse()
+            .expect("should parse timestamp");
 
         assert!(
             timestamp >= before && timestamp <= after,
@@ -170,8 +176,7 @@ mod tests {
     #[test]
     fn test_overseas_ds_random_is_lowercase_letters() {
         let ds = generate_dynamic_secret_overseas();
-        let parts: Vec<&str> = ds.split(',').collect();
-        let random = parts[1];
+        let random = ds.split(',').nth(1).expect("random part");
 
         assert_eq!(random.len(), 6, "Random string should be 6 characters");
         assert!(
@@ -183,8 +188,7 @@ mod tests {
     #[test]
     fn test_overseas_ds_hash_is_valid_hex() {
         let ds = generate_dynamic_secret_overseas();
-        let parts: Vec<&str> = ds.split(',').collect();
-        let hash = parts[2];
+        let hash = ds.split(',').nth(2).expect("hash part");
 
         assert_eq!(hash.len(), 32, "Hash should be 32 characters");
         assert!(
@@ -204,12 +208,12 @@ mod tests {
         let mut randoms: Vec<String> = Vec::new();
         for _ in 0..10 {
             let ds = generate_dynamic_secret_overseas();
-            let parts: Vec<&str> = ds.split(',').collect();
-            randoms.push(parts[1].to_string());
+            let random = ds.split(',').nth(1).expect("random part");
+            randoms.push(random.to_string());
         }
 
         // At least some of them should be different
-        let first = &randoms[0];
+        let first = randoms.first().expect("at least one random generated");
         let has_different = randoms.iter().any(|r| r != first);
         assert!(
             has_different,
@@ -224,22 +228,25 @@ mod tests {
     #[test]
     fn test_chinese_ds_format() {
         let ds = generate_dynamic_secret_chinese("", "");
-        let parts: Vec<&str> = ds.split(',').collect();
+        let mut parts = ds.split(',');
+        let timestamp = parts.next().expect("timestamp part");
+        let random = parts.next().expect("random part");
+        let hash = parts.next().expect("hash part");
+        assert!(parts.next().is_none(), "DS should have exactly 3 parts");
 
-        assert_eq!(parts.len(), 3, "DS should have 3 comma-separated parts");
         // First part should be timestamp
         assert!(
-            parts[0].chars().all(|c| c.is_ascii_digit()),
+            timestamp.chars().all(|c| c.is_ascii_digit()),
             "First part should be digits (timestamp)"
         );
         // Second part should be integer 100001-200000
-        let random: u32 = parts[1].parse().expect("should parse random int");
+        let random: u32 = random.parse().expect("should parse random int");
         assert!(
             (100_001..=200_000).contains(&random),
             "Random should be in range 100001-200000, got {random}"
         );
         // Third part should be 32 hex chars
-        assert_eq!(parts[2].len(), 32, "Hash should be 32 characters");
+        assert_eq!(hash.len(), 32, "Hash should be 32 characters");
     }
 
     #[test]
@@ -248,18 +255,20 @@ mod tests {
             r#"{"game_biz":"hk4e_global"}"#,
             "role_id=123456789&server=os_usa",
         );
-        let parts: Vec<&str> = ds.split(',').collect();
-
-        assert_eq!(parts.len(), 3);
-        assert_eq!(parts[2].len(), 32, "Hash should be 32 characters");
+        let hash = ds.split(',').nth(2).expect("hash part");
+        assert_eq!(hash.len(), 32, "Hash should be 32 characters");
     }
 
     #[test]
     fn test_chinese_ds_random_in_range() {
         for _ in 0..20 {
             let ds = generate_dynamic_secret_chinese("", "");
-            let parts: Vec<&str> = ds.split(',').collect();
-            let random: u32 = parts[1].parse().expect("should parse random int");
+            let random: u32 = ds
+                .split(',')
+                .nth(1)
+                .expect("random part")
+                .parse()
+                .expect("should parse random int");
 
             assert!(
                 (100_001..=200_000).contains(&random),
@@ -270,19 +279,17 @@ mod tests {
 
     #[test]
     fn test_chinese_ds_different_body_produces_different_hash() {
-        // Same timestamp and random would produce different hashes with different bodies
-        // Since we can't control timestamp/random, we just verify the hash is computed
+        // Same timestamp and random would produce different hashes with different
+        // bodies Since we can't control timestamp/random, we just verify the
+        // hash is computed
         let ds1 = generate_dynamic_secret_chinese("body1", "");
         let ds2 = generate_dynamic_secret_chinese("body2", "");
 
         // They should both be valid format
-        let parts1: Vec<&str> = ds1.split(',').collect();
-        let parts2: Vec<&str> = ds2.split(',').collect();
-
-        assert_eq!(parts1.len(), 3);
-        assert_eq!(parts2.len(), 3);
-        assert_eq!(parts1[2].len(), 32);
-        assert_eq!(parts2[2].len(), 32);
+        let hash1 = ds1.split(',').nth(2).expect("ds1 hash part");
+        let hash2 = ds2.split(',').nth(2).expect("ds2 hash part");
+        assert_eq!(hash1.len(), 32);
+        assert_eq!(hash2.len(), 32);
     }
 
     // =========================================================================

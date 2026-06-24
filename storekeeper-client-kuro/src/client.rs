@@ -1,17 +1,22 @@
 //! Kuro Games HTTP client implementation.
 
-use std::time::Instant;
-
+use crate::error::Error;
+use crate::error::Result;
 use reqwest::Method;
-use reqwest::header::{ACCEPT, CONTENT_TYPE, ORIGIN};
+use reqwest::header::ACCEPT;
+use reqwest::header::CONTENT_TYPE;
+use reqwest::header::ORIGIN;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
-use storekeeper_client_core::retry::{DEFAULT_MAX_DELAY_MS, DEFAULT_MAX_RETRIES};
-use storekeeper_client_core::{
-    ApiResponse, ClientError, ClientWithMiddleware, HttpClientBuilder, KuroApiResponse, RetryConfig,
-};
-
-use crate::error::{Error, Result};
+use std::time::Instant;
+use storekeeper_client_core::ApiResponse;
+use storekeeper_client_core::ClientError;
+use storekeeper_client_core::ClientWithMiddleware;
+use storekeeper_client_core::HttpClientBuilder;
+use storekeeper_client_core::KuroApiResponse;
+use storekeeper_client_core::RetryConfig;
+use storekeeper_client_core::retry::DEFAULT_MAX_DELAY_MS;
+use storekeeper_client_core::retry::DEFAULT_MAX_RETRIES;
 
 /// Base URL for the Kuro Games API.
 const KURO_API_BASE: &str = "https://pc-launcher-sdk-api.kurogame.net";
@@ -47,7 +52,8 @@ impl KuroClient {
     /// Creates a new Kuro Games client with the given OAuth code.
     ///
     /// The client is configured with automatic retry for HTTP-level failures
-    /// (5xx errors, timeouts, network errors) using exponential backoff with jitter.
+    /// (5xx errors, timeouts, network errors) using exponential backoff with
+    /// jitter.
     ///
     /// # Errors
     ///
@@ -87,7 +93,8 @@ impl KuroClient {
 
     /// Sends a CORS preflight OPTIONS request to the Kuro API.
     ///
-    /// This is required before making the actual POST request due to CORS restrictions.
+    /// This is required before making the actual POST request due to CORS
+    /// restrictions.
     ///
     /// # Errors
     ///
@@ -203,11 +210,13 @@ impl KuroClient {
 
     /// Queries role/character data from the Kuro API.
     ///
-    /// This method first sends a CORS preflight OPTIONS request, then makes the actual
-    /// POST request to fetch the role data. If the server returns code 1005 (retry requested),
-    /// the request will be retried up to 3 times with exponential backoff and jitter.
+    /// This method first sends a CORS preflight OPTIONS request, then makes the
+    /// actual POST request to fetch the role data. If the server returns
+    /// code 1005 (retry requested), the request will be retried up to 3
+    /// times with exponential backoff and jitter.
     ///
-    /// HTTP-level failures (5xx, timeouts) are automatically retried by the middleware.
+    /// HTTP-level failures (5xx, timeouts) are automatically retried by the
+    /// middleware.
     ///
     /// # Errors
     ///
@@ -242,15 +251,17 @@ impl KuroClient {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use std::collections::HashMap;
     use std::sync::Arc;
-    use std::sync::atomic::{AtomicUsize, Ordering};
-
-    use tokio::io::{AsyncReadExt, AsyncWriteExt};
-    use tokio::net::{TcpListener, TcpStream};
-    use tokio::sync::{Mutex, oneshot};
-
-    use super::*;
+    use std::sync::atomic::AtomicUsize;
+    use std::sync::atomic::Ordering;
+    use tokio::io::AsyncReadExt;
+    use tokio::io::AsyncWriteExt;
+    use tokio::net::TcpListener;
+    use tokio::net::TcpStream;
+    use tokio::sync::Mutex;
+    use tokio::sync::oneshot;
 
     #[derive(Debug, Clone)]
     struct TestRequest {
@@ -297,6 +308,10 @@ mod tests {
                                 if let Some(request) = read_request(&mut stream).await {
                                     requests.lock().await.push(request.clone());
                                     let response = handler(&request);
+                                    #[expect(
+                                        clippy::let_underscore_must_use,
+                                        reason = "best-effort response write to a test client that may have disconnected"
+                                    )]
                                     let _ = write_response(&mut stream, response).await;
                                 }
                             });
@@ -320,6 +335,10 @@ mod tests {
     impl Drop for TestServer {
         fn drop(&mut self) {
             if let Some(tx) = self.shutdown_tx.take() {
+                #[expect(
+                    clippy::let_underscore_must_use,
+                    reason = "shutdown receiver may already be gone when the server is dropped"
+                )]
                 let _ = tx.send(());
             }
         }
@@ -334,13 +353,18 @@ mod tests {
             if read == 0 {
                 return None;
             }
-            raw.extend_from_slice(&buf[..read]);
+            if let Some(chunk) = buf.get(..read) {
+                raw.extend_from_slice(chunk);
+            }
             if let Some(pos) = find_header_end(&raw) {
                 break pos;
             }
         };
 
-        let head = String::from_utf8_lossy(&raw[..header_end]).to_string();
+        let head_bytes = raw
+            .get(..header_end)
+            .expect("header_end is a valid offset within raw");
+        let head = String::from_utf8_lossy(head_bytes).to_string();
         let mut lines = head.split("\r\n");
         let request_line = lines.next()?.to_string();
         let mut request_line_parts = request_line.split_whitespace();
@@ -362,13 +386,18 @@ mod tests {
             .and_then(|v| v.parse::<usize>().ok())
             .unwrap_or(0);
 
-        let mut body = raw[header_end + 4..].to_vec();
+        let mut body = raw
+            .get(header_end + 4..)
+            .expect("header end offset is within raw")
+            .to_vec();
         while body.len() < content_length {
             let read = stream.read(&mut buf).await.ok()?;
             if read == 0 {
                 break;
             }
-            body.extend_from_slice(&buf[..read]);
+            if let Some(chunk) = buf.get(..read) {
+                body.extend_from_slice(chunk);
+            }
         }
 
         Some(TestRequest {

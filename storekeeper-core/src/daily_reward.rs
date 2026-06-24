@@ -3,12 +3,11 @@
 //! This module provides the core abstractions for daily check-in rewards
 //! across Genshin Impact, Honkai: Star Rail, and Zenless Zone Zero.
 
+use crate::game_id::GameId;
+use serde::Deserialize;
+use serde::Serialize;
 use std::future::Future;
 use std::pin::Pin;
-
-use serde::{Deserialize, Serialize};
-
-use crate::game_id::GameId;
 
 /// Type alias for a boxed error with Send + Sync bounds.
 type BoxError = Box<dyn std::error::Error + Send + Sync>;
@@ -41,7 +40,8 @@ impl DailyRewardInfo {
     #[must_use = "this returns the count of missed rewards"]
     pub fn missed_rewards(&self) -> u32 {
         use jiff::Timestamp;
-        use jiff::tz::{Offset, TimeZone};
+        use jiff::tz::Offset;
+        use jiff::tz::TimeZone;
 
         // Daily rewards reset at UTC+8 (China Standard Time).
         let utc8 = TimeZone::fixed(Offset::constant(8));
@@ -198,8 +198,9 @@ pub trait DailyRewardClient: Send + Sync {
     ///
     /// # Errors
     ///
-    /// Returns an error if the API request fails (network error, auth error, etc.).
-    /// Note: "Already claimed" is not an error - it's returned as a failed `ClaimResult`.
+    /// Returns an error if the API request fails (network error, auth error,
+    /// etc.). Note: "Already claimed" is not an error - it's returned as a
+    /// failed `ClaimResult`.
     #[must_use = "this performs an API call; the result should be used"]
     fn claim_daily_reward(
         &self,
@@ -232,7 +233,8 @@ pub trait DynDailyRewardClient: Send + Sync {
     ) -> BoxFuture<'_, std::result::Result<serde_json::Value, BoxError>>;
 }
 
-/// Blanket implementation of `DynDailyRewardClient` for all `DailyRewardClient` implementors.
+/// Blanket implementation of `DynDailyRewardClient` for all `DailyRewardClient`
+/// implementors.
 impl<T> DynDailyRewardClient for T
 where
     T: DailyRewardClient,
@@ -287,7 +289,8 @@ mod tests {
     #[test]
     fn test_missed_rewards_calculation() {
         use jiff::Timestamp;
-        use jiff::tz::{Offset, TimeZone};
+        use jiff::tz::Offset;
+        use jiff::tz::TimeZone;
 
         // Get the current day in UTC+8
         let utc8 = TimeZone::fixed(Offset::constant(8));
@@ -324,8 +327,9 @@ mod tests {
 
     #[test]
     fn test_missed_rewards_saturating_sub() {
-        // Edge case: total_sign_day > current day (shouldn't happen, but test saturation)
-        // This can't actually overflow because we use saturating_sub
+        // Edge case: total_sign_day > current day (shouldn't happen, but test
+        // saturation) This can't actually overflow because we use
+        // saturating_sub
         let info = DailyRewardInfo::new(true, 50);
         // If current day is, say, 15, then missed_rewards should be 0 (saturating)
         let missed = info.missed_rewards();

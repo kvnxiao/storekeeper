@@ -1,10 +1,11 @@
 //! [`ClaimTime`] type and UTC+8 serde helpers for daily reward claiming.
 
+use crate::error::Error;
+use crate::error::Result;
+use jiff::SignedDuration;
+use jiff::Timestamp;
 use jiff::civil::Time;
 use jiff::tz::TimeZone;
-use jiff::{SignedDuration, Timestamp};
-
-use crate::error::{Error, Result};
 
 /// UTC+8 offset used to convert between display time and stored UTC time.
 const UTC8_OFFSET: SignedDuration = SignedDuration::from_hours(8);
@@ -134,15 +135,16 @@ impl std::fmt::Display for ClaimTime {
 ///
 /// # Errors
 ///
-/// Returns an error if the datetime calculation fails (out-of-range construction).
+/// Returns an error if the datetime calculation fails (out-of-range
+/// construction).
 pub fn next_claim_datetime_utc(claim_time: Option<ClaimTime>) -> Result<Timestamp> {
     next_claim_datetime_from(claim_time, Timestamp::now())
 }
 
 /// Computes the next claim instant relative to a caller-supplied `now`.
 ///
-/// Split out from [`next_claim_datetime_utc`] so the today-vs-tomorrow logic can
-/// be tested deterministically with an injected instant.
+/// Split out from [`next_claim_datetime_utc`] so the today-vs-tomorrow logic
+/// can be tested deterministically with an injected instant.
 fn next_claim_datetime_from(claim_time: Option<ClaimTime>, now: Timestamp) -> Result<Timestamp> {
     // Use provided time or default to midnight UTC+8 (which is 16:00 UTC)
     let time = claim_time.unwrap_or_else(ClaimTime::default_utc8_midnight);
@@ -178,9 +180,15 @@ fn next_claim_datetime_from(claim_time: Option<ClaimTime>, now: Timestamp) -> Re
 /// - **Serialize:** Converts UTC to UTC+8, formats as "HH:MM".
 pub(crate) mod claim_time_serde {
     use super::ClaimTime;
-    use serde::{self, Deserialize, Deserializer, Serializer};
+    use serde::Deserialize;
+    use serde::Deserializer;
+    use serde::Serializer;
+    use serde::{self};
 
-    #[allow(clippy::ref_option)] // serde's `with` requires &Option<T> signature
+    #[expect(
+        clippy::ref_option,
+        reason = "serde's `with` requires a &Option<T> signature"
+    )]
     pub fn serialize<S>(time: &Option<ClaimTime>, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -208,7 +216,8 @@ pub(crate) mod claim_time_serde {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde::{Deserialize, Serialize};
+    use serde::Deserialize;
+    use serde::Serialize;
 
     // =========================================================================
     // ClaimTime::from_utc8_str tests
@@ -478,7 +487,8 @@ mod tests {
         let next_claim = result.expect("should be valid");
         let now = Timestamp::now();
 
-        // The next claim should be within the next 24 hours + a few seconds of tolerance
+        // The next claim should be within the next 24 hours + a few seconds of
+        // tolerance
         let diff = next_claim.duration_since(now);
         assert!(
             diff.as_secs() >= -5,
