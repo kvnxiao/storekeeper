@@ -4,13 +4,13 @@
 //! due to transient issues (timeouts, DNS, connection resets, etc.).
 
 use std::future::Future;
-
 use storekeeper_client_core::retry::RetryConfig;
 
 /// Retries a fallible async operation with exponential backoff.
 ///
 /// Only retries on transient network errors (see [`is_retryable_error`]).
-/// Non-retryable errors (auth failures, rate limits, etc.) propagate immediately.
+/// Non-retryable errors (auth failures, rate limits, etc.) propagate
+/// immediately.
 pub async fn retry_with_backoff<F, Fut>(operation: F) -> anyhow::Result<serde_json::Value>
 where
     F: FnMut() -> Fut,
@@ -27,10 +27,10 @@ where
 fn is_retryable_error(error: &anyhow::Error) -> bool {
     // Walk the error chain for typed reqwest errors
     for cause in error.chain() {
-        if let Some(reqwest_err) = cause.downcast_ref::<reqwest::Error>() {
-            if storekeeper_client_core::is_transient_reqwest_error(reqwest_err) {
-                return true;
-            }
+        if let Some(reqwest_err) = cause.downcast_ref::<reqwest::Error>()
+            && storekeeper_client_core::is_transient_reqwest_error(reqwest_err)
+        {
+            return true;
         }
     }
 
@@ -121,7 +121,7 @@ mod tests {
     #[tokio::test(start_paused = true)]
     async fn retry_succeeds_on_first_attempt() {
         let result = retry_with_backoff(|| async { Ok(serde_json::json!({"ok": true})) }).await;
-        assert!(result.is_ok());
+        result.expect("first attempt should succeed");
     }
 
     #[tokio::test(start_paused = true)]
@@ -132,7 +132,7 @@ mod tests {
             async { Err(anyhow::anyhow!("authentication failed")) }
         })
         .await;
-        assert!(result.is_err());
+        result.expect_err("non-retryable error should fail immediately");
         assert_eq!(calls, 1, "non-retryable error should not be retried");
     }
 
@@ -150,7 +150,7 @@ mod tests {
             }
         })
         .await;
-        assert!(result.is_ok());
+        result.expect("should recover after a transient error");
         assert_eq!(calls, 2);
     }
 }

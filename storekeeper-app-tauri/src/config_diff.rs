@@ -4,8 +4,9 @@
 //! when the user saves settings, avoiding unnecessary HTTP API calls.
 
 use std::collections::HashSet;
-
-use storekeeper_core::{AppConfig, GameId, SecretsConfig};
+use storekeeper_core::AppConfig;
+use storekeeper_core::GameId;
+use storekeeper_core::SecretsConfig;
 
 /// Describes what changed between two configurations.
 pub(crate) struct ConfigDiff {
@@ -113,8 +114,9 @@ pub(crate) fn compute(
 
 /// Trait to extract client-relevant fields from any game config for comparison.
 ///
-/// "Client-relevant" means fields that affect the HTTP client setup or what data
-/// is fetched. Changes to these fields require a registry rebuild and API re-fetch.
+/// "Client-relevant" means fields that affect the HTTP client setup or what
+/// data is fetched. Changes to these fields require a registry rebuild and API
+/// re-fetch.
 trait ClientFields {
     fn enabled(&self) -> bool;
     fn client_identity(&self) -> ClientIdentity<'_>;
@@ -131,7 +133,8 @@ struct ClientIdentity<'a> {
 }
 
 fn hash_vec<T: std::hash::Hash>(items: &[T]) -> u64 {
-    use std::hash::{Hash, Hasher};
+    use std::hash::Hash;
+    use std::hash::Hasher;
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     items.hash(&mut hasher);
     hasher.finish()
@@ -263,8 +266,13 @@ fn check_game_config<T: ClientFields>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use storekeeper_core::config::secrets::{HoyolabSecrets, KuroSecrets};
-    use storekeeper_core::{AppConfig, GamesConfig, GenshinConfig, SecretsConfig, WuwaConfig};
+    use storekeeper_core::AppConfig;
+    use storekeeper_core::GamesConfig;
+    use storekeeper_core::GenshinConfig;
+    use storekeeper_core::SecretsConfig;
+    use storekeeper_core::WuwaConfig;
+    use storekeeper_core::config::secrets::HoyolabSecrets;
+    use storekeeper_core::config::secrets::KuroSecrets;
 
     fn default_genshin() -> GenshinConfig {
         GenshinConfig {

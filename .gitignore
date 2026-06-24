@@ -22,3 +22,5 @@ target
 
 # Rust output
 /target
+
+*.local.json

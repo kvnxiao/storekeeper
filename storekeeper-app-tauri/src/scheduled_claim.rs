@@ -1,27 +1,31 @@
 //! Scheduled auto-claim for daily rewards.
 
-use std::collections::HashMap;
-use std::sync::Arc;
-use std::time::Duration;
-
-use anyhow::Context;
-use chrono::{DateTime, Utc};
-use storekeeper_core::{ClaimTime, DailyRewardStatus, GameId, next_claim_datetime_utc};
-use tauri::{AppHandle, Emitter, Manager};
-use tokio::sync::Notify;
-use tokio_util::sync::CancellationToken;
-
 use crate::events::AppEvent;
 use crate::retry_helpers::retry_with_backoff;
 use crate::state::AppState;
+use anyhow::Context;
+use jiff::Timestamp;
+use std::collections::HashMap;
+use std::ops::ControlFlow;
+use std::sync::Arc;
+use std::time::Duration;
+use storekeeper_core::ClaimTime;
+use storekeeper_core::DailyRewardStatus;
+use storekeeper_core::GameId;
+use storekeeper_core::next_claim_datetime_utc;
+use tauri::AppHandle;
+use tauri::Emitter;
+use tauri::Manager;
+use tokio::sync::Notify;
+use tokio_util::sync::CancellationToken;
 
 /// Maximum chunk duration for wall-clock-bounded sleeps.
 ///
 /// Prevents long `tokio::time::sleep` calls that can drift during OS suspend.
-const MAX_SLEEP_CHUNK: Duration = Duration::from_secs(15 * 60);
+const MAX_SLEEP_CHUNK: Duration = Duration::from_mins(15);
 
 /// Short sleep used when no games are configured or no claims are pending.
-const IDLE_SLEEP: Duration = Duration::from_secs(15 * 60);
+const IDLE_SLEEP: Duration = Duration::from_mins(15);
 
 /// Why the scheduler woke up from a sleep.
 enum WakeReason {
@@ -31,6 +35,29 @@ enum WakeReason {
     ConfigChanged,
     /// The timer expired normally.
     TimerExpired,
+}
+
+/// What the scheduler should do after a non-terminal wake.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PostWake {
+    /// Re-run startup claims before resuming the loop (config changed).
+    Rerun,
+    /// Resume the loop normally (timer expired).
+    Resume,
+}
+
+/// Pure mapping from a wake reason to the loop's next control-flow step.
+///
+/// `Break(())` means the scheduler should stop (cancellation). `Continue(_)`
+/// means keep looping, with the [`PostWake`] payload describing what
+/// bookkeeping the caller should perform first. Kept side-effect-free so it is
+/// unit-testable for every [`WakeReason`] variant.
+fn handle_wake_reason(reason: &WakeReason) -> ControlFlow<(), PostWake> {
+    match reason {
+        WakeReason::Cancelled => ControlFlow::Break(()),
+        WakeReason::ConfigChanged => ControlFlow::Continue(PostWake::Rerun),
+        WakeReason::TimerExpired => ControlFlow::Continue(PostWake::Resume),
+    }
 }
 
 /// Starts the scheduled daily claim task.
@@ -60,14 +87,9 @@ pub fn start_scheduled_claims(app_handle: AppHandle, cancel_token: CancellationT
 
             if auto_claim_games.is_empty() {
                 tracing::debug!("No games with auto-claim enabled, idle sleeping");
-                match sleep_short(&cancel_token, &notify).await {
-                    WakeReason::Cancelled => break,
-                    WakeReason::ConfigChanged => {
-                        tracing::info!("Config changed during idle, re-running startup claims");
-                        run_startup_claims(&state, &app_handle).await;
-                        continue;
-                    }
-                    WakeReason::TimerExpired => continue,
+                match idle_wait(&cancel_token, &notify, &state, &app_handle).await {
+                    ControlFlow::Break(()) => break,
+                    ControlFlow::Continue(()) => continue,
                 }
             }
 
@@ -77,42 +99,61 @@ pub fn start_scheduled_claims(app_handle: AppHandle, cancel_token: CancellationT
             else {
                 // No games need claiming right now, idle sleep
                 tracing::debug!("No games need claiming, idle sleeping");
-                match sleep_short(&cancel_token, &notify).await {
-                    WakeReason::Cancelled => break,
-                    WakeReason::ConfigChanged => {
-                        tracing::info!("Config changed while idle, re-running startup claims");
-                        run_startup_claims(&state, &app_handle).await;
-                        continue;
-                    }
-                    WakeReason::TimerExpired => continue,
+                match idle_wait(&cancel_token, &notify, &state, &app_handle).await {
+                    ControlFlow::Break(()) => break,
+                    ControlFlow::Continue(()) => continue,
                 }
             };
 
-            let until_claim = (target - Utc::now()).to_std().unwrap_or(Duration::ZERO);
+            // Clamp to zero for display: a target in the past sleeps for no time.
+            let until_claim_secs = target.duration_since(Timestamp::now()).as_secs().max(0);
 
             tracing::info!(
-                sleep_secs = until_claim.as_secs(),
+                sleep_secs = until_claim_secs,
                 target = %target,
                 games = ?games_to_claim,
                 "Waiting until next scheduled claim time"
             );
 
             // Wait until claim time, config change, or cancellation
-            match sleep_until(target, &cancel_token, &notify).await {
-                WakeReason::Cancelled => break,
-                WakeReason::ConfigChanged => {
+            match handle_wake_reason(&sleep_until(target, &cancel_token, &notify).await) {
+                ControlFlow::Break(()) => break,
+                ControlFlow::Continue(PostWake::Rerun) => {
                     tracing::info!(
                         "Config changed while waiting for claim, re-running startup claims"
                     );
                     run_startup_claims(&state, &app_handle).await;
                 }
-                WakeReason::TimerExpired => {
+                ControlFlow::Continue(PostWake::Resume) => {
                     // Claim rewards for all games that are due
                     claim_games_and_emit(&state, &app_handle, &games_to_claim).await;
                 }
             }
         }
     });
+}
+
+/// Sleeps idly and processes the resulting wake.
+///
+/// Returns [`ControlFlow::Break`] when the scheduler should stop, and
+/// [`ControlFlow::Continue`] when the loop should iterate again (re-running
+/// startup claims first if the config changed).
+async fn idle_wait(
+    cancel_token: &CancellationToken,
+    notify: &Arc<Notify>,
+    state: &AppState,
+    app_handle: &AppHandle,
+) -> ControlFlow<()> {
+    match handle_wake_reason(&sleep_short(cancel_token, notify).await) {
+        ControlFlow::Break(()) => ControlFlow::Break(()),
+        ControlFlow::Continue(post) => {
+            if post == PostWake::Rerun {
+                tracing::info!("Config changed while idle, re-running startup claims");
+                run_startup_claims(state, app_handle).await;
+            }
+            ControlFlow::Continue(())
+        }
+    }
 }
 
 /// Runs startup claims for games that have auto-claim enabled.
@@ -178,21 +219,23 @@ async fn claim_games_and_emit(state: &AppState, app_handle: &AppHandle, game_ids
 
 /// Sleeps until the given wall-clock target, in bounded chunks.
 ///
-/// Sleeps in chunks of at most [`MAX_SLEEP_CHUNK`] and re-checks `Utc::now()`
-/// after each chunk. This ensures the scheduler fires promptly after OS
-/// suspend/resume, with at most one chunk of delay.
+/// Sleeps in chunks of at most [`MAX_SLEEP_CHUNK`] and re-checks
+/// `Timestamp::now()` after each chunk. This ensures the scheduler fires
+/// promptly after OS suspend/resume, with at most one chunk of delay.
 async fn sleep_until(
-    target: DateTime<Utc>,
+    target: Timestamp,
     cancel_token: &CancellationToken,
     notify: &Arc<Notify>,
 ) -> WakeReason {
     loop {
-        let now = Utc::now();
+        let now = Timestamp::now();
         if now >= target {
             return WakeReason::TimerExpired;
         }
 
-        let remaining = (target - now).to_std().unwrap_or(Duration::ZERO);
+        // `now < target` here, so the duration is positive; `unsigned_abs`
+        // yields the std `Duration` tokio needs.
+        let remaining = target.duration_since(now).unsigned_abs();
         let chunk = remaining.min(MAX_SLEEP_CHUNK);
 
         tokio::select! {
@@ -230,7 +273,8 @@ async fn sleep_short(cancel_token: &CancellationToken, notify: &Arc<Notify>) -> 
 
 /// Checks status and claims if not already claimed today.
 ///
-/// Returns `Ok(true)` if claimed, `Ok(false)` if already claimed, `Err` on failure.
+/// Returns `Ok(true)` if claimed, `Ok(false)` if already claimed, `Err` on
+/// failure.
 async fn claim_with_status_check(state: &AppState, game_id: GameId) -> anyhow::Result<bool> {
     // Step 1: Check status first
     let status = fetch_status_with_retry(state, game_id).await?;
@@ -272,7 +316,7 @@ async fn claim_reward_with_retry(
 async fn calculate_next_claim(
     auto_claim_games: &[(GameId, Option<ClaimTime>)],
     state: &AppState,
-) -> Option<(DateTime<Utc>, Vec<GameId>)> {
+) -> Option<(Timestamp, Vec<GameId>)> {
     let mut earliest_time = None;
     let mut games_at_earliest: Vec<GameId> = Vec::new();
 
@@ -315,4 +359,33 @@ async fn calculate_next_claim(
 
     // If the target is in the past, `sleep_until` will return immediately
     Some((earliest, games_at_earliest))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn handle_wake_reason_cancelled_breaks() {
+        assert_eq!(
+            handle_wake_reason(&WakeReason::Cancelled),
+            ControlFlow::Break(())
+        );
+    }
+
+    #[test]
+    fn handle_wake_reason_config_changed_reruns_startup() {
+        assert_eq!(
+            handle_wake_reason(&WakeReason::ConfigChanged),
+            ControlFlow::Continue(PostWake::Rerun)
+        );
+    }
+
+    #[test]
+    fn handle_wake_reason_timer_expired_resumes() {
+        assert_eq!(
+            handle_wake_reason(&WakeReason::TimerExpired),
+            ControlFlow::Continue(PostWake::Resume)
+        );
+    }
 }

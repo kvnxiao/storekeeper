@@ -1,12 +1,14 @@
 //! Game client registry for dynamic client management.
 
-use std::collections::{HashMap, HashSet};
-
-use storekeeper_core::{DynGameClient, GameId};
-use tauri::{AppHandle, Emitter};
-
-use crate::events::{AppEvent, GameResourcePayload};
+use crate::events::AppEvent;
+use crate::events::GameResourcePayload;
 use crate::provider_batch;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use storekeeper_core::DynGameClient;
+use storekeeper_core::GameId;
+use tauri::AppHandle;
+use tauri::Emitter;
 
 /// Registry that holds type-erased game clients.
 ///
@@ -49,7 +51,8 @@ impl GameClientRegistry {
     /// Fetches resources from all registered clients with rate limit awareness.
     ///
     /// Games are grouped by API provider:
-    /// - Games using the same provider are fetched sequentially to avoid rate limits
+    /// - Games using the same provider are fetched sequentially to avoid rate
+    ///   limits
     /// - Different providers are fetched in parallel for efficiency
     ///
     /// Emits a per-game event after each successful fetch.
@@ -66,7 +69,11 @@ impl GameClientRegistry {
                         game_id,
                         data: resources,
                     };
-                    let _ = app_handle.emit(AppEvent::GameResourceUpdated.as_str(), &payload);
+                    if let Err(e) =
+                        app_handle.emit(AppEvent::GameResourceUpdated.as_str(), &payload)
+                    {
+                        tracing::warn!(error = %e, "Failed to emit GameResourceUpdated event");
+                    }
                 }
 
                 (game_id, result)
@@ -93,7 +100,11 @@ impl GameClientRegistry {
                         game_id,
                         data: resources,
                     };
-                    let _ = app_handle.emit(AppEvent::GameResourceUpdated.as_str(), &payload);
+                    if let Err(e) =
+                        app_handle.emit(AppEvent::GameResourceUpdated.as_str(), &payload)
+                    {
+                        tracing::warn!(error = %e, "Failed to emit GameResourceUpdated event");
+                    }
                 }
 
                 (game_id, result)
@@ -111,10 +122,9 @@ impl Default for GameClientRegistry {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use std::future::Future;
     use std::pin::Pin;
-
-    use super::*;
 
     type BoxError = Box<dyn std::error::Error + Send + Sync>;
     type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;

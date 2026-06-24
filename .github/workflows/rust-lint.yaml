@@ -40,7 +40,10 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           components: clippy, rustfmt
-          toolchain: stable
+          # Comma-separated; the action makes the LAST entry the default
+          # toolchain. Keep stable last so bare `cargo clippy` runs on stable
+          # while nightly stays available for `cargo +nightly fmt`.
+          toolchain: "nightly, stable"
           cache: true
 
       - name: Install just command runner

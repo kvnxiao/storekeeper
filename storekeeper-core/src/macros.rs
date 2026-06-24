@@ -8,7 +8,8 @@
 /// - Implementation of `DisplayableResource` trait
 /// - Standard derives (Debug, Clone, Serialize, Deserialize)
 ///
-/// Optionally, with `/ TypeName` syntax, also generates a companion type-only enum.
+/// Optionally, with `/ TypeName` syntax, also generates a companion type-only
+/// enum.
 ///
 /// # Example
 ///

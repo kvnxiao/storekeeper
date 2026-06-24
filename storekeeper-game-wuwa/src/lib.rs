@@ -8,5 +8,6 @@ pub mod error;
 pub mod resource;
 
 pub use client::WuwaClient;
-pub use error::{Error, Result};
+pub use error::Error;
+pub use error::Result;
 pub use resource::WuwaResource;

@@ -1,11 +1,9 @@
 //! Game client traits for fetching resources from game APIs.
 
+use crate::game_id::GameId;
+use serde::Serialize;
 use std::future::Future;
 use std::pin::Pin;
-
-use serde::Serialize;
-
-use crate::game_id::GameId;
 
 /// Type alias for a boxed error with Send + Sync bounds.
 type BoxError = Box<dyn std::error::Error + Send + Sync>;
@@ -36,7 +34,8 @@ pub trait GameClient: Send + Sync {
     ///
     /// # Errors
     ///
-    /// Returns an error if the API request fails or the response cannot be parsed.
+    /// Returns an error if the API request fails or the response cannot be
+    /// parsed.
     #[must_use = "this performs an API call; the result should be used"]
     fn fetch_resources(
         &self,

@@ -1,14 +1,20 @@
 //! Genshin Impact game client implementation.
 
-use chrono::{DateTime, Local, TimeDelta};
-use serde::{Deserialize, Deserializer};
-use storekeeper_client_hoyolab::HoyolabClient;
-use storekeeper_core::{
-    CooldownResource, ExpeditionResource, GameClient, GameId, Region, StaminaResource, serde_utils,
-};
-
-use crate::error::{Error, Result};
+use crate::error::Error;
+use crate::error::Result;
 use crate::resource::GenshinResource;
+use jiff::SignedDuration;
+use jiff::Timestamp;
+use serde::Deserialize;
+use serde::Deserializer;
+use storekeeper_client_hoyolab::HoyolabClient;
+use storekeeper_core::CooldownResource;
+use storekeeper_core::ExpeditionResource;
+use storekeeper_core::GameClient;
+use storekeeper_core::GameId;
+use storekeeper_core::Region;
+use storekeeper_core::StaminaResource;
+use storekeeper_core::serde_utils;
 
 /// Resin regeneration rate: 1 resin per 8 minutes = 480 seconds.
 const RESIN_REGEN_SECONDS: u32 = 480;
@@ -27,11 +33,11 @@ struct DailyNoteResponse {
     current_resin: u32,
     max_resin: u32,
     #[serde(deserialize_with = "serde_utils::seconds_string_to_datetime::deserialize")]
-    resin_recovery_time: DateTime<Local>,
+    resin_recovery_time: Timestamp,
     current_home_coin: u32,
     max_home_coin: u32,
     #[serde(deserialize_with = "serde_utils::seconds_string_to_datetime::deserialize")]
-    home_coin_recovery_time: DateTime<Local>,
+    home_coin_recovery_time: Timestamp,
     current_expedition_num: u32,
     max_expedition_num: u32,
     expeditions: Vec<ExpeditionInfo>,
@@ -50,12 +56,18 @@ pub enum ExpeditionStatus {
 #[derive(Debug, Clone, Deserialize)]
 struct ExpeditionInfo {
     #[serde(deserialize_with = "serde_utils::seconds_string_to_datetime::deserialize")]
-    remained_time: DateTime<Local>,
+    remained_time: Timestamp,
     /// URL to the avatar's side icon.
-    #[allow(dead_code)]
+    #[expect(
+        dead_code,
+        reason = "deserialized from the API response but not yet surfaced to the UI"
+    )]
     avatar_side_icon: String,
     /// Current status of the expedition.
-    #[allow(dead_code)]
+    #[expect(
+        dead_code,
+        reason = "deserialized from the API response but not yet surfaced to the UI"
+    )]
     status: ExpeditionStatus,
 }
 
@@ -63,7 +75,7 @@ struct ExpeditionInfo {
 #[derive(Debug, Clone)]
 struct TransformerInfo {
     obtained: bool,
-    ready_at: DateTime<Local>,
+    ready_at: Timestamp,
 }
 
 impl<'de> Deserialize<'de> for TransformerInfo {
@@ -95,7 +107,7 @@ impl<'de> Deserialize<'de> for TransformerInfo {
         let raw = RawTransformerInfo::deserialize(deserializer)?;
 
         let ready_at = if raw.recovery_time.reached {
-            Local::now()
+            Timestamp::now()
         } else {
             let total_seconds = i64::from(raw.recovery_time.day) * 86400
                 + i64::from(raw.recovery_time.hour) * 3600
@@ -103,10 +115,13 @@ impl<'de> Deserialize<'de> for TransformerInfo {
                 + i64::from(raw.recovery_time.second);
 
             if total_seconds > 0 {
-                TimeDelta::try_seconds(total_seconds)
-                    .map_or_else(Local::now, |delta| Local::now() + delta)
+                // `total_seconds` comes from the API; clamp overflow back to now
+                // rather than panicking.
+                Timestamp::now()
+                    .checked_add(SignedDuration::from_secs(total_seconds))
+                    .unwrap_or_else(|_| Timestamp::now())
             } else {
-                Local::now()
+                Timestamp::now()
             }
         };
 
@@ -149,7 +164,7 @@ impl GenshinClient {
     }
 }
 
-fn build_resources(note: &DailyNoteResponse, now: DateTime<Local>) -> Vec<GenshinResource> {
+fn build_resources(note: &DailyNoteResponse, now: Timestamp) -> Vec<GenshinResource> {
     let mut resources = Vec::with_capacity(4);
 
     // Resin
@@ -169,11 +184,11 @@ fn build_resources(note: &DailyNoteResponse, now: DateTime<Local>) -> Vec<Genshi
     )));
 
     // Parametric Transformer
-    if let Some(ref transformer) = note.transformer {
-        if transformer.obtained {
-            let cooldown = CooldownResource::new(transformer.ready_at <= now, transformer.ready_at);
-            resources.push(GenshinResource::ParametricTransformer(cooldown));
-        }
+    if let Some(ref transformer) = note.transformer
+        && transformer.obtained
+    {
+        let cooldown = CooldownResource::new(transformer.ready_at <= now, transformer.ready_at);
+        resources.push(GenshinResource::ParametricTransformer(cooldown));
     }
 
     // Expeditions - find the earliest finish time
@@ -206,7 +221,7 @@ impl GameClient for GenshinClient {
     async fn fetch_resources(&self) -> Result<Vec<Self::Resource>> {
         tracing::info!(game = "Genshin Impact", "Fetching game resources");
         let note = self.fetch_daily_note().await?;
-        let resources = build_resources(&note, Local::now());
+        let resources = build_resources(&note, Timestamp::now());
 
         tracing::info!(
             resin = note.current_resin,
@@ -226,24 +241,23 @@ impl GameClient for GenshinClient {
 
 #[cfg(test)]
 mod tests {
-    use chrono::TimeDelta;
-    use serde_json::json;
-
     use super::*;
+    use jiff::SignedDuration;
+    use serde_json::json;
 
     fn make_note(
         transformer: Option<TransformerInfo>,
         expeditions: Vec<ExpeditionInfo>,
         current_expeditions: u32,
     ) -> DailyNoteResponse {
-        let now = Local::now();
+        let now = Timestamp::now();
         DailyNoteResponse {
             current_resin: 100,
             max_resin: 160,
-            resin_recovery_time: now + TimeDelta::try_hours(8).expect("valid delta"),
+            resin_recovery_time: now + SignedDuration::from_hours(8),
             current_home_coin: 1200,
             max_home_coin: 2400,
-            home_coin_recovery_time: now + TimeDelta::try_hours(4).expect("valid delta"),
+            home_coin_recovery_time: now + SignedDuration::from_hours(4),
             current_expedition_num: current_expeditions,
             max_expedition_num: 5,
             expeditions,
@@ -253,7 +267,7 @@ mod tests {
 
     #[test]
     fn transformer_deserialize_reached_sets_ready_at_now() {
-        let before = Local::now();
+        let before = Timestamp::now();
         let transformer: TransformerInfo = serde_json::from_value(json!({
             "obtained": true,
             "recovery_time": {
@@ -265,7 +279,7 @@ mod tests {
             }
         }))
         .expect("deserialize transformer");
-        let after = Local::now();
+        let after = Timestamp::now();
 
         assert!(transformer.obtained);
         assert!(transformer.ready_at >= before && transformer.ready_at <= after);
@@ -285,7 +299,10 @@ mod tests {
         }))
         .expect("deserialize transformer");
 
-        let seconds_until_ready = (transformer.ready_at - Local::now()).num_seconds();
+        let seconds_until_ready = transformer
+            .ready_at
+            .duration_since(Timestamp::now())
+            .as_secs();
         assert!(
             (85..=95).contains(&seconds_until_ready),
             "Expected ~90s until ready, got {seconds_until_ready}s"
@@ -294,7 +311,7 @@ mod tests {
 
     #[test]
     fn transformer_deserialize_zero_duration_falls_back_to_now() {
-        let before = Local::now();
+        let before = Timestamp::now();
         let transformer: TransformerInfo = serde_json::from_value(json!({
             "obtained": true,
             "recovery_time": {
@@ -306,21 +323,21 @@ mod tests {
             }
         }))
         .expect("deserialize transformer");
-        let after = Local::now();
+        let after = Timestamp::now();
 
         assert!(transformer.ready_at >= before && transformer.ready_at <= after);
     }
 
     #[test]
     fn build_resources_omits_transformer_when_not_obtained() {
-        let now = Local::now();
+        let now = Timestamp::now();
         let note = make_note(
             Some(TransformerInfo {
                 obtained: false,
-                ready_at: now + TimeDelta::try_hours(10).expect("valid delta"),
+                ready_at: now + SignedDuration::from_hours(10),
             }),
             vec![ExpeditionInfo {
-                remained_time: now + TimeDelta::try_minutes(20).expect("valid delta"),
+                remained_time: now + SignedDuration::from_mins(20),
                 avatar_side_icon: "icon".to_string(),
                 status: ExpeditionStatus::Ongoing,
             }],
@@ -339,7 +356,7 @@ mod tests {
 
     #[test]
     fn build_resources_uses_now_when_expeditions_are_missing() {
-        let now = Local::now();
+        let now = Timestamp::now();
         let note = make_note(None, Vec::new(), 2);
         let resources = build_resources(&note, now);
 

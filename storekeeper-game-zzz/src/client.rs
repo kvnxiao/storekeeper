@@ -1,12 +1,16 @@
 //! Zenless Zone Zero game client implementation.
 
-use chrono::{DateTime, Local};
+use crate::error::Error;
+use crate::error::Result;
+use crate::resource::ZzzResource;
+use jiff::Timestamp;
 use serde::Deserialize;
 use storekeeper_client_hoyolab::HoyolabClient;
-use storekeeper_core::{GameClient, GameId, Region, StaminaResource, serde_utils};
-
-use crate::error::{Error, Result};
-use crate::resource::ZzzResource;
+use storekeeper_core::GameClient;
+use storekeeper_core::GameId;
+use storekeeper_core::Region;
+use storekeeper_core::StaminaResource;
+use storekeeper_core::serde_utils;
 
 /// Battery regeneration rate: 1 battery per 6 minutes = 360 seconds.
 const BATTERY_REGEN_SECONDS: u32 = 360;
@@ -21,7 +25,7 @@ struct NoteResponse {
 struct EnergyInfo {
     progress: EnergyProgress,
     #[serde(deserialize_with = "serde_utils::seconds_u64_to_datetime::deserialize")]
-    restore: DateTime<Local>,
+    restore: Timestamp,
 }
 
 #[derive(Debug, Deserialize)]

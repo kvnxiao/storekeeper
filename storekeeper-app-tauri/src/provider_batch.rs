@@ -1,13 +1,14 @@
 //! Batch-by-provider helper for executing operations across game clients.
 //!
-//! Groups clients by API provider and runs each provider's operations in parallel,
-//! while operations within a single provider run sequentially (to respect rate limits).
-
-use std::collections::{HashMap, HashSet};
-use std::future::Future;
-use std::pin::Pin;
+//! Groups clients by API provider and runs each provider's operations in
+//! parallel, while operations within a single provider run sequentially (to
+//! respect rate limits).
 
 use futures::future::join_all;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::future::Future;
+use std::pin::Pin;
 use storekeeper_core::GameId;
 
 /// Type alias for the result of a per-game operation.
@@ -18,15 +19,16 @@ type OperationResult = (
 
 /// Executes an async operation on each client, batched by API provider.
 ///
-/// Clients sharing an API provider are processed sequentially (to avoid rate limits).
-/// Different providers are processed in parallel.
+/// Clients sharing an API provider are processed sequentially (to avoid rate
+/// limits). Different providers are processed in parallel.
 ///
 /// An optional `game_filter` limits which games are processed. When `None`, all
 /// clients are processed.
 ///
-/// The `operation` closure receives the game ID and client reference, and returns
-/// a pinned future yielding the game ID paired with the result. The closure is
-/// responsible for any side effects like event emission or inter-operation delays.
+/// The `operation` closure receives the game ID and client reference, and
+/// returns a pinned future yielding the game ID paired with the result. The
+/// closure is responsible for any side effects like event emission or
+/// inter-operation delays.
 pub async fn batch_by_provider<C, F>(
     clients: &HashMap<GameId, Box<C>>,
     game_filter: Option<&HashSet<GameId>>,
@@ -97,11 +99,11 @@ fn collect_results(all_results: Vec<Vec<OperationResult>>) -> HashMap<GameId, se
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use std::future::Future;
     use std::pin::Pin;
-    use std::sync::atomic::{AtomicU32, Ordering};
-
-    use super::*;
+    use std::sync::atomic::AtomicU32;
+    use std::sync::atomic::Ordering;
 
     type BoxError = Box<dyn std::error::Error + Send + Sync>;
     type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;

@@ -9,7 +9,8 @@ pub mod error;
 
 pub use cache::load_oauth_from_cache;
 pub use client::KuroClient;
-pub use error::{Error, Result};
+pub use error::Error;
+pub use error::Result;
 
 /// Decodes an XOR-5 encoded string.
 ///

@@ -1,9 +1,8 @@
 //! Error types for the Kuro Games API client.
 
-use thiserror::Error;
-
 // Re-export base error for convenience
 pub use storekeeper_client_core::ClientError;
+use thiserror::Error;
 
 /// Error type for Kuro Games API operations.
 #[derive(Error, Debug)]

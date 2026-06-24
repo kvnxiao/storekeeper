@@ -1,11 +1,12 @@
-use chrono::{DateTime, Datelike, Local, Timelike};
-use icu_datetime::fieldsets;
-use icu_experimental::duration::{
-    DurationFormatter, DurationFormatterPreferences, ValidatedDurationFormatterOptions,
-    options::{BaseStyle, DurationFormatterOptions, FieldDisplay},
-};
-
 use super::store::with_messages;
+use icu_datetime::fieldsets;
+use icu_experimental::duration::DurationFormatter;
+use icu_experimental::duration::DurationFormatterPreferences;
+use icu_experimental::duration::ValidatedDurationFormatterOptions;
+use icu_experimental::duration::options::BaseStyle;
+use icu_experimental::duration::options::DurationFormatterOptions;
+use icu_experimental::duration::options::FieldDisplay;
+use jiff::Zoned;
 
 /// Formats a completion time using the current locale.
 ///
@@ -13,8 +14,8 @@ use super::store::with_messages;
 /// (e.g. "3:45 PM"). When on a different day, shows weekday + time
 /// (e.g. "Mon 3:45 PM" / "月 15:45") using ICU4X locale-aware formatting.
 #[must_use]
-pub fn format_time(completion: DateTime<Local>, now: DateTime<Local>) -> String {
-    let is_today = completion.date_naive() == now.date_naive();
+pub fn format_time(completion: &Zoned, now: &Zoned) -> String {
+    let is_today = completion.date() == now.date();
 
     if is_today {
         format_time_only(completion)
@@ -24,7 +25,7 @@ pub fn format_time(completion: DateTime<Local>, now: DateTime<Local>) -> String 
 }
 
 /// Formats just the time portion (hour + minute) using the current locale.
-fn format_time_only(dt: DateTime<Local>) -> String {
+fn format_time_only(dt: &Zoned) -> String {
     let hour = u8::try_from(dt.hour()).unwrap_or(0);
     let minute = u8::try_from(dt.minute()).unwrap_or(0);
     let fallback = || format!("{hour}:{minute:02}");
@@ -43,20 +44,20 @@ fn format_time_only(dt: DateTime<Local>) -> String {
     .unwrap_or_else(fallback)
 }
 
-/// Formats weekday + time (e.g. "Mon 3:45 PM") using ICU4X locale-aware formatting.
-#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-fn format_weekday_time(dt: DateTime<Local>) -> String {
+/// Formats weekday + time (e.g. "Mon 3:45 PM") using ICU4X locale-aware
+/// formatting.
+fn format_weekday_time(dt: &Zoned) -> String {
     let hour = u8::try_from(dt.hour()).unwrap_or(0);
     let minute = u8::try_from(dt.minute()).unwrap_or(0);
     let fallback = || {
-        let weekday = dt.format("%a").to_string();
+        let weekday = dt.strftime("%a").to_string();
         format!("{weekday} {hour}:{minute:02}")
     };
 
     with_messages(|m| {
-        let year = dt.year();
-        let month = dt.month() as u8;
-        let day = dt.day() as u8;
+        let year = i32::from(dt.year());
+        let month = u8::try_from(dt.month()).unwrap_or(1);
+        let day = u8::try_from(dt.day()).unwrap_or(1);
         let Ok(date) = icu_calendar::Date::try_new_iso(year, month, day) else {
             return fallback();
         };
@@ -77,11 +78,15 @@ fn format_weekday_time(dt: DateTime<Local>) -> String {
 
 /// Formats a duration in minutes using the current locale.
 ///
-/// Uses `icu_experimental::duration::DurationFormatter` with `BaseStyle::Narrow`
-/// (e.g. "1h 15m" in English). Clamps negative values to 0.
-/// Falls back to plain `"{hours}h {minutes}m"` or `"{minutes}m"` if formatting fails.
+/// Uses `icu_experimental::duration::DurationFormatter` with
+/// `BaseStyle::Narrow` (e.g. "1h 15m" in English). Clamps negative values to 0.
+/// Falls back to plain `"{hours}h {minutes}m"` or `"{minutes}m"` if formatting
+/// fails.
 #[must_use]
-#[allow(clippy::cast_sign_loss)]
+#[expect(
+    clippy::cast_sign_loss,
+    reason = "value is clamped to >= 0 via max(0) before the cast"
+)]
 pub fn format_duration(total_minutes: i64) -> String {
     let clamped = total_minutes.max(0) as u64;
     let days = clamped / 1440;
@@ -100,7 +105,8 @@ pub fn format_duration(total_minutes: i64) -> String {
 
     with_messages(|m| {
         let mut opts = DurationFormatterOptions::default();
-        // Narrow style only works correctly for English; use Short for all other locales.
+        // Narrow style only works correctly for English; use Short for all other
+        // locales.
         opts.base = if m.locale.id.language == icu_locale::subtags::language!("en") {
             BaseStyle::Narrow
         } else {

@@ -9,20 +9,25 @@ pub mod games;
 pub mod notification;
 pub mod secrets;
 
-use std::path::{Path, PathBuf};
-
-use serde::{Deserialize, Serialize};
-
-use crate::error::{Error, Result};
-use crate::resource_types::{
-    GenshinResourceType, HsrResourceType, WuwaResourceType, ZzzResourceType,
-};
-
+use crate::error::Error;
+use crate::error::Result;
+use crate::resource_types::GenshinResourceType;
+use crate::resource_types::HsrResourceType;
+use crate::resource_types::WuwaResourceType;
+use crate::resource_types::ZzzResourceType;
+use camino::Utf8Path;
+use camino::Utf8PathBuf;
 // Re-exports: keep the same public surface as the original single-file module.
 pub use claim_time::{ClaimTime, DEFAULT_AUTO_CLAIM_TIME, next_claim_datetime_utc};
-pub use games::{GenshinConfig, HsrConfig, WuwaConfig, ZzzConfig};
+pub use games::GenshinConfig;
+pub use games::HsrConfig;
+pub use games::WuwaConfig;
+pub use games::ZzzConfig;
 pub use notification::ResourceNotificationConfig;
 pub use secrets::SecretsConfig;
+use serde::Deserialize;
+use serde::Serialize;
+use std::path::PathBuf;
 
 // ============================================================================
 // Shared serde default functions
@@ -38,6 +43,16 @@ fn default_poll_interval() -> u64 {
 
 fn default_log_level() -> String {
     "info".to_string()
+}
+
+/// Converts an OS path obtained from `dirs` into a UTF-8 path.
+///
+/// This is the boundary where we leave `std::path` behind; everything past it
+/// uses `camino`. Non-UTF-8 paths are rejected rather than lossily coerced.
+fn to_utf8_path(path: PathBuf) -> Result<Utf8PathBuf> {
+    Utf8PathBuf::from_path_buf(path).map_err(|p| Error::ConfigParseFailed {
+        message: format!("Config path is not valid UTF-8: {}", p.display()),
+    })
 }
 
 // ============================================================================
@@ -72,14 +87,14 @@ impl AppConfig {
     /// # Errors
     ///
     /// Returns an error if the config file cannot be read or parsed.
-    pub fn load_from_path(path: &Path) -> Result<Self> {
+    pub fn load_from_path(path: &Utf8Path) -> Result<Self> {
         if !path.exists() {
             return Err(Error::ConfigNotFound {
-                path: path.display().to_string(),
+                path: path.to_string(),
             });
         }
 
-        let content = std::fs::read_to_string(path)?;
+        let content = fs_err::read_to_string(path)?;
         let config: Self = toml::from_str(&content)?;
         Ok(config)
     }
@@ -88,24 +103,23 @@ impl AppConfig {
     ///
     /// # Errors
     ///
-    /// Returns an error if the config directory cannot be determined.
-    pub fn config_path() -> Result<PathBuf> {
-        let config_dir = dirs::config_dir().ok_or_else(|| Error::ConfigNotFound {
-            path: "config directory".to_string(),
-        })?;
-        Ok(config_dir.join("storekeeper").join("config.toml"))
+    /// Returns an error if the config directory cannot be determined or is not
+    /// valid UTF-8.
+    pub fn config_path() -> Result<Utf8PathBuf> {
+        Ok(Self::config_dir()?.join("config.toml"))
     }
 
     /// Returns the config directory path.
     ///
     /// # Errors
     ///
-    /// Returns an error if the config directory cannot be determined.
-    pub fn config_dir() -> Result<PathBuf> {
+    /// Returns an error if the config directory cannot be determined or is not
+    /// valid UTF-8.
+    pub fn config_dir() -> Result<Utf8PathBuf> {
         let config_dir = dirs::config_dir().ok_or_else(|| Error::ConfigNotFound {
             path: "config directory".to_string(),
         })?;
-        Ok(config_dir.join("storekeeper"))
+        Ok(to_utf8_path(config_dir)?.join("storekeeper"))
     }
 
     /// Saves the configuration to the default config file location.
@@ -123,16 +137,16 @@ impl AppConfig {
     /// # Errors
     ///
     /// Returns an error if the config file cannot be written.
-    pub fn save_to_path(&self, path: &Path) -> Result<()> {
+    pub fn save_to_path(&self, path: &Utf8Path) -> Result<()> {
         // Ensure the directory exists
         if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)?;
+            fs_err::create_dir_all(parent)?;
         }
 
         let content = toml::to_string_pretty(self).map_err(|e| Error::ConfigParseFailed {
             message: format!("Failed to serialize config: {e}"),
         })?;
-        std::fs::write(path, content)?;
+        fs_err::write(path, content)?;
         Ok(())
     }
 
@@ -142,7 +156,8 @@ impl AppConfig {
     ///
     /// # Errors
     ///
-    /// Returns an error if the directory cannot be created or the file cannot be written.
+    /// Returns an error if the directory cannot be created or the file cannot
+    /// be written.
     pub fn create_default_if_missing() -> Result<bool> {
         let path = Self::config_path()?;
 
@@ -152,17 +167,17 @@ impl AppConfig {
 
         // Ensure the directory exists
         if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)?;
+            fs_err::create_dir_all(parent)?;
         }
 
         // Write default config with helpful comments
         let content = Self::default_config_content();
-        std::fs::write(&path, content)?;
+        fs_err::write(&path, content)?;
 
         // Verify it can be loaded
         let _ = Self::load_from_path(&path)?;
 
-        tracing::info!("Created default config file at: {}", path.display());
+        tracing::info!("Created default config file at: {path}");
         Ok(true)
     }
 
@@ -367,7 +382,8 @@ impl GamesConfig {
         cfg.notifications.get(&resource)
     }
 
-    /// Converts a typed notification map to string-keyed map for the notification system.
+    /// Converts a typed notification map to string-keyed map for the
+    /// notification system.
     fn stringify_notification_map<K: AsRef<str>>(
         notifications: &std::collections::HashMap<K, ResourceNotificationConfig>,
     ) -> std::collections::HashMap<String, ResourceNotificationConfig> {
@@ -377,7 +393,8 @@ impl GamesConfig {
             .collect()
     }
 
-    /// Notification configs for a game, with string keys for the notification system.
+    /// Notification configs for a game, with string keys for the notification
+    /// system.
     ///
     /// Converts typed resource keys to strings via `AsRef<str>`.
     #[must_use]
@@ -436,7 +453,8 @@ impl GamesConfig {
         }
     }
 
-    /// Gets notification config for a game/resource pair without allocating a map.
+    /// Gets notification config for a game/resource pair without allocating a
+    /// map.
     #[must_use]
     pub fn notification_config(
         &self,
@@ -480,7 +498,8 @@ impl GamesConfig {
 
     /// Whether auto-claim is enabled for a game.
     ///
-    /// Wuthering Waves does not support daily rewards, so always returns `false`.
+    /// Wuthering Waves does not support daily rewards, so always returns
+    /// `false`.
     #[must_use]
     pub fn auto_claim_enabled(&self, game_id: crate::GameId) -> bool {
         use crate::GameId;
@@ -539,10 +558,10 @@ pub fn ensure_configs_exist() -> Result<()> {
     let config_created = AppConfig::create_default_if_missing()?;
     let secrets_created = SecretsConfig::create_default_if_missing()?;
 
-    if config_created || secrets_created {
-        if let Ok(config_dir) = AppConfig::config_dir() {
-            tracing::info!("Configuration files created in: {}", config_dir.display());
-        }
+    if (config_created || secrets_created)
+        && let Ok(config_dir) = AppConfig::config_dir()
+    {
+        tracing::info!("Configuration files created in: {config_dir}");
     }
 
     Ok(())
@@ -551,6 +570,17 @@ pub fn ensure_configs_exist() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Returns a unique, non-colliding temp directory path for a test.
+    fn unique_temp_dir(tag: &str) -> Utf8PathBuf {
+        use std::sync::atomic::AtomicU32;
+        use std::sync::atomic::Ordering;
+        static COUNTER: AtomicU32 = AtomicU32::new(0);
+        let n = COUNTER.fetch_add(1, Ordering::Relaxed);
+        let base =
+            Utf8PathBuf::from_path_buf(std::env::temp_dir()).expect("temp dir should be UTF-8");
+        base.join(format!("storekeeper-test-{tag}-{}-{n}", std::process::id()))
+    }
 
     #[test]
     fn test_app_config_without_notifications_section() {
@@ -562,5 +592,60 @@ mod tests {
 
         let config: AppConfig = toml::from_str(toml_str).expect("should parse config");
         assert_eq!(config.general.poll_interval_secs, 300);
+    }
+
+    #[test]
+    fn app_config_save_load_roundtrip_through_temp_dir() {
+        let dir = unique_temp_dir("config");
+        let path = dir.join("config.toml");
+
+        let mut config = AppConfig::default();
+        config.general.poll_interval_secs = 999;
+        config.general.log_level = "debug".to_string();
+
+        config.save_to_path(&path).expect("should save config");
+        let loaded = AppConfig::load_from_path(&path).expect("should load config");
+
+        assert_eq!(loaded.general.poll_interval_secs, 999);
+        assert_eq!(loaded.general.log_level, "debug");
+        assert_eq!(loaded, config);
+
+        // Best-effort cleanup of the temp directory.
+        if let Err(err) = fs_err::remove_dir_all(&dir) {
+            eprintln!("failed to clean up temp dir {dir}: {err}");
+        }
+    }
+
+    #[test]
+    fn app_config_load_missing_path_errors() {
+        let path = unique_temp_dir("missing").join("does-not-exist.toml");
+        let result = AppConfig::load_from_path(&path);
+        assert!(
+            matches!(result, Err(Error::ConfigNotFound { .. })),
+            "loading a missing path should report ConfigNotFound"
+        );
+    }
+
+    #[cfg(any(windows, unix))]
+    #[test]
+    fn to_utf8_path_rejects_non_utf8() {
+        // Build a path that is not valid UTF-8 in a platform-specific way.
+        #[cfg(windows)]
+        let bad: PathBuf = {
+            use std::os::windows::ffi::OsStringExt;
+            // 0xD800 is an unpaired high surrogate, which is not valid UTF-8.
+            std::ffi::OsString::from_wide(&[0xD800]).into()
+        };
+        #[cfg(unix)]
+        let bad: PathBuf = {
+            use std::os::unix::ffi::OsStrExt;
+            std::ffi::OsStr::from_bytes(&[0xFF]).to_os_string().into()
+        };
+
+        let result = to_utf8_path(bad);
+        assert!(
+            matches!(result, Err(Error::ConfigParseFailed { .. })),
+            "a non-UTF-8 path must be rejected, not lossily coerced"
+        );
     }
 }

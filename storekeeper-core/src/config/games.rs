@@ -1,18 +1,20 @@
 //! Per-game configuration types.
 
-use std::collections::HashMap;
-use std::hash::Hash;
-
-use serde::de::{DeserializeOwned, Deserializer};
-use serde::{Deserialize, Serialize};
-
-use super::claim_time::{ClaimTime, claim_time_serde};
+use super::claim_time::ClaimTime;
+use super::claim_time::claim_time_serde;
 use super::default_true;
 use super::notification::ResourceNotificationConfig;
 use crate::region::Region;
-use crate::resource_types::{
-    GenshinResourceType, HsrResourceType, WuwaResourceType, ZzzResourceType,
-};
+use crate::resource_types::GenshinResourceType;
+use crate::resource_types::HsrResourceType;
+use crate::resource_types::WuwaResourceType;
+use crate::resource_types::ZzzResourceType;
+use serde::Deserialize;
+use serde::Serialize;
+use serde::de::DeserializeOwned;
+use serde::de::Deserializer;
+use std::collections::HashMap;
+use std::hash::Hash;
 
 /// Genshin Impact specific configuration.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -39,7 +41,8 @@ pub struct GenshinConfig {
     pub auto_claim_daily_rewards: bool,
 
     /// Optional time to auto-claim daily rewards in HH:MM format (UTC+8).
-    /// Internally stored as UTC. If not specified, defaults to "00:00" (midnight UTC+8).
+    /// Internally stored as UTC. If not specified, defaults to "00:00"
+    /// (midnight UTC+8).
     #[serde(default, with = "claim_time_serde")]
     pub auto_claim_time: Option<ClaimTime>,
 
@@ -77,7 +80,8 @@ pub struct HsrConfig {
     pub auto_claim_daily_rewards: bool,
 
     /// Optional time to auto-claim daily rewards in HH:MM format (UTC+8).
-    /// Internally stored as UTC. If not specified, defaults to "00:00" (midnight UTC+8).
+    /// Internally stored as UTC. If not specified, defaults to "00:00"
+    /// (midnight UTC+8).
     #[serde(default, with = "claim_time_serde")]
     pub auto_claim_time: Option<ClaimTime>,
 
@@ -115,7 +119,8 @@ pub struct ZzzConfig {
     pub auto_claim_daily_rewards: bool,
 
     /// Optional time to auto-claim daily rewards in HH:MM format (UTC+8).
-    /// Internally stored as UTC. If not specified, defaults to "00:00" (midnight UTC+8).
+    /// Internally stored as UTC. If not specified, defaults to "00:00"
+    /// (midnight UTC+8).
     #[serde(default, with = "claim_time_serde")]
     pub auto_claim_time: Option<ClaimTime>,
 

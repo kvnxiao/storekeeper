@@ -3,14 +3,17 @@
 //! Provides a config-driven `DailyRewardClient` implementation that works for
 //! all HoYoLab games (Genshin Impact, Honkai: Star Rail, Zenless Zone Zero).
 
+use crate::client::HoyolabClient;
+use crate::error::Error;
+use crate::error::Result;
 use reqwest::Method;
 use serde::Deserialize;
-use storekeeper_core::{
-    ClaimResult, DailyReward, DailyRewardClient, DailyRewardInfo, DailyRewardStatus, GameId,
-};
-
-use crate::client::HoyolabClient;
-use crate::error::{Error, Result};
+use storekeeper_core::ClaimResult;
+use storekeeper_core::DailyReward;
+use storekeeper_core::DailyRewardClient;
+use storekeeper_core::DailyRewardInfo;
+use storekeeper_core::DailyRewardStatus;
+use storekeeper_core::GameId;
 
 // ============================================================================
 // Configuration
@@ -90,7 +93,8 @@ pub struct HoyolabDailyRewardClient {
 }
 
 impl HoyolabDailyRewardClient {
-    /// Creates a new daily reward client with the given HoYoLab client and config.
+    /// Creates a new daily reward client with the given HoYoLab client and
+    /// config.
     #[must_use]
     pub fn new(client: HoyolabClient, config: &'static HoyolabDailyRewardConfig) -> Self {
         Self { client, config }
@@ -221,14 +225,15 @@ impl DailyRewardClient for HoyolabDailyRewardClient {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use std::collections::HashMap;
     use std::sync::Arc;
-
-    use tokio::io::{AsyncReadExt, AsyncWriteExt};
-    use tokio::net::{TcpListener, TcpStream};
-    use tokio::sync::{Mutex, oneshot};
-
-    use super::*;
+    use tokio::io::AsyncReadExt;
+    use tokio::io::AsyncWriteExt;
+    use tokio::net::TcpListener;
+    use tokio::net::TcpStream;
+    use tokio::sync::Mutex;
+    use tokio::sync::oneshot;
 
     #[derive(Debug, Clone)]
     struct TestRequest {
@@ -274,6 +279,10 @@ mod tests {
                                 if let Some(request) = read_request(&mut stream).await {
                                     requests.lock().await.push(request.clone());
                                     let response = handler(&request);
+                                    #[expect(
+                                        clippy::let_underscore_must_use,
+                                        reason = "best-effort response write to a test client that may have disconnected"
+                                    )]
                                     let _ = write_response(&mut stream, response).await;
                                 }
                             });
@@ -297,6 +306,10 @@ mod tests {
     impl Drop for TestServer {
         fn drop(&mut self) {
             if let Some(tx) = self.shutdown_tx.take() {
+                #[expect(
+                    clippy::let_underscore_must_use,
+                    reason = "shutdown receiver may already be gone when the server is dropped"
+                )]
                 let _ = tx.send(());
             }
         }
@@ -311,13 +324,18 @@ mod tests {
             if read == 0 {
                 return None;
             }
-            raw.extend_from_slice(&buf[..read]);
+            if let Some(chunk) = buf.get(..read) {
+                raw.extend_from_slice(chunk);
+            }
             if let Some(pos) = find_header_end(&raw) {
                 break pos;
             }
         };
 
-        let head = String::from_utf8_lossy(&raw[..header_end]).to_string();
+        let head_bytes = raw
+            .get(..header_end)
+            .expect("header_end is a valid offset within raw");
+        let head = String::from_utf8_lossy(head_bytes).to_string();
         let mut lines = head.split("\r\n");
         let request_line = lines.next()?.to_string();
         let mut request_line_parts = request_line.split_whitespace();
@@ -339,13 +357,18 @@ mod tests {
             .and_then(|v| v.parse::<usize>().ok())
             .unwrap_or(0);
 
-        let mut body = raw[header_end + 4..].to_vec();
+        let mut body = raw
+            .get(header_end + 4..)
+            .expect("header end offset is within raw")
+            .to_vec();
         while body.len() < content_length {
             let read = stream.read(&mut buf).await.ok()?;
             if read == 0 {
                 break;
             }
-            body.extend_from_slice(&buf[..read]);
+            if let Some(chunk) = buf.get(..read) {
+                body.extend_from_slice(chunk);
+            }
         }
 
         Some(TestRequest { method, target })

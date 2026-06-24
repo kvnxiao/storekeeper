@@ -1,11 +1,13 @@
 //! Game identifier enum for type-safe game identification.
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 /// API provider for a game.
 ///
 /// Games are grouped by their API provider to enable rate limit management.
-/// Games using the same provider should be fetched sequentially to avoid rate limits.
+/// Games using the same provider should be fetched sequentially to avoid rate
+/// limits.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ApiProvider {
     /// HoYoLab API (miHoYo/HoYoverse games)
@@ -16,8 +18,9 @@ pub enum ApiProvider {
 
 /// Unique identifier for each supported game.
 ///
-/// This enum provides a type-safe way to identify games throughout the application,
-/// replacing string-based identification with compile-time checked values.
+/// This enum provides a type-safe way to identify games throughout the
+/// application, replacing string-based identification with compile-time checked
+/// values.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum GameId {
@@ -195,10 +198,16 @@ mod tests {
     #[test]
     fn test_all_is_in_expected_order() {
         let all = GameId::all();
-        assert_eq!(all[0], GameId::GenshinImpact);
-        assert_eq!(all[1], GameId::HonkaiStarRail);
-        assert_eq!(all[2], GameId::ZenlessZoneZero);
-        assert_eq!(all[3], GameId::WutheringWaves);
+        assert_eq!(
+            all,
+            [
+                GameId::GenshinImpact,
+                GameId::HonkaiStarRail,
+                GameId::ZenlessZoneZero,
+                GameId::WutheringWaves,
+            ]
+            .as_slice()
+        );
     }
 
     // =========================================================================

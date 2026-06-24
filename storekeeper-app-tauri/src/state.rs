@@ -1,20 +1,25 @@
 //! Application state management.
 
-use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
-use storekeeper_core::{AppConfig, ClaimTime, GameId, SecretsConfig, ensure_configs_exist};
-
-use crate::notification::NotificationTracker;
-
-use tokio::sync::{Notify, RwLock};
-
-use crate::clients::{create_daily_reward_registry, create_registry};
+use crate::clients::create_daily_reward_registry;
+use crate::clients::create_registry;
 use crate::daily_reward_registry::DailyRewardRegistry;
+use crate::notification::NotificationTracker;
 use crate::registry::GameClientRegistry;
+use jiff::Timestamp;
+use serde::Deserialize;
+use serde::Serialize;
+use std::collections::HashMap;
+use std::collections::HashSet;
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
+use storekeeper_core::AppConfig;
+use storekeeper_core::ClaimTime;
+use storekeeper_core::GameId;
+use storekeeper_core::SecretsConfig;
+use storekeeper_core::ensure_configs_exist;
+use tokio::sync::Notify;
+use tokio::sync::RwLock;
 
 /// All resources from all games.
 ///
@@ -30,7 +35,7 @@ pub struct AllResources {
     pub games: HashMap<GameId, serde_json::Value>,
 
     /// Last update timestamp.
-    pub last_updated: Option<DateTime<Utc>>,
+    pub last_updated: Option<Timestamp>,
 }
 
 /// All daily reward status from all games.
@@ -42,7 +47,7 @@ pub struct AllDailyRewardStatus {
     pub games: HashMap<GameId, serde_json::Value>,
 
     /// Last check timestamp.
-    pub last_checked: Option<DateTime<Utc>>,
+    pub last_checked: Option<Timestamp>,
 }
 
 /// Inner state data protected by RwLock.
@@ -156,7 +161,8 @@ impl AppState {
         self.refreshing.store(false, Ordering::Release);
     }
 
-    /// Wakes the scheduler to re-evaluate config (e.g. after auto-claim changes).
+    /// Wakes the scheduler to re-evaluate config (e.g. after auto-claim
+    /// changes).
     pub fn wake_scheduler(&self) {
         self.scheduler_notify.notify_one();
     }
@@ -178,7 +184,7 @@ impl AppState {
         let games = registry.fetch_all(app_handle).await;
         AllResources {
             games,
-            last_updated: Some(Utc::now()),
+            last_updated: Some(Timestamp::now()),
         }
     }
 
@@ -222,7 +228,7 @@ impl AppState {
         let games = daily_reward_registry.get_all_status().await;
         AllDailyRewardStatus {
             games,
-            last_checked: Some(Utc::now()),
+            last_checked: Some(Timestamp::now()),
         }
     }
 
@@ -272,9 +278,9 @@ impl AppState {
 
     /// Checks if auto-claim is enabled for a specific game.
     ///
-    /// Returns true if auto-claim is enabled in config and the game is registered
-    /// in the daily reward registry. Does not check if already claimed today -
-    /// that is determined by fetching status from the API.
+    /// Returns true if auto-claim is enabled in config and the game is
+    /// registered in the daily reward registry. Does not check if already
+    /// claimed today - that is determined by fetching status from the API.
     pub async fn should_auto_claim_game(&self, game_id: GameId) -> bool {
         let state = self.inner.read().await;
         state.config.games.auto_claim_enabled(game_id)
@@ -314,11 +320,13 @@ impl AppState {
     // Config Reload Methods
     // ========================================================================
 
-    /// Applies new config and secrets to state, optionally rebuilding registries.
+    /// Applies new config and secrets to state, optionally rebuilding
+    /// registries.
     ///
-    /// When `rebuild_registries` is true, game client and daily reward registries
-    /// are recreated from the new config/secrets. This is only needed when
-    /// game-level settings (uid, region, enabled) or credentials change.
+    /// When `rebuild_registries` is true, game client and daily reward
+    /// registries are recreated from the new config/secrets. This is only
+    /// needed when game-level settings (uid, region, enabled) or
+    /// credentials change.
     pub async fn apply_config(
         &self,
         config: AppConfig,
@@ -377,7 +385,7 @@ mod tests {
         let mut r = AllResources::default();
         r.games
             .insert(GameId::GenshinImpact, serde_json::json!([{"stamina": 160}]));
-        r.last_updated = Some(Utc::now());
+        r.last_updated = Some(Timestamp::now());
 
         let json = serde_json::to_string(&r).expect("serialize");
         let r2: AllResources = serde_json::from_str(&json).expect("deserialize");
@@ -388,7 +396,7 @@ mod tests {
     #[test]
     fn all_resources_camel_case_keys() {
         let r = AllResources {
-            last_updated: Some(Utc::now()),
+            last_updated: Some(Timestamp::now()),
             ..AllResources::default()
         };
         let v = serde_json::to_value(&r).expect("serialize");
@@ -424,7 +432,7 @@ mod tests {
             GameId::HonkaiStarRail,
             serde_json::json!({"is_signed": true}),
         );
-        s.last_checked = Some(Utc::now());
+        s.last_checked = Some(Timestamp::now());
 
         let json = serde_json::to_string(&s).expect("serialize");
         let s2: AllDailyRewardStatus = serde_json::from_str(&json).expect("deserialize");
@@ -435,7 +443,7 @@ mod tests {
     #[test]
     fn all_daily_reward_status_camel_case_keys() {
         let s = AllDailyRewardStatus {
-            last_checked: Some(Utc::now()),
+            last_checked: Some(Timestamp::now()),
             ..AllDailyRewardStatus::default()
         };
         let v = serde_json::to_value(&s).expect("serialize");

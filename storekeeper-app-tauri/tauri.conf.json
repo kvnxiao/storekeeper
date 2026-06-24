@@ -33,6 +33,7 @@
       "id": "main",
       "iconPath": "./icons/icon.png",
       "iconAsTemplate": false,
+      "showMenuOnLeftClick": false,
       "tooltip": "Storekeeper",
       "title": "Storekeeper"
     },

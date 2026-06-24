@@ -1,10 +1,14 @@
+# List all available recipes (default when running `just` with no arguments).
+default:
+    @just --list
+
 lint:
-    cargo clippy --workspace --all-targets --all-features
-    cargo fmt --check
+    cargo clippy --workspace --all-targets --all-features -- -D warnings
+    cargo +nightly fmt --all --check
 
 fix:
     cargo clippy --workspace --all-targets --all-features --fix --allow-dirty
-    cargo fmt --all
+    cargo +nightly fmt --all
 
 dev:
     cargo tauri dev

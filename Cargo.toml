@@ -14,7 +14,7 @@ resolver = "2"
 
 [workspace.package]
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.95"
 license = "MIT"
 repository = "https://github.com/kvnxiao/storekeeper"
 authors = ["Kevin Xiao"]
@@ -34,11 +34,17 @@ tokio-util = { version = "0.7", features = ["rt"] }
 reqwest = { version = "0.13", default-features = false, features = ["native-tls", "charset", "http2", "system-proxy", "json", "cookies"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-toml = "0.8"
+toml = "1"
 
 # Time & utilities
-chrono = { version = "0.4", features = ["serde"] }
+jiff = { version = "0.2", features = ["serde"] }
 dirs = "6"
+
+# Filesystem IO (errors carry path context)
+fs-err = "3"
+
+# UTF-8 paths
+camino = "1"
 
 # Error handling
 thiserror = "2"
@@ -52,7 +58,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 governor = "0.10"
 
 # Crypto
-md-5 = "0.10"
+md-5 = "0.11"
 
 # Internationalization (ICU4X) — pinned to rev that includes re-export fix (PR #7616)
 icu_locale = { git = "https://github.com/unicode-org/icu4x", rev = "bd6b9179" }
@@ -93,43 +99,84 @@ unsafe_code = "forbid"
 missing_docs = "warn"
 
 [workspace.lints.clippy]
-# Deny all warnings - treat them as errors
+# Groups
 all = { level = "deny", priority = -1 }
 pedantic = { level = "deny", priority = -1 }
 cargo = { level = "deny", priority = -1 }
+
+# Cargo group escape hatches
+multiple_crate_versions = "allow"
+cargo_common_metadata = "allow"   # storekeeper: internal crates omit readme/keywords/categories
+
+# Don't panic
 unwrap_used = "deny"
 expect_used = "deny"
 panic = "deny"
-
-# Unimplemented items can be left as warnings
+unreachable = "deny"
+string_slice = "deny"
+indexing_slicing = "deny"
+get_unwrap = "deny"
+unwrap_in_result = "deny"
+panic_in_result_fn = "deny"
+unchecked_time_subtraction = "deny"
 todo = "warn"
 unimplemented = "warn"
 
-# Correctness (deny)
+# Don't fail silently
+let_underscore_future = "deny"
+let_underscore_must_use = "deny"
+unused_result_ok = "deny"
+map_err_ignore = "deny"
+assertions_on_result_states = "deny"
+
+# Async correctness
+await_holding_lock = "deny"
+await_holding_refcell_ref = "deny"
+if_let_mutex = "deny"
+large_futures = "deny"
+
+# Unsafe hygiene
+mem_forget = "deny"
+undocumented_unsafe_blocks = "deny"
+multiple_unsafe_ops_per_block = "deny"
+unnecessary_safety_doc = "deny"
+unnecessary_safety_comment = "deny"
+
+# Float correctness
+float_cmp = "deny"
+float_cmp_const = "deny"
+lossy_float_literal = "deny"
+invalid_upcast_comparisons = "deny"
+
+# Misc footguns
+rc_mutex = "deny"
+debug_assert_with_mut_call = "deny"
+iter_not_returning_iterator = "deny"
+expl_impl_clone_on_copy = "deny"
+infallible_try_from = "deny"
+dbg_macro = "deny"
+
+# Casts (storekeeper-specific, stricter than speccy)
 cast_lossless = "deny"
 cast_possible_truncation = "deny"
 cast_possible_wrap = "deny"
 cast_precision_loss = "deny"
 cast_sign_loss = "deny"
 
-# Performance (warn/deny)
-inefficient_to_string = "deny"
+# Force #[expect(..., reason = "...")] over silent #[allow]
+allow_attributes = "deny"
+allow_attributes_without_reason = "deny"
+
+# Performance
+inefficient_to_string = "deny"   # storekeeper-specific
 large_enum_variant = "warn"
-large_stack_arrays = "warn"
+large_stack_arrays = "deny"
 needless_pass_by_value = "warn"
 
-# Style (warn)
+# Style
 missing_errors_doc = "warn"
 missing_panics_doc = "warn"
-
-# Allow multiple crate versions caused by transitive dependencies
-multiple_crate_versions = "allow"
-
-# Allow missing package metadata (readme, keywords, categories) for internal crates
-cargo_common_metadata = "allow"
-
-# Allow some pedantic lints that are too noisy
-doc_markdown = "allow"           # HoYoLab doesn't need backticks
+doc_markdown = "allow"           # storekeeper: HoYoLab / game terms aren't backtick-quoted
 
 [profile.release]
 opt-level = 3

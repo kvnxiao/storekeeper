@@ -1,9 +1,8 @@
 //! Retry utilities with exponential backoff and jitter.
 
+use rand::RngExt;
 use std::future::Future;
 use std::time::Duration;
-
-use rand::RngExt;
 
 /// Default maximum number of retry attempts.
 pub const DEFAULT_MAX_RETRIES: u32 = 3;
@@ -44,7 +43,8 @@ impl RetryConfig {
         }
     }
 
-    /// Calculates the delay for a given attempt with exponential backoff and jitter.
+    /// Calculates the delay for a given attempt with exponential backoff and
+    /// jitter.
     ///
     /// Formula: `min(base_delay * 2^attempt + jitter, max_delay)`
     /// where jitter is a random value between 0 and base_delay.
@@ -71,14 +71,16 @@ impl RetryConfig {
 
 /// Retries an async operation with exponential backoff.
 ///
-/// Executes `operation` and retries on failures where `is_retryable` returns `true`,
-/// up to `config.max_retries` times with exponential backoff delays between attempts.
+/// Executes `operation` and retries on failures where `is_retryable` returns
+/// `true`, up to `config.max_retries` times with exponential backoff delays
+/// between attempts.
 ///
 /// Total attempts = 1 initial + `config.max_retries` retries.
 ///
 /// # Errors
 ///
-/// Returns the last error if all retries are exhausted, or the first non-retryable error.
+/// Returns the last error if all retries are exhausted, or the first
+/// non-retryable error.
 pub async fn retry_with_backoff<T, E, F, Fut>(
     config: &RetryConfig,
     mut operation: F,
@@ -305,10 +307,11 @@ mod tests {
         }
 
         // Check we got at least some variation (not all the same)
-        let first = delays[0];
+        let first = *delays.first().expect("at least one delay recorded");
         let has_variation = delays.iter().any(|&d| d != first);
-        // Note: There's a very small chance all 20 are identical, but extremely unlikely
-        // We'll allow this test to pass even without variation to avoid flakiness
+        // Note: There's a very small chance all 20 are identical, but extremely
+        // unlikely We'll allow this test to pass even without variation to
+        // avoid flakiness
         if !has_variation {
             // Just print a note, don't fail
             println!("Note: All delays were identical (rare but possible with random jitter)");
