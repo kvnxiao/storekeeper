@@ -1,3 +1,7 @@
+# List all available recipes (default when running `just` with no arguments).
+default:
+    @just --list
+
 lint:
     cargo clippy --workspace --all-targets --all-features
     cargo fmt --check
