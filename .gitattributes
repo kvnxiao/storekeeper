@@ -6,3 +6,4 @@
 # with "Incorrect newline style".
 * text=auto
 *.rs text eol=lf
+*.toml text eol=lf
