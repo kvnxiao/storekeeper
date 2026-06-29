@@ -1,6 +1,6 @@
 # Storekeeper
 
-![In app screenshot](./screenshot.png)
+![In app screenshot](./screenshot_2026-06-29.png)
 
 Stamina resource tracking desktop tray application for various gacha games.
 
