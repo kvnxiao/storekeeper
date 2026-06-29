@@ -1,9 +1,8 @@
-# Normalize line endings so source checks out as LF on every platform.
+# Normalize line endings: all text files check out as LF on every platform,
+# and are stored as LF in the repo regardless of each contributor's git config.
 #
-# Nightly rustfmt enforces `newline_style = "Unix"` (see .rustfmt.toml).
-# Without this, Windows CI runners check out *.rs with CRLF (their git
-# default is core.autocrlf=true) and `cargo +nightly fmt --check` fails
-# with "Incorrect newline style".
-* text=auto
-*.rs text eol=lf
-*.toml text eol=lf
+# Required for nightly rustfmt (`newline_style = "Unix"`, see .rustfmt.toml):
+# the windows-latest rust-lint leg defaults to core.autocrlf=true and would
+# otherwise check out source as CRLF, failing `cargo +nightly fmt --all --check`.
+# `text=auto` still auto-detects binaries (images, etc.) and leaves them as-is.
+* text=auto eol=lf
