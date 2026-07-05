@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@v7.0.0
 
       - name: Set up Vite+ and install dependencies
-        uses: voidzero-dev/setup-vp@v1
+        uses: voidzero-dev/setup-vp@v1.12.0
         with:
           node-version-file: .node-version
           working-directory: frontend
