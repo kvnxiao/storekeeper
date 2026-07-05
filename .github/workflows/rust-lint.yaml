@@ -37,7 +37,7 @@ jobs:
             lld
 
       - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@v1.16.1
+        uses: actions-rust-lang/setup-rust-toolchain@v1.17.0
         with:
           components: clippy, rustfmt
           # Comma-separated; the action makes the LAST entry the default
