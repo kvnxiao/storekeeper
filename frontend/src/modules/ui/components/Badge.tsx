@@ -1,4 +1,4 @@
-import type React from "react";
+import { type JSX, type ParentComponent, splitProps } from "solid-js";
 import { tv, type VariantProps } from "tailwind-variants";
 
 // Catalyst-style badge with hover states
@@ -25,8 +25,9 @@ const badgeStyle = tv({
 
 type BadgeStyleProps = VariantProps<typeof badgeStyle>;
 
-export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement>, BadgeStyleProps {}
+export interface BadgeProps extends JSX.HTMLAttributes<HTMLSpanElement>, BadgeStyleProps {}
 
-export const Badge: React.FC<BadgeProps> = ({ variant, className, ...props }) => {
-  return <span className={badgeStyle({ variant, className })} {...props} />;
+export const Badge: ParentComponent<BadgeProps> = (props) => {
+  const [local, rest] = splitProps(props, ["variant", "class"]);
+  return <span class={badgeStyle({ variant: local.variant, class: local.class })} {...rest} />;
 };

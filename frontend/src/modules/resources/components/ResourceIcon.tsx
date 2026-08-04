@@ -1,4 +1,4 @@
-import type React from "react";
+import { Show, type VoidComponent } from "solid-js";
 import { tv, type VariantProps } from "tailwind-variants";
 import { IconPlaceholder } from "@/modules/ui/components/IconPlaceholder";
 
@@ -19,13 +19,19 @@ type ResourceIconStyleProps = VariantProps<typeof resourceIconStyle>;
 
 export interface ResourceIconProps extends ResourceIconStyleProps {
   src?: string;
-  className?: string;
+  class?: string;
 }
 
-export const ResourceIcon: React.FC<ResourceIconProps> = ({ src, size, className }) => {
-  if (!src) {
-    return <IconPlaceholder size={size} className={className} />;
-  }
-
-  return <img src={src} alt="" className={resourceIconStyle({ size, className })} />;
+export const ResourceIcon: VoidComponent<ResourceIconProps> = (props) => {
+  return (
+    <Show when={props.src} fallback={<IconPlaceholder size={props.size} class={props.class} />}>
+      {(src) => (
+        <img
+          src={src()}
+          alt=""
+          class={resourceIconStyle({ size: props.size, class: props.class })}
+        />
+      )}
+    </Show>
+  );
 };

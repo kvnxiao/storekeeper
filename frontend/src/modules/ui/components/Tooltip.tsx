@@ -1,40 +1,35 @@
-import {
-  Tooltip as AriaTooltip,
-  type TooltipProps as AriaTooltipProps,
-  composeRenderProps,
-  OverlayArrow,
-} from "react-aria-components";
+import * as TooltipPrimitive from "@kobalte/core/tooltip";
+import type { JSX, ParentComponent } from "solid-js";
 import { tv } from "tailwind-variants";
 
 const tooltipStyle = tv({
-  base: "group rounded bg-zinc-100 px-2 py-1 text-xs text-zinc-900 shadow-md ring-1 ring-zinc-300 dark:bg-zinc-800 dark:text-white dark:ring-zinc-600",
+  base: "z-50 rounded bg-zinc-100 px-2 py-1 text-xs text-zinc-900 shadow-md ring-1 ring-zinc-300 dark:bg-zinc-800 dark:text-white dark:ring-zinc-600",
 });
 
-export interface TooltipProps extends AriaTooltipProps {}
+export interface TooltipProps {
+  /** Tooltip bubble content; `children` is the trigger content. */
+  content: JSX.Element;
+  placement?: "top" | "bottom" | "left" | "right";
+  openDelay?: number;
+  triggerClass?: string;
+}
 
-export const Tooltip: React.FC<TooltipProps> = ({ className, ...props }) => {
+export const Tooltip: ParentComponent<TooltipProps> = (props) => {
   return (
-    <AriaTooltip
-      offset={8}
-      {...props}
-      className={composeRenderProps(className, (className) => tooltipStyle({ className }))}
+    <TooltipPrimitive.Root
+      placement={props.placement ?? "top"}
+      openDelay={props.openDelay ?? 300}
+      gutter={8}
     >
-      {composeRenderProps(props.children, (children) => (
-        <>
-          <OverlayArrow>
-            <svg
-              aria-hidden="true"
-              width={8}
-              height={8}
-              viewBox="0 0 8 8"
-              className="block fill-zinc-100 stroke-zinc-100 dark:fill-zinc-800 dark:stroke-zinc-800 group-placement-bottom:rotate-180 group-placement-left:-rotate-90 group-placement-right:rotate-90"
-            >
-              <path d="M0 0 L4 4 L8 0" />
-            </svg>
-          </OverlayArrow>
-          {children}
-        </>
-      ))}
-    </AriaTooltip>
+      <TooltipPrimitive.Trigger class={props.triggerClass}>
+        {props.children}
+      </TooltipPrimitive.Trigger>
+      <TooltipPrimitive.Portal>
+        <TooltipPrimitive.Content class={tooltipStyle()}>
+          <TooltipPrimitive.Arrow />
+          {props.content}
+        </TooltipPrimitive.Content>
+      </TooltipPrimitive.Portal>
+    </TooltipPrimitive.Root>
   );
 };

@@ -1,17 +1,7 @@
-import { CheckIcon, ChevronDownIcon } from "@heroicons/react/16/solid";
-import type React from "react";
-import {
-  Select as AriaSelect,
-  type SelectProps as AriaSelectProps,
-  SelectValue as AriaSelectValue,
-  Button,
-  composeRenderProps,
-  Label,
-  ListBox,
-  ListBoxItem,
-  type ListBoxItemProps,
-  Popover,
-} from "react-aria-components";
+import * as SelectPrimitive from "@kobalte/core/select";
+import Check from "lucide-solid/icons/check";
+import ChevronDown from "lucide-solid/icons/chevron-down";
+import { Show, type VoidComponent } from "solid-js";
 import { tv } from "tailwind-variants";
 import { cn } from "@/modules/ui/ui.styles";
 
@@ -27,105 +17,93 @@ const selectTriggerStyle = tv({
     "bg-white dark:bg-zinc-800/50",
     "shadow-sm",
     "ring-1 ring-zinc-950/10 dark:ring-white/10",
-    "transition-colors placeholder:text-muted-foreground",
+    "transition-colors",
     "disabled:cursor-not-allowed disabled:opacity-50",
     "outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
   ],
 });
 
-// Select popover - Catalyst-style with backdrop blur and proper transitions
+// Select popover - Catalyst-style with backdrop blur
 const selectPopoverStyle = tv({
   base: [
-    "w-[var(--trigger-width)] overflow-hidden rounded-xl p-1",
+    "w-(--kb-popper-anchor-width) overflow-hidden rounded-xl p-1",
     // Catalyst-style frosted glass
     "bg-white/75 backdrop-blur-xl dark:bg-zinc-800/75",
     // Shadows and ring
     "shadow-lg ring-1 ring-zinc-950/10 dark:ring-white/10",
-    // Transitions with proper duration for exit
-    "transition duration-100 ease-out",
-    "entering:animate-in entering:fade-in-0 entering:zoom-in-95",
-    "exiting:animate-out exiting:fade-out-0 exiting:zoom-out-95 exiting:duration-100 exiting:ease-in",
+    // Entry animation
+    "data-[expanded]:animate-[fade-in_100ms_ease-out]",
   ],
 });
 
-// Select list box
-const selectListBoxStyle = tv({
-  base: "outline-none",
-});
-
-// Select item - Catalyst-style with blue focus
+// Select item - Catalyst-style with blue highlight
 const selectItemStyle = tv({
   base: [
     "group flex w-full cursor-default select-none items-center gap-x-1.5 rounded-lg px-2 py-1.5 text-sm outline-none",
     "text-zinc-950 dark:text-white",
-    // Hover/focus state - blue background like Catalyst
-    "hover:bg-blue-500 hover:text-white",
-    "focus:bg-blue-500 focus:text-white",
-    "disabled:pointer-events-none disabled:opacity-50",
+    "data-[highlighted]:bg-blue-500 data-[highlighted]:text-white",
+    "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
   ],
 });
 
-export interface SelectProps<T extends object> extends Omit<AriaSelectProps<T>, "children"> {
-  className?: string;
+export interface SelectOption {
+  id: string;
+  label: string;
+}
+
+export interface SelectProps {
+  class?: string;
   label?: string;
   placeholder?: string;
-  children: React.ReactNode;
+  value: string;
+  onChange: (value: string) => void;
+  options: SelectOption[];
 }
 
-export const Select = <T extends object>({
-  className,
-  label,
-  placeholder,
-  children,
-  ...props
-}: SelectProps<T>): React.ReactElement => {
+export const Select: VoidComponent<SelectProps> = (props) => {
   return (
-    <AriaSelect {...props} className={cn("flex flex-col gap-1", className)}>
-      {label && <Label className={labelStyle()}>{label}</Label>}
-      <Button className={selectTriggerStyle()}>
-        <AriaSelectValue className="flex-1 truncate text-left placeholder:text-muted-foreground">
-          {({ selectedText, defaultChildren, isPlaceholder }) =>
-            isPlaceholder ? (
-              <span className="text-muted-foreground">{placeholder}</span>
-            ) : (
-              selectedText || defaultChildren
-            )
-          }
-        </AriaSelectValue>
-        <ChevronDownIcon className="size-4 text-zinc-500 dark:text-zinc-400" aria-hidden="true" />
-      </Button>
-      <Popover className={selectPopoverStyle()}>
-        <ListBox className={selectListBoxStyle()}>{children}</ListBox>
-      </Popover>
-    </AriaSelect>
-  );
-};
-
-export interface SelectItemProps extends ListBoxItemProps {
-  className?: string;
-}
-
-export const SelectItem: React.FC<SelectItemProps> = ({ className, children, ...props }) => {
-  const textValue = props.textValue || (typeof children === "string" ? children : undefined);
-  return (
-    <ListBoxItem
-      {...props}
-      textValue={textValue}
-      className={composeRenderProps(className, (cn) => selectItemStyle({ className: cn }))}
-    >
-      {composeRenderProps(children, (children, { isSelected }) => (
-        <>
-          <span className="flex size-4 items-center justify-center">
-            {isSelected && (
-              <CheckIcon
-                className="size-4 text-blue-500 group-hover:text-white group-focus:text-white"
+    <SelectPrimitive.Root<SelectOption>
+      options={props.options}
+      optionValue="id"
+      optionTextValue="label"
+      value={props.options.find((option) => option.id === props.value) ?? null}
+      onChange={(option) => {
+        if (option) {
+          props.onChange(option.id);
+        }
+      }}
+      placeholder={<span class="text-muted-foreground">{props.placeholder}</span>}
+      itemComponent={(itemProps) => (
+        <SelectPrimitive.Item item={itemProps.item} class={selectItemStyle()}>
+          <span class="flex size-4 items-center justify-center">
+            <SelectPrimitive.ItemIndicator>
+              <Check
                 aria-hidden="true"
+                class="size-4 text-blue-500 group-data-[highlighted]:text-white"
               />
-            )}
+            </SelectPrimitive.ItemIndicator>
           </span>
-          {children}
-        </>
-      ))}
-    </ListBoxItem>
+          <SelectPrimitive.ItemLabel>{itemProps.item.rawValue.label}</SelectPrimitive.ItemLabel>
+        </SelectPrimitive.Item>
+      )}
+      class={cn("flex flex-col gap-1", props.class)}
+    >
+      <Show when={props.label}>
+        <SelectPrimitive.Label class={labelStyle()}>{props.label}</SelectPrimitive.Label>
+      </Show>
+      <SelectPrimitive.Trigger class={selectTriggerStyle()}>
+        <SelectPrimitive.Value<SelectOption> class="flex-1 truncate text-left">
+          {(state) => state.selectedOption().label}
+        </SelectPrimitive.Value>
+        <SelectPrimitive.Icon>
+          <ChevronDown aria-hidden="true" class="size-4 text-zinc-500 dark:text-zinc-400" />
+        </SelectPrimitive.Icon>
+      </SelectPrimitive.Trigger>
+      <SelectPrimitive.Portal>
+        <SelectPrimitive.Content class={selectPopoverStyle()}>
+          <SelectPrimitive.Listbox class="outline-none" />
+        </SelectPrimitive.Content>
+      </SelectPrimitive.Portal>
+    </SelectPrimitive.Root>
   );
 };

@@ -1,47 +1,45 @@
-import { ArrowPathIcon, Cog6ToothIcon } from "@heroicons/react/24/outline";
-import { createFileRoute } from "@tanstack/react-router";
-import { useAtomValue } from "jotai";
-import { AnimatePresence, motion } from "motion/react";
-import { atoms } from "@/modules/atoms";
+import { useMutation, useQuery } from "@tanstack/solid-query";
+import { createFileRoute } from "@tanstack/solid-router";
+import RefreshCw from "lucide-solid/icons/refresh-cw";
+import Settings from "lucide-solid/icons/settings";
+import { createMemo, Show, type VoidComponent } from "solid-js";
 import { GameId } from "@/modules/games/games.types";
 import { GenshinSection } from "@/modules/games/genshin/components/GenshinSection";
 import { HsrSection } from "@/modules/games/hsr/components/HsrSection";
 import { WuwaSection } from "@/modules/games/wuwa/components/WuwaSection";
 import { ZzzSection } from "@/modules/games/zzz/components/ZzzSection";
+import {
+  refreshResourcesMutationOptions,
+  resourcesQueryOptions,
+} from "@/modules/resources/resources.query";
+import { configQueryOptions } from "@/modules/settings/settings.query";
+import { enabledGamesFromConfig } from "@/modules/settings/settings.utils";
 import { Button } from "@/modules/ui/components/Button";
 import { ButtonLink } from "@/modules/ui/components/ButtonLink";
 import { cn } from "@/modules/ui/ui.styles";
 import * as m from "@/paraglide/messages";
 
-const DashboardPage: React.FC = () => {
-  const { error } = useAtomValue(atoms.core.resourcesQuery);
-  const { isPending, mutate: refresh } = useAtomValue(atoms.core.refreshResources);
-  const isConfigLoading = useAtomValue(atoms.core.isConfigLoading);
-  const enabledGames = useAtomValue(atoms.core.enabledGames);
+const DashboardPage: VoidComponent = () => {
+  const resourcesQuery = useQuery(() => resourcesQueryOptions());
+  const configQuery = useQuery(() => configQueryOptions());
+  const refresh = useMutation(() => refreshResourcesMutationOptions());
 
-  // Subscribe to backend resource updates
-  useAtomValue(atoms.core.resourcesEventListener);
-  // Subscribe to daily reward claim status
-  useAtomValue(atoms.core.dailyClaimStatus);
-  // Sync Paraglide locale from backend config on startup
-  useAtomValue(atoms.core.localeSync);
-
-  const hasAnyGames = enabledGames.size > 0;
+  const enabledGames = createMemo(() => enabledGamesFromConfig(configQuery.data));
 
   return (
-    <div className="mx-auto min-h-screen max-w-sm p-3">
-      <header className="mb-3 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-zinc-950 dark:text-white">{m.app_title()}</h1>
-        <div className="flex items-center gap-1">
+    <div class="mx-auto min-h-screen max-w-sm p-3">
+      <header class="mb-3 flex items-center justify-between">
+        <h1 class="text-lg font-bold text-zinc-950 dark:text-white">{m.app_title()}</h1>
+        <div class="flex items-center gap-1">
           <Button
             variant="plain"
             aria-label={m.dashboard_refresh_resources()}
-            isDisabled={isPending}
-            onPress={() => refresh()}
+            disabled={refresh.isPending}
+            onClick={() => refresh.mutate()}
           >
-            <ArrowPathIcon
+            <RefreshCw
               aria-hidden="true"
-              className={cn("size-5", isPending && "animate-spin")}
+              class={cn("size-5", refresh.isPending && "animate-spin")}
             />
           </Button>
           <ButtonLink
@@ -52,46 +50,46 @@ const DashboardPage: React.FC = () => {
               document.documentElement.dataset.viewTransitionDirection = "forward";
             }}
           >
-            <Cog6ToothIcon aria-hidden="true" className="size-5" />
+            <Settings aria-hidden="true" class="size-5" />
           </ButtonLink>
         </div>
       </header>
 
-      {error && (
-        <div className="mb-3 rounded-lg bg-red-500/15 p-3 text-red-700 ring-1 ring-red-500/20 dark:text-red-400">
-          {String(error)}
-        </div>
-      )}
+      <Show when={resourcesQuery.error}>
+        {(error) => (
+          <div class="mb-3 rounded-lg bg-red-500/15 p-3 text-red-700 ring-1 ring-red-500/20 dark:text-red-400">
+            {String(error())}
+          </div>
+        )}
+      </Show>
 
-      <main className="space-y-2">
-        <AnimatePresence>
-          {!isConfigLoading &&
-            (hasAnyGames ? (
-              <motion.div
-                key="sections"
-                className="space-y-2"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.2 }}
-              >
-                {enabledGames.has(GameId.GenshinImpact) && <GenshinSection />}
-                {enabledGames.has(GameId.HonkaiStarRail) && <HsrSection />}
-                {enabledGames.has(GameId.ZenlessZoneZero) && <ZzzSection />}
-                {enabledGames.has(GameId.WutheringWaves) && <WuwaSection />}
-              </motion.div>
-            ) : (
-              <motion.div
-                key="empty"
-                className="py-8 text-center text-zinc-500 dark:text-zinc-400"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.2 }}
-              >
-                <p className="mb-2">{m.dashboard_no_games()}</p>
-                <p className="text-sm">{m.dashboard_no_games_hint()}</p>
-              </motion.div>
-            ))}
-        </AnimatePresence>
+      <main class="space-y-2">
+        <Show when={!configQuery.isPending}>
+          <Show
+            when={enabledGames().size > 0}
+            fallback={
+              <div class="animate-fade-in py-8 text-center text-zinc-500 dark:text-zinc-400">
+                <p class="mb-2">{m.dashboard_no_games()}</p>
+                <p class="text-sm">{m.dashboard_no_games_hint()}</p>
+              </div>
+            }
+          >
+            <div class="animate-fade-in space-y-2">
+              <Show when={enabledGames().has(GameId.GenshinImpact)}>
+                <GenshinSection />
+              </Show>
+              <Show when={enabledGames().has(GameId.HonkaiStarRail)}>
+                <HsrSection />
+              </Show>
+              <Show when={enabledGames().has(GameId.ZenlessZoneZero)}>
+                <ZzzSection />
+              </Show>
+              <Show when={enabledGames().has(GameId.WutheringWaves)}>
+                <WuwaSection />
+              </Show>
+            </div>
+          </Show>
+        </Show>
       </main>
     </div>
   );

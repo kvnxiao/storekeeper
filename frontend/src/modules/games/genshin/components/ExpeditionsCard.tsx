@@ -1,28 +1,28 @@
-import { useAtomValue } from "jotai";
-import { atoms } from "@/modules/atoms";
+import type { VoidComponent } from "solid-js";
+import { core } from "@/modules/core/core.state";
 import { GenshinResource, getResourceDisplayName } from "@/modules/games/games.constants";
+import { createGenshinResources } from "@/modules/games/genshin/genshin.primitives";
 import { CooldownCard } from "@/modules/resources/components/CooldownCard";
 
 const RESOURCE_ICON = "/icons/game/genshin/Expeditions.webp";
 
-export const ExpeditionsCard: React.FC = () => {
-  const expeditionsData = useAtomValue(atoms.games.genshin.expeditions);
-  const allDone = useAtomValue(atoms.games.genshin.expeditionsReady);
-  const expeditionsTime = useAtomValue(atoms.games.genshin.expeditionsTime);
-  const isRefreshing = useAtomValue(atoms.core.isRefreshing);
-  const resourceName = getResourceDisplayName(GenshinResource.Expeditions);
+export const ExpeditionsCard: VoidComponent = () => {
+  const genshin = createGenshinResources();
 
-  const data = expeditionsData
-    ? { isReady: allDone, readyAt: expeditionsData.earliestFinishAt }
-    : undefined;
+  const data = () => {
+    const expeditions = genshin.expeditions();
+    return expeditions
+      ? { isReady: genshin.expeditionsReady(), readyAt: expeditions.earliestFinishAt }
+      : undefined;
+  };
 
   return (
     <CooldownCard
       iconPath={RESOURCE_ICON}
-      name={resourceName}
-      data={data}
-      formattedTime={expeditionsTime}
-      isRefreshing={isRefreshing}
+      name={getResourceDisplayName(GenshinResource.Expeditions)}
+      data={data()}
+      formattedTime={genshin.expeditionsTime()}
+      isRefreshing={core.isRefreshing()}
     />
   );
 };

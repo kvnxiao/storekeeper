@@ -1,15 +1,8 @@
-import { EyeIcon, EyeSlashIcon } from "@heroicons/react/20/solid";
-import { useState } from "react";
-import {
-  Button as AriaButton,
-  TextField as AriaTextField,
-  type TextFieldProps as AriaTextFieldProps,
-  composeRenderProps,
-  Input,
-  Label,
-  Text,
-} from "react-aria-components";
-import { tv, type VariantProps } from "tailwind-variants";
+import * as TextFieldPrimitive from "@kobalte/core/text-field";
+import Eye from "lucide-solid/icons/eye";
+import EyeOff from "lucide-solid/icons/eye-off";
+import { createSignal, Show, type VoidComponent } from "solid-js";
+import { tv } from "tailwind-variants";
 import * as m from "@/paraglide/messages";
 
 const fieldStyle = tv({
@@ -32,7 +25,7 @@ const inputStyle = tv({
     "outline-none focus-visible:ring-2 focus-visible:ring-ring",
     "disabled:bg-zinc-100 disabled:text-zinc-400 disabled:ring-zinc-950/5",
     "dark:disabled:bg-zinc-900 dark:disabled:text-zinc-500",
-    "invalid:ring-red-500",
+    "data-[invalid]:ring-red-500",
     // Hide native password reveal (WebView2/Edge)
     "[&::-ms-reveal]:hidden",
   ],
@@ -47,59 +40,53 @@ const inputStyle = tv({
   },
 });
 
-type FieldStyleProps = VariantProps<typeof fieldStyle>;
-type InputStyleProps = VariantProps<typeof inputStyle>;
-
-export interface TextFieldProps
-  extends Omit<AriaTextFieldProps, "type">, FieldStyleProps, InputStyleProps {
+export interface TextFieldProps {
   label?: string;
   description?: string;
   placeholder?: string;
-  className?: string;
+  type?: "text" | "password";
+  class?: string;
+  value: string;
+  onChange: (value: string) => void;
 }
 
-export const TextField: React.FC<TextFieldProps> = ({
-  label,
-  description,
-  placeholder,
-  type = "text",
-  className,
-  ...props
-}) => {
-  const [revealed, setRevealed] = useState(false);
-  const isPassword = type === "password";
+export const TextField: VoidComponent<TextFieldProps> = (props) => {
+  const [revealed, setRevealed] = createSignal(false);
+  const isPassword = () => props.type === "password";
 
   return (
-    <AriaTextField
-      {...props}
-      className={composeRenderProps(className, (cn) => fieldStyle({ className: cn }))}
+    <TextFieldPrimitive.Root
+      value={props.value}
+      onChange={(value) => props.onChange(value)}
+      class={fieldStyle({ class: props.class })}
     >
-      {label && <Label className={labelStyle()}>{label}</Label>}
-      <div className="relative">
-        <Input
-          type={isPassword && revealed ? "text" : type}
-          placeholder={placeholder}
-          className={inputStyle({ type })}
+      <Show when={props.label}>
+        <TextFieldPrimitive.Label class={labelStyle()}>{props.label}</TextFieldPrimitive.Label>
+      </Show>
+      <div class="relative">
+        <TextFieldPrimitive.Input
+          type={isPassword() && !revealed() ? "password" : "text"}
+          placeholder={props.placeholder}
+          class={inputStyle({ type: isPassword() ? "password" : "text" })}
         />
-        {isPassword && (
-          <AriaButton
-            aria-label={revealed ? m.textfield_hide_password() : m.textfield_show_password()}
-            onPress={() => setRevealed((v) => !v)}
-            className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300"
+        <Show when={isPassword()}>
+          <button
+            type="button"
+            aria-label={revealed() ? m.textfield_hide_password() : m.textfield_show_password()}
+            onClick={() => setRevealed((v) => !v)}
+            class="absolute inset-y-0 right-0 flex items-center pr-2.5 text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300"
           >
-            {revealed ? (
-              <EyeSlashIcon aria-hidden="true" className="size-4" />
-            ) : (
-              <EyeIcon aria-hidden="true" className="size-4" />
-            )}
-          </AriaButton>
-        )}
+            <Show when={revealed()} fallback={<Eye aria-hidden="true" class="size-4" />}>
+              <EyeOff aria-hidden="true" class="size-4" />
+            </Show>
+          </button>
+        </Show>
       </div>
-      {description && (
-        <Text slot="description" className={descriptionStyle()}>
-          {description}
-        </Text>
-      )}
-    </AriaTextField>
+      <Show when={props.description}>
+        <TextFieldPrimitive.Description class={descriptionStyle()}>
+          {props.description}
+        </TextFieldPrimitive.Description>
+      </Show>
+    </TextFieldPrimitive.Root>
   );
 };

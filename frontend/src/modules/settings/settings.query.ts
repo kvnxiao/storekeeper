@@ -1,4 +1,4 @@
-import { mutationOptions, queryOptions } from "@tanstack/react-query";
+import { queryOptions } from "@tanstack/solid-query";
 import { invoke } from "@tauri-apps/api/core";
 import type { AppConfig, SaveResult, SecretsConfig } from "@/modules/settings/settings.types";
 
@@ -20,11 +20,10 @@ export function secretsQueryOptions() {
   });
 }
 
-/** Mutation options for saving config + secrets and applying changes in one call */
-export function saveAndApplyMutationOptions() {
-  return mutationOptions({
-    mutationKey: ["save-and-apply"],
-    mutationFn: async (params: { config: AppConfig; secrets: SecretsConfig }) =>
-      invoke<SaveResult>("save_and_apply", params),
-  });
+/** Saves config + secrets and applies changes in a single IPC call */
+export async function saveAndApply(params: {
+  config: AppConfig;
+  secrets: SecretsConfig;
+}): Promise<SaveResult> {
+  return invoke<SaveResult>("save_and_apply", params);
 }

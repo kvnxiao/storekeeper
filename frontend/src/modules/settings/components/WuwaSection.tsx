@@ -1,3 +1,4 @@
+import { Show, type VoidComponent } from "solid-js";
 import { WuwaResource } from "@/modules/games/games.constants";
 import { GameId } from "@/modules/games/games.types";
 import type { ResourceLimits } from "@/modules/settings/components/NotificationResourceRow";
@@ -10,60 +11,58 @@ import * as m from "@/paraglide/messages";
 
 const RESOURCE_TYPES = [WuwaResource.Waveplates] as const;
 
-interface WuwaSectionProps {
+export interface WuwaSectionProps {
   config: WuwaConfig | undefined;
   resourceLimits?: Partial<Record<string, ResourceLimits>>;
   onChange: (config: WuwaConfig) => void;
 }
 
-export const WuwaSection: React.FC<WuwaSectionProps> = ({ config, resourceLimits, onChange }) => {
-  const enabled = config?.enabled ?? false;
-  const uid = config?.uid ?? "";
+export const WuwaSection: VoidComponent<WuwaSectionProps> = (props) => {
+  const enabled = () => props.config?.enabled ?? false;
+  const uid = () => props.config?.uid ?? "";
 
   return (
     <Section title={m.game_wuwa_name()} description={m.settings_game_configure_wuwa()}>
       <Switch
-        isSelected={enabled}
-        onChange={(isSelected) =>
-          onChange({
-            ...config,
-            enabled: isSelected,
-            uid,
+        checked={enabled()}
+        onChange={(checked) =>
+          props.onChange({
+            ...props.config,
+            enabled: checked,
+            uid: uid(),
           })
         }
       >
         {m.settings_wuwa_enable_tracking()}
       </Switch>
-      {enabled && (
-        <>
-          <TextField
-            label={m.settings_game_uid()}
-            value={uid}
-            onChange={(value) =>
-              onChange({
-                ...config,
-                enabled,
-                uid: value,
-              })
-            }
-            placeholder={m.settings_game_uid_placeholder()}
-          />
-          <NotificationSection
-            gameId={GameId.WutheringWaves}
-            resourceTypes={RESOURCE_TYPES}
-            notifications={config?.notifications}
-            resourceLimits={resourceLimits}
-            onChange={(notifications) =>
-              onChange({
-                ...config,
-                enabled,
-                uid,
-                notifications,
-              })
-            }
-          />
-        </>
-      )}
+      <Show when={enabled()}>
+        <TextField
+          label={m.settings_game_uid()}
+          value={uid()}
+          onChange={(value) =>
+            props.onChange({
+              ...props.config,
+              enabled: enabled(),
+              uid: value,
+            })
+          }
+          placeholder={m.settings_game_uid_placeholder()}
+        />
+        <NotificationSection
+          gameId={GameId.WutheringWaves}
+          resourceTypes={RESOURCE_TYPES}
+          notifications={props.config?.notifications}
+          resourceLimits={props.resourceLimits}
+          onChange={(notifications) =>
+            props.onChange({
+              ...props.config,
+              enabled: enabled(),
+              uid: uid(),
+              notifications,
+            })
+          }
+        />
+      </Show>
     </Section>
   );
 };

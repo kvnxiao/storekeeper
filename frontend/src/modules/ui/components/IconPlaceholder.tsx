@@ -1,4 +1,4 @@
-import type React from "react";
+import { type JSX, splitProps, type VoidComponent } from "solid-js";
 import { tv, type VariantProps } from "tailwind-variants";
 
 const iconPlaceholderStyle = tv({
@@ -17,8 +17,9 @@ const iconPlaceholderStyle = tv({
 type IconPlaceholderStyleProps = VariantProps<typeof iconPlaceholderStyle>;
 
 export interface IconPlaceholderProps
-  extends React.HTMLAttributes<HTMLDivElement>, IconPlaceholderStyleProps {}
+  extends JSX.HTMLAttributes<HTMLDivElement>, IconPlaceholderStyleProps {}
 
-export const IconPlaceholder: React.FC<IconPlaceholderProps> = ({ size, className, ...props }) => {
-  return <div className={iconPlaceholderStyle({ size, className })} {...props} />;
+export const IconPlaceholder: VoidComponent<IconPlaceholderProps> = (props) => {
+  const [local, rest] = splitProps(props, ["size", "class"]);
+  return <div class={iconPlaceholderStyle({ size: local.size, class: local.class })} {...rest} />;
 };

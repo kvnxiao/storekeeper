@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@plugin "tailwindcss-react-aria-components";
 @import "@fontsource-variable/inter";
 @import "@fontsource-variable/geist-mono";
 
@@ -250,4 +249,47 @@ body {
   to {
     mask-position: 0 0;
   }
+}
+
+/* =============================================================================
+   Component Animations
+   ============================================================================= */
+
+/* Kobalte collapsible expand/collapse */
+@keyframes collapsible-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--kb-collapsible-content-height);
+  }
+}
+
+@keyframes collapsible-up {
+  from {
+    height: var(--kb-collapsible-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+
+/* Card entrance */
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@utility animate-card-in {
+  animation: card-in 150ms ease-out both;
+}
+
+@utility animate-fade-in {
+  animation: fade-in 0.2s ease-out both;
 }

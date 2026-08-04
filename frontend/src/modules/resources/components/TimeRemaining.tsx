@@ -1,15 +1,7 @@
-import { Button, TooltipTrigger } from "react-aria-components";
+import { Show, type VoidComponent } from "solid-js";
 import { tv } from "tailwind-variants";
 import { Tooltip } from "@/modules/ui/components/Tooltip";
 import { cn } from "@/modules/ui/ui.styles";
-
-interface TimeRemainingProps {
-  relativeTime: string;
-  absoluteTime: string | null;
-  className?: string;
-  /** Skip background styling (use when nested inside Badge) */
-  plain?: boolean;
-}
 
 const interactiveStyle = tv({
   base: [
@@ -18,20 +10,26 @@ const interactiveStyle = tv({
   ],
 });
 
-export const TimeRemaining: React.FC<TimeRemainingProps> = ({
-  relativeTime,
-  absoluteTime,
-  className,
-  plain = false,
-}) => {
-  if (!absoluteTime) {
-    return <time className={className}>{relativeTime}</time>;
-  }
+export interface TimeRemainingProps {
+  relativeTime: string;
+  absoluteTime: string | null;
+  class?: string;
+  /** Skip background styling (use when nested inside Badge) */
+  plain?: boolean;
+}
 
+export const TimeRemaining: VoidComponent<TimeRemainingProps> = (props) => {
   return (
-    <TooltipTrigger delay={300}>
-      <Button className={cn(!plain && interactiveStyle(), className)}>{relativeTime}</Button>
-      <Tooltip>{absoluteTime}</Tooltip>
-    </TooltipTrigger>
+    <Show
+      when={props.absoluteTime}
+      fallback={<time class={props.class}>{props.relativeTime}</time>}
+    >
+      <Tooltip
+        content={props.absoluteTime}
+        triggerClass={cn(!props.plain && interactiveStyle(), props.class)}
+      >
+        {props.relativeTime}
+      </Tooltip>
+    </Show>
   );
 };

@@ -1,28 +1,43 @@
 import { invoke } from "@tauri-apps/api/core";
+import type { VoidComponent } from "solid-js";
 import { LOCALE_ENDONYMS } from "@/modules/i18n/locale-names";
 import { Section } from "@/modules/settings/components/Section";
 import type { GeneralConfig } from "@/modules/settings/settings.types";
 import { Button } from "@/modules/ui/components/Button";
 import { NumberField } from "@/modules/ui/components/NumberField";
-import { Select, SelectItem } from "@/modules/ui/components/Select";
+import { Select } from "@/modules/ui/components/Select";
 import { Switch } from "@/modules/ui/components/Switch";
 import * as m from "@/paraglide/messages";
 
-interface GeneralSectionProps {
+export interface GeneralSectionProps {
   config: GeneralConfig;
   onChange: (config: GeneralConfig) => void;
 }
 
-export const GeneralSection: React.FC<GeneralSectionProps> = ({ config, onChange }) => {
+// Evaluated at call time so labels follow the active locale
+const languageOptions = () => [
+  { id: "auto", label: m.settings_general_language_system_default() },
+  ...Object.entries(LOCALE_ENDONYMS).map(([code, name]) => ({ id: code, label: name })),
+];
+
+const logLevelOptions = () => [
+  { id: "error", label: m.settings_general_log_error() },
+  { id: "warn", label: m.settings_general_log_warning() },
+  { id: "info", label: m.settings_general_log_info() },
+  { id: "debug", label: m.settings_general_log_debug() },
+  { id: "trace", label: m.settings_general_log_trace() },
+];
+
+export const GeneralSection: VoidComponent<GeneralSectionProps> = (props) => {
   return (
     <Section title={m.settings_general_title()} description={m.settings_general_description()}>
       <NumberField
         label={m.settings_general_poll_interval()}
         description={m.settings_general_poll_description()}
-        value={config.poll_interval_secs}
+        value={props.config.poll_interval_secs}
         onChange={(value) =>
-          onChange({
-            ...config,
+          props.onChange({
+            ...props.config,
             poll_interval_secs: value,
           })
         }
@@ -31,22 +46,22 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({ config, onChange
         step={60}
       />
       <Switch
-        isSelected={config.start_minimized}
-        onChange={(isSelected) =>
-          onChange({
-            ...config,
-            start_minimized: isSelected,
+        checked={props.config.start_minimized}
+        onChange={(checked) =>
+          props.onChange({
+            ...props.config,
+            start_minimized: checked,
           })
         }
       >
         {m.settings_general_start_minimized()}
       </Switch>
       <Switch
-        isSelected={config.autostart}
-        onChange={(isSelected) =>
-          onChange({
-            ...config,
-            autostart: isSelected,
+        checked={props.config.autostart}
+        onChange={(checked) =>
+          props.onChange({
+            ...props.config,
+            autostart: checked,
           })
         }
       >
@@ -54,38 +69,27 @@ export const GeneralSection: React.FC<GeneralSectionProps> = ({ config, onChange
       </Switch>
       <Select
         label={m.settings_general_language()}
-        value={config.language ?? "auto"}
+        value={props.config.language ?? "auto"}
         onChange={(value) =>
-          onChange({
-            ...config,
-            language: value === "auto" ? null : String(value),
+          props.onChange({
+            ...props.config,
+            language: value === "auto" ? null : value,
           })
         }
-      >
-        <SelectItem id="auto">{m.settings_general_language_system_default()}</SelectItem>
-        {Object.entries(LOCALE_ENDONYMS).map(([code, name]) => (
-          <SelectItem key={code} id={code}>
-            {name}
-          </SelectItem>
-        ))}
-      </Select>
+        options={languageOptions()}
+      />
       <Select
         label={m.settings_general_log_level()}
-        value={config.log_level}
+        value={props.config.log_level}
         onChange={(value) =>
-          onChange({
-            ...config,
-            log_level: String(value),
+          props.onChange({
+            ...props.config,
+            log_level: value,
           })
         }
-      >
-        <SelectItem id="error">{m.settings_general_log_error()}</SelectItem>
-        <SelectItem id="warn">{m.settings_general_log_warning()}</SelectItem>
-        <SelectItem id="info">{m.settings_general_log_info()}</SelectItem>
-        <SelectItem id="debug">{m.settings_general_log_debug()}</SelectItem>
-        <SelectItem id="trace">{m.settings_general_log_trace()}</SelectItem>
-      </Select>
-      <Button color="light" onPress={() => void invoke("open_config_folder")}>
+        options={logLevelOptions()}
+      />
+      <Button color="light" onClick={() => void invoke("open_config_folder")}>
         {m.settings_general_open_config()}
       </Button>
     </Section>

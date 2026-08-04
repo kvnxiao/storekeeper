@@ -1,10 +1,6 @@
-import { ArrowPathIcon } from "@heroicons/react/20/solid";
-import type React from "react";
-import {
-  Button as AriaButton,
-  type ButtonProps as AriaButtonProps,
-  composeRenderProps,
-} from "react-aria-components";
+import * as ButtonPrimitive from "@kobalte/core/button";
+import RefreshCw from "lucide-solid/icons/refresh-cw";
+import { type JSX, type ParentComponent, Show, splitProps } from "solid-js";
 import { tv, type VariantProps } from "tailwind-variants";
 
 // Catalyst-style button with layered pseudo-elements
@@ -15,7 +11,7 @@ export const buttonStyle = tv({
     "relative isolate inline-flex items-center justify-center gap-x-2 rounded-lg border text-sm font-semibold",
     // Sizing
     "px-3 py-1.5",
-    // Focus (using React Aria states)
+    // Focus
     "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500",
     // Disabled
     "disabled:opacity-50 disabled:cursor-not-allowed",
@@ -44,19 +40,19 @@ export const buttonStyle = tv({
         // Inner highlight shadow (top edge light bevel)
         "after:shadow-[inset_0_1px_--theme(--color-white/15%)]",
         // Hover overlay
-        "hover:after:bg-(--btn-hover-overlay) pressed:after:bg-(--btn-hover-overlay)",
+        "hover:after:bg-(--btn-hover-overlay) active:after:bg-(--btn-hover-overlay)",
         // Dark mode: `after` expands to cover entire button
         "dark:after:-inset-px dark:after:rounded-lg",
         // Disabled
         "disabled:before:shadow-none disabled:after:shadow-none",
       ],
       outline: [
-        "border-zinc-950/10 text-zinc-950 hover:bg-zinc-950/2.5 pressed:bg-zinc-950/5",
-        "dark:border-white/15 dark:text-white dark:hover:bg-white/5 dark:pressed:bg-white/10",
+        "border-zinc-950/10 text-zinc-950 hover:bg-zinc-950/2.5 active:bg-zinc-950/5",
+        "dark:border-white/15 dark:text-white dark:hover:bg-white/5 dark:active:bg-white/10",
       ],
       plain: [
-        "border-transparent text-zinc-950 hover:bg-zinc-950/10 pressed:bg-zinc-950/15",
-        "dark:text-white dark:hover:bg-white/15 dark:pressed:bg-white/20",
+        "border-transparent text-zinc-950 hover:bg-zinc-950/10 active:bg-zinc-950/15",
+        "dark:text-white dark:hover:bg-white/15 dark:active:bg-white/20",
       ],
     },
     color: {
@@ -90,12 +86,6 @@ export const buttonStyle = tv({
     },
   },
   compoundVariants: [
-    // Only apply color when variant is solid
-    {
-      variant: "solid",
-      color: "dark/zinc",
-      class: "",
-    },
     // Fix pseudo-element border-radius for icon size
     {
       variant: "solid",
@@ -112,38 +102,40 @@ export const buttonStyle = tv({
 
 export type ButtonStyleProps = VariantProps<typeof buttonStyle>;
 
-export interface ButtonProps extends AriaButtonProps, ButtonStyleProps {
-  className?: string;
+export interface ButtonProps extends JSX.ButtonHTMLAttributes<HTMLButtonElement>, ButtonStyleProps {
   isPending?: boolean;
 }
 
-export const Button: React.FC<ButtonProps> = ({
-  variant,
-  color,
-  size,
-  className,
-  children,
-  isPending,
-  isDisabled,
-  ...props
-}) => {
+export const Button: ParentComponent<ButtonProps> = (props) => {
+  const [local, rest] = splitProps(props, [
+    "variant",
+    "color",
+    "size",
+    "class",
+    "children",
+    "isPending",
+    "disabled",
+  ]);
+
   // Only apply color for solid variant
-  const effectiveColor = variant === "solid" || !variant ? color : undefined;
+  const effectiveColor = () =>
+    local.variant === "solid" || !local.variant ? local.color : undefined;
 
   return (
-    <AriaButton
-      {...props}
-      isDisabled={isDisabled || isPending}
-      className={composeRenderProps(className, (cn) =>
-        buttonStyle({ variant, color: effectiveColor, size, className: cn }),
-      )}
+    <ButtonPrimitive.Root
+      {...rest}
+      disabled={local.disabled || local.isPending}
+      class={buttonStyle({
+        variant: local.variant,
+        color: effectiveColor(),
+        size: local.size,
+        class: local.class,
+      })}
     >
-      {composeRenderProps(children, (children) => (
-        <>
-          {isPending && <ArrowPathIcon aria-hidden="true" className="size-4 animate-spin" />}
-          {children}
-        </>
-      ))}
-    </AriaButton>
+      <Show when={local.isPending}>
+        <RefreshCw aria-hidden="true" class="size-4 animate-spin" />
+      </Show>
+      {local.children}
+    </ButtonPrimitive.Root>
   );
 };

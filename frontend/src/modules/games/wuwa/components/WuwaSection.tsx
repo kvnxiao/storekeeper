@@ -1,24 +1,22 @@
-import { useAtomValue } from "jotai";
-import { atoms } from "@/modules/atoms";
+import type { VoidComponent } from "solid-js";
+import { core } from "@/modules/core/core.state";
 import { getResourceDisplayName, WuwaResource } from "@/modules/games/games.constants";
+import { createWuwaResources } from "@/modules/games/wuwa/wuwa.primitives";
 import { StaminaCard } from "@/modules/resources/components/StaminaCard";
 import { GameSection } from "@/modules/ui/components/GameSection";
 import * as m from "@/paraglide/messages";
 
-export const WuwaSection: React.FC = () => {
-  const isRefreshing = useAtomValue(atoms.core.isRefreshing);
-
-  const waveplatesData = useAtomValue(atoms.games.wuwa.waveplates);
-  const waveplatesTime = useAtomValue(atoms.games.wuwa.waveplatesTime);
+export const WuwaSection: VoidComponent = () => {
+  const wuwa = createWuwaResources();
 
   return (
     <GameSection title={m.game_wuwa_name()}>
       <StaminaCard
         iconPath="/icons/game/wuwa/Item_Waveplate.webp"
         name={getResourceDisplayName(WuwaResource.Waveplates)}
-        data={waveplatesData ?? undefined}
-        formattedTime={waveplatesTime}
-        isRefreshing={isRefreshing}
+        data={wuwa.waveplates() ?? undefined}
+        formattedTime={wuwa.waveplatesTime()}
+        isRefreshing={core.isRefreshing()}
       />
     </GameSection>
   );
