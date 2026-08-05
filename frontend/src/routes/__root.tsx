@@ -42,8 +42,10 @@ const RootComponent: Component = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Keyed on locale so the entire route tree remounts on locale change */}
-      <Show when={core.locale()} keyed>
+      {/* Nothing renders until the backend-resolved locale is in, so the first
+          paint is never in the wrong language. Keyed on locale so a later
+          change remounts the tree, since messages are not reactive. */}
+      <Show when={core.localeReady() && core.locale()} keyed>
         <Outlet />
       </Show>
     </QueryClientProvider>

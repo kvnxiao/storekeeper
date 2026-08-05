@@ -8,11 +8,11 @@ import { GenshinSection } from "@/modules/games/genshin/components/GenshinSectio
 import { HsrSection } from "@/modules/games/hsr/components/HsrSection";
 import { WuwaSection } from "@/modules/games/wuwa/components/WuwaSection";
 import { ZzzSection } from "@/modules/games/zzz/components/ZzzSection";
-import { createIsRefreshing } from "@/modules/resources/resources.primitives";
 import {
   refreshResourcesMutationOptions,
   resourcesQueryOptions,
 } from "@/modules/resources/resources.query";
+import { resourcesState } from "@/modules/resources/resources.state";
 import { configQueryOptions } from "@/modules/settings/settings.query";
 import { enabledGamesFromConfig } from "@/modules/settings/settings.utils";
 import { Button } from "@/modules/ui/components/Button";
@@ -27,7 +27,6 @@ const DashboardPage: VoidComponent = () => {
   const resourcesQuery = useQuery(() => resourcesQueryOptions());
   const configQuery = useQuery(() => configQueryOptions());
   const refresh = useMutation(() => refreshResourcesMutationOptions(queryClient));
-  const isRefreshing = createIsRefreshing();
 
   const enabledGames = createMemo(() => enabledGamesFromConfig(configQuery.data));
 
@@ -39,12 +38,12 @@ const DashboardPage: VoidComponent = () => {
           <Button
             variant="plain"
             aria-label={m.dashboard_refresh_resources()}
-            disabled={isRefreshing()}
+            disabled={resourcesState.isRefreshing()}
             onClick={() => refresh.mutate()}
           >
             <RefreshClockwise
               aria-hidden="true"
-              class={cn("size-5", isRefreshing() && "animate-spin")}
+              class={cn("size-5", resourcesState.isRefreshing() && "animate-spin")}
             />
           </Button>
           <ButtonLink

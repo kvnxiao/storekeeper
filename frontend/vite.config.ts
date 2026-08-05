@@ -58,8 +58,6 @@ export default defineConfig({
     },
   },
 
-  // Oxlint: mirrors the former biome.json ruleset, plus type-aware rules
-  // (tsgolint) and a layer of high-value extras with no Biome analog.
   lint: {
     plugins: ["import", "typescript", "unicorn", "jsx-a11y"],
     categories: {
@@ -67,12 +65,11 @@ export default defineConfig({
       suspicious: "error",
     },
     options: {
-      // type-aware rules below + full type-check (replaces `tsc --noEmit`)
+      // typeCheck covers what a separate `tsc --noEmit` pass would.
       typeAware: true,
       typeCheck: true,
     },
     rules: {
-      // Type-aware (was biome `nursery`)
       "typescript/no-floating-promises": "error",
       "typescript/no-misused-promises": "error",
       "typescript/await-thenable": "error",
@@ -80,18 +77,15 @@ export default defineConfig({
       "typescript/require-array-sort-compare": "error",
       "typescript/switch-exhaustiveness-check": "error",
       "typescript/prefer-regexp-exec": "error",
-      // Opinionated, not enforced under biome; flags intentional narrowing casts.
+      // Fires on intentional narrowing casts.
       "typescript/no-unsafe-type-assertion": "off",
-      // Noisy, not enforced under biome: shadowing children/className/cn in
-      // component render props is idiomatic here.
+      // Shadowing children/className/cn in component render props is idiomatic
+      // here.
       "no-shadow": "off",
       // Polyfill / font / side-effect imports are intentional.
       "import/no-unassigned-import": "off",
-      // was biome `suspicious/noImportCycles`
       "import/no-cycle": "error",
-      // was biome `style/useBlockStatements`
       curly: ["error", "all"],
-      // was biome `nursery/useFind`
       "unicorn/prefer-array-find": "error",
     },
     ignorePatterns: [
@@ -103,8 +97,8 @@ export default defineConfig({
     ],
   },
 
-  // Oxfmt: Prettier-compatible. Defaults (2-space indent, double quotes)
-  // already match the former biome formatter, so only ignores are set here.
+  // Oxfmt defaults (2-space indent, double quotes) are what this repo wants,
+  // so only ignores are set here.
   fmt: {
     ignorePatterns: [
       "src/routeTree.gen.ts",

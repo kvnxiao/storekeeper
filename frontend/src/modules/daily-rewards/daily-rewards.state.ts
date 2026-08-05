@@ -1,23 +1,17 @@
 import { type Accessor, createEffect, createRoot, getOwner, on, runWithOwner } from "solid-js";
 import { refreshDailyRewardStatus } from "@/modules/daily-rewards/daily-rewards.query";
-
-/** UTC+8 offset in milliseconds (all HoYoLab games reset at midnight UTC+8). */
-const UTC8_OFFSET_MS = 8 * 3_600_000;
+import { utc8DateString } from "@/modules/daily-rewards/daily-rewards.utils";
 
 /** Buffer for game server reset propagation before re-fetching claim status. */
 const RESET_PROPAGATION_MS = 60_000;
 
-function getUtc8DateString(): string {
-  return new Date(Date.now() + UTC8_OFFSET_MS).toISOString().slice(0, 10);
-}
-
-function createDailyRewardsState() {
+export function createDailyRewardsState() {
   const owner = getOwner();
 
-  let lastUtc8Date = getUtc8DateString();
+  let lastUtc8Date = utc8DateString(Date.now());
 
   function checkReset(): void {
-    const currentDate = getUtc8DateString();
+    const currentDate = utc8DateString(Date.now());
     if (currentDate === lastUtc8Date) {
       return;
     }
@@ -31,7 +25,7 @@ function createDailyRewardsState() {
    * Fetches claim status and starts watching for the UTC+8 date rollover.
    *
    * The tick accessor is injected rather than imported so the dependency runs
-   * core -> daily-rewards only. Watching every tick (not just the minute
+   * core to daily-rewards only. Watching every tick (not just the minute
    * interval) matters because backend events keep restarting that interval.
    */
   function init(tick: Accessor<number>): void {

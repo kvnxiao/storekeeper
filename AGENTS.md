@@ -21,6 +21,8 @@ stop and ask how to proceed.
 - Frontend tooling is `vp` (vite-plus) backed by `pnpm`: use `vp` commands for
   deps, checks, and tests, and `pnpm` (`pnpm exec`, `pnpm dlx`) otherwise -
   never `npm`/`npx`.
+- Every frontend `*.utils.ts` and `*.state.ts` ships a sibling test file. Keep
+  derivation logic in pure functions so it is testable without rendering.
 - Always invoke the matching `*-rules` skill before touching code in its area:
   `solidjs-rules` (frontend), `rust-rules` (Rust), `github-actions-rules`
   (workflows). Agents without skill support read them from `.claude/skills/`.

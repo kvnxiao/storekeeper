@@ -21,6 +21,8 @@ function createCore() {
 
   const [locale, setLocaleSignal] = createSignal<string>(getLocale());
 
+  const [localeReady, setLocaleReady] = createSignal(false);
+
   const durationFormatter = createMemo(() => {
     const loc = locale();
     return new Intl.DurationFormat(loc, {
@@ -115,14 +117,18 @@ function createCore() {
 
     dailyRewardsState.init(tick);
 
-    // Sync Paraglide locale from backend config on startup
-    invoke<string>("get_effective_locale")
+    // Sync Paraglide locale from backend config on startup. Views wait on
+    // localeReady so the first render already uses the resolved locale; a
+    // failure here still releases them, on whatever locale Paraglide restored.
+    void invoke<string>("get_effective_locale")
       .then((effectiveLocale) => setAppLocale(effectiveLocale))
-      .catch(console.error);
+      .catch(console.error)
+      .finally(() => setLocaleReady(true));
   }
 
   return {
     locale,
+    localeReady,
     durationFormatter,
     timeOnlyFormatter,
     weekdayTimeFormatter,

@@ -1,23 +1,11 @@
 import { mutationOptions, queryOptions } from "@tanstack/solid-query";
 import { invoke } from "@tauri-apps/api/core";
 import { queryClient } from "@/modules/core/core.queryClient";
+import {
+  type AllDailyRewardStatus,
+  extractClaimStatus,
+} from "@/modules/daily-rewards/daily-rewards.utils";
 import type { GameId } from "@/modules/games/games.types";
-
-/** Backend response shape (private, only used for extraction) */
-interface AllDailyRewardStatus {
-  games?: Record<string, { info?: { is_signed?: boolean } }>;
-  lastChecked?: string;
-}
-
-function extractClaimStatus(status: AllDailyRewardStatus): Map<GameId, boolean> {
-  const map = new Map<GameId, boolean>();
-  for (const [gameId, data] of Object.entries(status.games ?? {})) {
-    if (data.info?.is_signed != null) {
-      map.set(gameId as GameId, data.info.is_signed);
-    }
-  }
-  return map;
-}
 
 /**
  * Query options for per-game daily-reward claim status.

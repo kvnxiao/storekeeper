@@ -7,14 +7,12 @@ import {
 } from "@/modules/games/games.constants";
 import { GameId } from "@/modules/games/games.types";
 import { createZzzResources } from "@/modules/games/zzz/zzz.primitives";
-import { createIsRefreshing } from "@/modules/resources/resources.primitives";
 import { StaminaCard } from "@/modules/resources/components/StaminaCard";
 import { GameSection } from "@/modules/ui/components/GameSection";
 import * as m from "@/paraglide/messages";
 
 export const ZzzSection: VoidComponent = () => {
   const zzz = createZzzResources();
-  const isRefreshing = createIsRefreshing();
 
   return (
     <GameSection
@@ -26,7 +24,6 @@ export const ZzzSection: VoidComponent = () => {
         name={getResourceDisplayName(ZzzResource.Battery)}
         data={zzz.battery()}
         formattedTime={zzz.batteryTime()}
-        isRefreshing={isRefreshing()}
       />
     </GameSection>
   );

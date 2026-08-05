@@ -584,7 +584,6 @@ mod tests {
 
     #[test]
     fn test_app_config_without_notifications_section() {
-        // AppConfig no longer has a top-level notifications section
         let toml_str = r"
             [general]
             poll_interval_secs = 300
