@@ -1,31 +1,31 @@
 # Storekeeper
 
-Storekeeper is a desktop application that provides real-time stamina resource tracking for various gacha games such as Genshin Impact, Honkai Star Rail, Zenless Zone Zero, Wuthering Waves, etc.
+Desktop app (Tauri + Rust backend, SolidJS frontend) for real-time stamina
+tracking across gacha games (Genshin Impact, Honkai Star Rail, Zenless Zone
+Zero, Wuthering Waves, ...).
 
-## Before Task Completion
+## Commands
 
-**IMPORTANT**: Before completing any task, ALWAYS run linter auto-fix commands and address any unfixed issues:
+All tasks run through `just` (see `justfile` for the full list):
 
-```bash
-just fix-web  # Lint and apply fixes + formatting for frontend code
-just fix      # Lint and apply fixes + formatting rust code
-```
+- `just fix` / `just fix-web` - lint auto-fix + format (Rust / frontend).
+  Run the relevant one before finishing any change; fix remaining warnings.
+- `just test` / `just test-web` - Rust / frontend tests
+- `just dev` - run the app
 
-Fix all warnings and errors before marking work as done, no exceptions. If there is a large occurrence of the same linter error, provide recommended suggestions via `AskUserQuestion` for the user to pick. DO NOT automatically go and turn the linter rule off unless explicitly stated by the user.
+Never disable a lint rule to silence errors. If one rule fires many times,
+stop and ask how to proceed.
 
-## Tool Usage
+## Conventions
 
-- ALWAYS use `pnpm` over `npm`, same applies with `pnpm exec` or `pnpm dlx` over `npx`.
+- Frontend tooling is `vp` (vite-plus) backed by `pnpm`: use `vp` commands for
+  deps, checks, and tests, and `pnpm` (`pnpm exec`, `pnpm dlx`) otherwise -
+  never `npm`/`npx`.
+- Always invoke the matching `*-rules` skill before touching code in its area:
+  `solidjs-rules` (frontend), `rust-rules` (Rust), `github-actions-rules`
+  (workflows). Agents without skill support read them from `.claude/skills/`.
 
-## Quick References
+## Docs
 
-- [DEVELOPMENT.md](DEVELOPMENT.md) — Quick-start: prerequisites, commands, configuration
-- [justfile](justfile) — Available project commands
-- [Cargo.toml](Cargo.toml) — Workspace dependencies for Rust
-- [package.json](frontend/package.json) — Frontend dependencies and pnpm scripts
-
-Read [`docs/README.md`](docs/README.md) for the full documentation index.
-
-- Consult `docs/architecture/` for system design and data flow
-- Consult `docs/onboarding/` for setup and contribution guides
-- Frontend, Rust, and GitHub Actions rules live in `.claude/skills/` (`solidjs-rules`, `rust-rules`, `github-actions-rules`); agents load them via the Skill tool, humans can read them directly
+- `DEVELOPMENT.md` - prerequisites, commands, configuration
+- `docs/README.md` - index for `docs/architecture/` and `docs/onboarding/`
