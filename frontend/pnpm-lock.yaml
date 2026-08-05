@@ -14,6 +14,9 @@ overrides:
   vite: npm:@voidzero-dev/vite-plus-core@latest
   vitest: npm:@voidzero-dev/vite-plus-test@latest
 
+patchedDependencies:
+  '@voidzero-dev/vite-plus-test': 18be4237b66c0a955411b3e0630199f93fbc24daec08e0ba15b1256d7c6fc631
+
 importers:
 
   .:
@@ -111,7 +114,7 @@ importers:
         version: 0.2.1(@types/node@26.0.1)(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(jiti@2.7.0)(jsdom@29.1.1)(typescript@6.0.3)
       vitest:
         specifier: npm:@voidzero-dev/vite-plus-test@latest
-        version: '@voidzero-dev/vite-plus-test@0.1.24(@types/node@26.0.1)(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(jiti@2.7.0)(jsdom@29.1.1)(typescript@6.0.3)'
+        version: '@voidzero-dev/vite-plus-test@0.1.24(patch_hash=18be4237b66c0a955411b3e0630199f93fbc24daec08e0ba15b1256d7c6fc631)(@types/node@26.0.1)(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(jiti@2.7.0)(jsdom@29.1.1)(typescript@6.0.3)'
 
 packages:
 
@@ -3802,19 +3805,19 @@ snapshots:
     dependencies:
       undici-types: 8.3.0
 
-  '@vitest/browser-preview@4.1.9(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(@voidzero-dev/vite-plus-test@0.1.24(@types/node@26.0.1)(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(jiti@2.7.0)(jsdom@29.1.1)(typescript@6.0.3))':
+  '@vitest/browser-preview@4.1.9(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(@voidzero-dev/vite-plus-test@0.1.24(patch_hash=18be4237b66c0a955411b3e0630199f93fbc24daec08e0ba15b1256d7c6fc631)(@types/node@26.0.1)(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(jiti@2.7.0)(jsdom@29.1.1)(typescript@6.0.3))':
     dependencies:
       '@testing-library/dom': 10.4.1
       '@testing-library/user-event': 14.6.1(@testing-library/dom@10.4.1)
-      '@vitest/browser': 4.1.9(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(@voidzero-dev/vite-plus-test@0.1.24(@types/node@26.0.1)(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(jiti@2.7.0)(jsdom@29.1.1)(typescript@6.0.3))
-      vitest: '@voidzero-dev/vite-plus-test@0.1.24(@types/node@26.0.1)(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(jiti@2.7.0)(jsdom@29.1.1)(typescript@6.0.3)'
+      '@vitest/browser': 4.1.9(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(@voidzero-dev/vite-plus-test@0.1.24(patch_hash=18be4237b66c0a955411b3e0630199f93fbc24daec08e0ba15b1256d7c6fc631)(@types/node@26.0.1)(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(jiti@2.7.0)(jsdom@29.1.1)(typescript@6.0.3))
+      vitest: '@voidzero-dev/vite-plus-test@0.1.24(patch_hash=18be4237b66c0a955411b3e0630199f93fbc24daec08e0ba15b1256d7c6fc631)(@types/node@26.0.1)(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(jiti@2.7.0)(jsdom@29.1.1)(typescript@6.0.3)'
     transitivePeerDependencies:
       - bufferutil
       - msw
       - utf-8-validate
       - vite
 
-  '@vitest/browser@4.1.9(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(@voidzero-dev/vite-plus-test@0.1.24(@types/node@26.0.1)(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(jiti@2.7.0)(jsdom@29.1.1)(typescript@6.0.3))':
+  '@vitest/browser@4.1.9(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(@voidzero-dev/vite-plus-test@0.1.24(patch_hash=18be4237b66c0a955411b3e0630199f93fbc24daec08e0ba15b1256d7c6fc631)(@types/node@26.0.1)(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(jiti@2.7.0)(jsdom@29.1.1)(typescript@6.0.3))':
     dependencies:
       '@blazediff/core': 1.9.1
       '@vitest/mocker': 4.1.9(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))
@@ -3823,7 +3826,7 @@ snapshots:
       pngjs: 7.0.0
       sirv: 3.0.2
       tinyrainbow: 3.1.0
-      vitest: '@voidzero-dev/vite-plus-test@0.1.24(@types/node@26.0.1)(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(jiti@2.7.0)(jsdom@29.1.1)(typescript@6.0.3)'
+      vitest: '@voidzero-dev/vite-plus-test@0.1.24(patch_hash=18be4237b66c0a955411b3e0630199f93fbc24daec08e0ba15b1256d7c6fc631)(@types/node@26.0.1)(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(jiti@2.7.0)(jsdom@29.1.1)(typescript@6.0.3)'
       ws: 8.21.0
     transitivePeerDependencies:
       - bufferutil
@@ -3928,7 +3931,7 @@ snapshots:
   '@voidzero-dev/vite-plus-linux-x64-musl@0.2.1':
     optional: true
 
-  '@voidzero-dev/vite-plus-test@0.1.24(@types/node@26.0.1)(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(jiti@2.7.0)(jsdom@29.1.1)(typescript@6.0.3)':
+  '@voidzero-dev/vite-plus-test@0.1.24(patch_hash=18be4237b66c0a955411b3e0630199f93fbc24daec08e0ba15b1256d7c6fc631)(@types/node@26.0.1)(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(jiti@2.7.0)(jsdom@29.1.1)(typescript@6.0.3)':
     dependencies:
       '@standard-schema/spec': 1.1.0
       '@types/chai': 5.2.3
@@ -4793,8 +4796,8 @@ snapshots:
     dependencies:
       '@oxc-project/types': 0.136.0
       '@oxlint/plugins': 1.68.0
-      '@vitest/browser': 4.1.9(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(@voidzero-dev/vite-plus-test@0.1.24(@types/node@26.0.1)(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(jiti@2.7.0)(jsdom@29.1.1)(typescript@6.0.3))
-      '@vitest/browser-preview': 4.1.9(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(@voidzero-dev/vite-plus-test@0.1.24(@types/node@26.0.1)(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(jiti@2.7.0)(jsdom@29.1.1)(typescript@6.0.3))
+      '@vitest/browser': 4.1.9(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(@voidzero-dev/vite-plus-test@0.1.24(patch_hash=18be4237b66c0a955411b3e0630199f93fbc24daec08e0ba15b1256d7c6fc631)(@types/node@26.0.1)(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(jiti@2.7.0)(jsdom@29.1.1)(typescript@6.0.3))
+      '@vitest/browser-preview': 4.1.9(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(@voidzero-dev/vite-plus-test@0.1.24(patch_hash=18be4237b66c0a955411b3e0630199f93fbc24daec08e0ba15b1256d7c6fc631)(@types/node@26.0.1)(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(jiti@2.7.0)(jsdom@29.1.1)(typescript@6.0.3))
       '@vitest/expect': 4.1.9
       '@vitest/mocker': 4.1.9(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))
       '@vitest/pretty-format': 4.1.9
@@ -4806,7 +4809,7 @@ snapshots:
       oxfmt: 0.55.0(vite-plus@0.2.1(@types/node@26.0.1)(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(jiti@2.7.0)(jsdom@29.1.1)(typescript@6.0.3))
       oxlint: 1.70.0(oxlint-tsgolint@0.23.0)(vite-plus@0.2.1(@types/node@26.0.1)(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(jiti@2.7.0)(jsdom@29.1.1)(typescript@6.0.3))
       oxlint-tsgolint: 0.23.0
-      vitest: '@voidzero-dev/vite-plus-test@0.1.24(@types/node@26.0.1)(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(jiti@2.7.0)(jsdom@29.1.1)(typescript@6.0.3)'
+      vitest: '@voidzero-dev/vite-plus-test@0.1.24(patch_hash=18be4237b66c0a955411b3e0630199f93fbc24daec08e0ba15b1256d7c6fc631)(@types/node@26.0.1)(@voidzero-dev/vite-plus-core@0.2.6(@types/node@26.0.1)(jiti@2.7.0)(typescript@6.0.3))(jiti@2.7.0)(jsdom@29.1.1)(typescript@6.0.3)'
     optionalDependencies:
       '@voidzero-dev/vite-plus-darwin-arm64': 0.2.1
       '@voidzero-dev/vite-plus-darwin-x64': 0.2.1

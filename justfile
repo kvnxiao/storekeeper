@@ -27,6 +27,9 @@ lint-web:
 fix-web:
     cd frontend && vp check --fix
 
+test-web:
+    cd frontend && vp test run
+
 icon:
     cd storekeeper-app-tauri && cargo tauri icon icons/app-icon.svg
 

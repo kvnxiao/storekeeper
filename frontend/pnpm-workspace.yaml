@@ -16,3 +16,5 @@ peerDependencyRules:
   allowedVersions:
     vite: "*"
     vitest: "*"
+patchedDependencies:
+  "@voidzero-dev/vite-plus-test": patches/@voidzero-dev__vite-plus-test.patch
