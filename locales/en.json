@@ -1,6 +1,9 @@
 {
   "app_title": "Storekeeper",
 
+  "error_title": "Something went wrong",
+  "error_reload": "Reload",
+
   "dashboard_refresh_resources": "Refresh resources",
   "dashboard_settings": "Settings",
   "dashboard_no_games": "No games configured",

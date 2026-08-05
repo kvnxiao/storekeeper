@@ -1,6 +1,9 @@
 {
   "app_title": "Storekeeper",
 
+  "error_title": "エラーが発生しました",
+  "error_reload": "再読み込み",
+
   "dashboard_refresh_resources": "リソースを更新",
   "dashboard_settings": "設定",
   "dashboard_no_games": "ゲーム未設定",

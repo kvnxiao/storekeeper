@@ -1,9 +1,18 @@
 import { type QueryClient, QueryClientProvider } from "@tanstack/solid-query";
-import { createRootRouteWithContext, HeadContent, Outlet, Scripts } from "@tanstack/solid-router";
+import {
+  createRootRouteWithContext,
+  type ErrorComponentProps,
+  HeadContent,
+  Outlet,
+  Scripts,
+} from "@tanstack/solid-router";
 import { type Component, onMount, type ParentComponent, Show } from "solid-js";
 import { HydrationScript } from "solid-js/web";
 import { queryClient } from "@/modules/core/core.queryClient";
 import { core } from "@/modules/core/core.state";
+import { Button } from "@/modules/ui/components/Button";
+import { ErrorBanner } from "@/modules/ui/components/ErrorBanner";
+import * as m from "@/paraglide/messages";
 import appCss from "@/styles.css?url";
 
 interface RouterContext {
@@ -36,6 +45,16 @@ const RootComponent: Component = () => {
   );
 };
 
+const RootErrorPage: Component<ErrorComponentProps> = (props) => (
+  <div class="flex min-h-screen flex-col items-center justify-center gap-4 p-4">
+    <h1 class="text-lg font-bold text-zinc-950 dark:text-white">{m.error_title()}</h1>
+    <ErrorBanner class="max-w-sm break-all font-mono text-sm">{String(props.error)}</ErrorBanner>
+    <Button color="blue" onClick={() => window.location.reload()}>
+      {m.error_reload()}
+    </Button>
+  </div>
+);
+
 export const Route = createRootRouteWithContext<RouterContext>()({
   head: () => ({
     meta: [
@@ -47,4 +66,5 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   }),
   shellComponent: RootDocument,
   component: RootComponent,
+  errorComponent: RootErrorPage,
 });

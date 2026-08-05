@@ -1,6 +1,9 @@
 {
   "app_title": "Storekeeper",
 
+  "error_title": "문제가 발생했습니다",
+  "error_reload": "다시 로드",
+
   "dashboard_refresh_resources": "리소스 새로고침",
   "dashboard_settings": "설정",
   "dashboard_no_games": "구성된 게임 없음",

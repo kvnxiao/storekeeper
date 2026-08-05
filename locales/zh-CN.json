@@ -1,6 +1,9 @@
 {
   "app_title": "Storekeeper",
 
+  "error_title": "出错了",
+  "error_reload": "重新加载",
+
   "dashboard_refresh_resources": "刷新资源",
   "dashboard_settings": "设置",
   "dashboard_no_games": "未配置游戏",
