@@ -1,363 +1,87 @@
 # Data Flow
 
-Complete data flow through the system, from external game APIs to UI rendering.
+How data moves between the game APIs, the backend, and the UI. Sequence detail lives in the code; this covers the paths and the guarantees each one makes.
 
-## Overview
+## Paths
 
-Primary data paths:
+There are five: background polling, manual refresh, saving settings, daily reward claiming, and notification checking.
 
-1. **Background Polling** — Periodic resource updates
-2. **Manual Refresh** — User-triggered updates
-3. **Initial Load** — App startup data fetch
-4. **Config Updates** — Settings changes and reloading
-5. **Daily Reward Claiming** — Automated and manual claiming
-6. **Notification Checking** — Background resource alert evaluation
-7. **Locale Switching** — Language change propagation
-
-## 1. Background Polling Flow
+## Fetching Resources
 
 ```mermaid
-sequenceDiagram
-    participant PL as Polling Loop
-    participant ST as AppState
-    participant REG as GameClientRegistry
-    participant GC as GameClient
-    participant API as External API
-    participant EV as Event System
-    participant FE as Frontend
-
-    PL->>ST: is_refreshing()?
-    ST-->>PL: false
-    PL->>ST: set_refreshing(true)
-    PL->>ST: fetch_all_resources()
-    ST->>REG: fetch_all()
-
-    par HoYoLab (sequential within)
-        REG->>GC: fetch_resources_json() [Genshin]
-        GC->>API: HTTP GET with auth
-        API-->>GC: JSON response
-        GC-->>REG: resources
-        REG->>EV: emit("game-resource-updated")
-        EV->>FE: incremental update
-        REG->>GC: fetch_resources_json() [HSR]
-        GC->>API: HTTP GET with auth
-        API-->>GC: JSON response
-        GC-->>REG: resources
-        REG->>EV: emit("game-resource-updated")
-        EV->>FE: incremental update
-    and Kuro (parallel with HoYoLab)
-        REG->>GC: fetch_resources_json() [Wuwa]
-        GC->>API: HTTP GET with auth
-        API-->>GC: JSON response
-        GC-->>REG: resources
-        REG->>EV: emit("game-resource-updated")
-        EV->>FE: incremental update
-    end
-
-    REG-->>ST: HashMap<GameId, Value>
-    ST->>ST: set_resources()
-    ST->>ST: set_refreshing(false)
-    ST->>EV: emit("resources-updated")
-    EV->>FE: full update
-    FE->>FE: Update Query Cache + Re-render
+graph LR
+    Poll[Polling loop] --> Fetch
+    Manual[Manual refresh] --> Fetch
+    Fetch[Fetch by provider] --> API[Game APIs]
+    Fetch -->|per game, as it finishes| PerGame[game update event]
+    Fetch -->|after all games| All[full update event]
+    PerGame & All --> Cache[Frontend query cache]
+    Fetch --> State[Cached state]
 ```
 
-### Key Steps
+Both entry points share the same fetch path, so they cannot race: whichever claims the refresh flag first runs, and the other is rejected or skipped. Within the fetch, providers run in parallel and games within a provider run in sequence.
 
-1. **Polling loop** wakes after `poll_interval_secs` (configurable, default 300s)
-2. **Guard check**: Skip if already refreshing or no clients configured
-3. **Registry groups** games by `ApiProvider`, fetches providers in parallel
-4. **Within each provider**, games are fetched sequentially (rate limit safety)
-5. **Per-game event** emitted immediately after each game completes
-6. **Full update event** emitted after all games finish
-7. **Frontend** receives events via Jotai effect atoms, updates TanStack Query cache
+Two kinds of update reach the frontend. Per-game events arrive as each game completes and let the dashboard fill in progressively; the full update arrives once the batch finishes. A manual refresh additionally returns its result to the caller, and announces itself with a start event so the UI can show a pending state immediately.
 
-## 2. Manual Refresh Flow
+Failures are per game. A game that errors is logged and skipped, the rest of the batch continues, and the UI keeps showing that game's last known values until a later fetch succeeds.
+
+## Startup
+
+Config and secrets are loaded, the locale is resolved, autostart is synced with the config, registries are built, and the background tasks start. The first fetch runs after a short delay rather than at launch. The frontend registers its event listeners once at startup and asks the backend for the effective locale.
+
+## Saving Settings
 
 ```mermaid
-sequenceDiagram
-    participant UI as Frontend UI
-    participant Q as TanStack Query
-    participant IPC as Tauri IPC
-    participant CMD as Tauri Command
-    participant POLL as Polling Module
-    participant ST as AppState
-
-    UI->>Q: mutate()
-    Q->>IPC: invoke("refresh_resources")
-    IPC->>CMD: refresh_resources()
-    CMD->>POLL: refresh_now()
-    POLL->>ST: emit("refresh-started")
-    POLL->>ST: fetch_all_resources()
-    Note over ST: Same as background polling
-    ST-->>POLL: AllResources
-    POLL-->>IPC: AllResources
-    IPC-->>Q: AllResources
-    Q-->>UI: Updated data
+graph LR
+    UI[Settings form] --> Save[Save command]
+    Save --> Files[Write config + secrets]
+    Save --> Diff[Diff against state snapshot]
+    Diff --> Locale[Locale + tray]
+    Diff --> Auto[Autostart]
+    Diff --> Rebuild[Rebuild clients]
+    Diff --> Refetch[Refetch changed games]
+    Diff --> Cooldowns[Clear affected cooldowns]
+    Save --> Result[Effective locale to frontend]
 ```
 
-Differences from background polling:
-- **Returns data** synchronously to the caller
-- **Emits `refresh-started`** so UI can show loading state immediately
-- **Rejects** if already refreshing (returns error string)
+One command covers write, diff, and apply. Nothing is re-read from disk, and an empty diff applies nothing at all. Only the games whose client-relevant settings changed are rebuilt and refetched, which keeps threshold edits and other display-only changes free of API calls.
 
-## 3. Initial Load Flow
+The command returns the locale that ended up in effect, and the frontend applies it. That round trip exists because a config value of "no language set" is resolved against the system locale on the backend, so the frontend cannot compute the answer itself.
 
-```mermaid
-sequenceDiagram
-    participant APP as Tauri App
-    participant CFG as Config Files
-    participant ST as AppState
-    participant REG as Registry
-    participant I18N as i18n Module
-    participant NOTIF as Notification Checker
-    participant POLL as Polling
+## Daily Rewards
 
-    APP->>CFG: Load config.toml + secrets.toml
-    CFG-->>APP: AppConfig, SecretsConfig
-    APP->>REG: create_registry(config, secrets)
-    REG-->>APP: GameClientRegistry
-    APP->>ST: Initialize AppState (with NotificationTracker)
-    APP->>I18N: init(config.general.language)
-    APP->>POLL: start_polling(cancel_token)
-    APP->>NOTIF: start_notification_checker(cancel_token)
-    POLL->>POLL: Sleep 2s
-    POLL->>ST: poll_resources()
-    Note over ST: First fetch populates state
-```
+Claims happen at each game's configured time, plus a catch-up pass at startup for anything outstanding. Claiming retries transient failures with backoff and notifies on success. Manual claiming from the UI uses the same path.
 
-Timeline:
-- **T+0ms**: Tauri app starts, config loaded, state initialized, i18n initialized
-- **T+2000ms**: First resource fetch (background)
-- **T+~3000ms**: Frontend receives first `resources-updated` event
-- **T+60000ms**: First notification check runs (reads cached resources)
+The frontend tracks claim status separately from resources and watches for the UTC+8 date rollover, which is when the games reset. It re-checks shortly after the rollover rather than at the boundary, to let the game servers catch up.
 
-## 4. Config Update Flow
+## Notification Checking
 
-```mermaid
-sequenceDiagram
-    participant UI as Settings UI
-    participant IPC as Tauri IPC
-    participant FS as File System
-    participant ST as AppState
-    participant I18N as i18n Module
-    participant TRAY as System Tray
+Every minute, the checker reads cached resources and each game's notification settings, decides per resource whether it is inside its notification window, consults the cooldown state, and sends an OS toast if both agree. No network calls are involved. See [03-core-components.md](03-core-components.md) for the threshold and cooldown semantics.
 
-    UI->>IPC: invoke("save_config", config)
-    IPC->>FS: Write config.toml
-    FS-->>IPC: Ok
+## Boundaries and Conventions
 
-    UI->>IPC: invoke("reload_config")
-    IPC->>FS: Read config.toml + secrets.toml
-    FS-->>IPC: AppConfig, SecretsConfig
-    IPC->>ST: Recreate registries
-    IPC->>ST: Clear notification tracker
-    IPC->>I18N: set_locale(config.language)
-    IPC->>TRAY: Rebuild tray menu (localized labels)
-    IPC->>ST: refresh_now()
-    Note over ST: Immediate fetch with new config
-```
-
-`reload_config()` recreates both `GameClientRegistry` and `DailyRewardRegistry` from the new config, clears notification cooldowns, updates the backend locale, rebuilds the tray menu, then triggers an immediate refresh.
-
-## 5. Daily Reward Claiming Flow
-
-```mermaid
-sequenceDiagram
-    participant SCH as Scheduled Task
-    participant DREG as DailyRewardRegistry
-    participant DC as DailyRewardClient
-    participant API as HoYoLab API
-    participant NOT as Notification
-
-    SCH->>DC: get_reward_info()
-    DC->>API: GET /info
-    API-->>DC: { is_sign: false }
-
-    SCH->>DC: claim_daily_reward()
-    DC->>API: POST /sign
-    API-->>DC: { retcode: 0 }
-
-    DC->>DC: get_reward_status()
-    DC->>API: GET /home
-    API-->>DC: { awards: [...] }
-
-    DC-->>SCH: ClaimResult::success(reward, info)
-    SCH->>NOT: Desktop notification
-```
-
-Two phases:
-1. **Startup claims**: Run once on app start, claim any unclaimed rewards
-2. **Scheduled loop**: Calculate next claim time, sleep until then, claim with retry
-
-Retry on transient errors with exponential backoff (3 retries, 500ms base, 30s max).
-
-## 6. Notification Checking Flow
-
-```mermaid
-sequenceDiagram
-    participant NC as Notification Checker (60s timer)
-    participant ST as AppState
-    participant TK as NotificationTracker
-    participant I18N as i18n Module
-    participant NP as tauri-plugin-notification
-    participant OS as OS Toast
-
-    NC->>ST: get_resources() (read lock)
-    ST-->>NC: AllResources (cached)
-    NC->>ST: get_game_notification_config(game_id)
-    ST-->>NC: HashMap<resource_type, NotificationConfig>
-
-    loop For each (game, resource) with enabled config
-        NC->>NC: extract_resource_info(data)
-        Note over NC: Detect: StaminaResource / CooldownResource / ExpeditionResource
-        NC->>TK: should_notify(game, resource, config, info, now)
-        alt In window + cooldown expired
-            TK-->>NC: true
-            NC->>I18N: t_args("notification.title", ...)
-            NC->>I18N: build_notification_body(...)
-            NC->>NP: notification().builder().title().body().show()
-            NP->>OS: Display toast notification
-            NC->>TK: record(game, resource, now)
-        else Not in window OR within cooldown
-            TK-->>NC: false
-        end
-    end
-```
-
-### Key Design Choices
-
-- **No API calls**: Reads only cached state. Notification accuracy depends on polling freshness.
-- **60-second check interval**: Balances responsiveness with CPU usage. Resource timers are minute-granularity anyway.
-- **Separate from polling**: The notification checker runs on its own timer, independent of the polling loop. This means notifications keep checking even if a poll cycle takes longer than expected.
-- **Write lock scope**: A single write lock is acquired for the entire check cycle to update the tracker. Read locks are released before the write lock is acquired.
-
-## 7. Locale Switching Flow
-
-```mermaid
-sequenceDiagram
-    participant UI as Settings UI
-    participant IPC as Tauri IPC
-    participant CFG as Config (TOML)
-    participant I18N as Backend i18n
-    participant TRAY as System Tray
-    participant NC as Notification Checker
-
-    UI->>IPC: save_config({ general: { language: "en" } })
-    IPC->>CFG: Write config.toml
-    UI->>IPC: reload_config()
-    IPC->>I18N: set_locale("en")
-    Note over I18N: Replace global Messages store
-    IPC->>TRAY: build_tray_menu()
-    Note over TRAY: Labels now use new locale
-    Note over NC: Next check cycle uses new locale strings
-```
-
-**Frontend locale switching**: Paraglide JS handles frontend locale independently. The frontend reads `config.general.language` and sets the Paraglide runtime locale. Message functions automatically return strings in the active locale.
-
-**What gets re-localized on language change**:
-- System tray menu labels (rebuilt immediately)
-- Future OS notification text (next check cycle)
-- Frontend UI text (React re-render with new message functions)
-
-## Data Transformations
-
-### API Response → Frontend UI
-
-```
-1. External API JSON response
-   { "current_resin": 150, "resin_recovery_time": "1708020000" }
-       │
-       ▼
-2. Rust deserialization (game-specific response struct)
-   DailyNoteResponse { current_resin: 150, resin_recovery_time: ... }
-       │
-       ▼
-3. Transform to core resource type
-   StaminaResource { current: 150, max: 160, full_at: DateTime, regen_rate_seconds: 480 }
-       │
-       ▼
-4. Wrap in game-specific enum
-   GenshinResource::Resin(StaminaResource { ... })
-       │
-       ▼
-5. Serialize to JSON (type erasure at DynGameClient boundary)
-   { "type": "resin", "data": { "current": 150, "max": 160, "fullAt": "...", "regenRateSeconds": 480 } }
-       │
-       ▼
-6. Store in AllResources
-   { "games": { "GENSHIN_IMPACT": [...], "HONKAI_STAR_RAIL": [...] }, "lastUpdated": "..." }
-       │
-       ├──▶ Tauri event → Frontend
-       │
-       └──▶ Notification checker reads cached data (no transformation)
-            └── extract_resource_info() → ResourceInfo { completion_at, is_complete, current, max }
-```
-
-### Naming Convention at Boundaries
+Data crosses three boundaries with different naming conventions on each side:
 
 | Layer | Convention | Example |
 |-------|-----------|---------|
-| Rust structs | snake_case | `current_resin`, `full_at` |
-| JSON serialization | camelCase | `fullAt`, `regenRateSeconds` |
-| GameId enum | SCREAMING_SNAKE_CASE | `GENSHIN_IMPACT` |
-| TypeScript interfaces | camelCase | `fullAt`, `regenRateSeconds` |
-| Config/Secrets TOML | snake_case | `poll_interval_secs` |
-| Backend i18n keys | dot.separated | `notification.resource_full` |
-| Frontend i18n keys | snake_case | `settings_notifications_title` |
+| Rust structs | snake_case | `full_at` |
+| Resource JSON and TypeScript | camelCase | `fullAt` |
+| Game identifiers | SCREAMING_SNAKE_CASE | `GENSHIN_IMPACT` |
+| Config and secrets, both sides | snake_case | `poll_interval_secs` |
+| i18n keys | flat snake_case | `settings_notifications_title` |
 
-Serde's `#[serde(rename_all = "camelCase")]` handles the Rust↔JSON conversion automatically.
+Resource types are renamed to camelCase at serialization. Config and secrets are the deliberate exception: they stay snake_case end to end so the Rust types serialize straight into the TOML files with no DTO layer, and the TypeScript mirror matches key for key.
 
-Config and secrets types are the deliberate exception: they stay snake_case end to end (`AppConfig`, `GeneralConfig`, `GamesConfig` and the per-game configs, `SecretsConfig`, `HoyolabSecrets`, `KuroSecrets`) so Rust types serialize directly with no DTO layer and stay consistent with the snake_case TOML files. Resource types (`StaminaResource`, `CooldownResource`, `ExpeditionResource`, `AllResources`) are camelCase in JSON and TypeScript via the serde rename.
+There is no code generation between the two languages. Config and resource types are mirrored by hand, so adding a field means editing both sides. In exchange there is no build step and no generated code in review. Where a mismatch would be silent rather than a type error, a test guards it instead.
 
-To add a config field: add it snake_case to the Rust type in `storekeeper-core/src/config.rs`, mirror it snake_case in `frontend/src/modules/settings/settings.types.ts`, and use it in the UI — no conversion layer. To add a resource field: add it snake_case to the Rust type in the game crate (the struct must carry `#[serde(rename_all = "camelCase")]`), then mirror it camelCase in `frontend/src/modules/resources/resources.types.ts`.
-
-## Rate Limiting Strategy
+## Rate Limiting
 
 ```
-┌─────────────────────────────────────────┐
-│ HoYoLab provider (~1 req/sec limit)    │
-│   Genshin ──→ HSR ──→ ZZZ             │
-│         (sequential, no overlap)        │
-└─────────────────────────────────────────┘
-         ║ parallel (independent limits)
-┌─────────────────────────────────────────┐
-│ Kuro provider                           │
-│   Wuwa ────────────────────────────────│
-└─────────────────────────────────────────┘
+HoYoLab provider (shared limit)
+    Genshin -> HSR -> ZZZ        sequential
+        ||  parallel
+Kuro provider (independent limit)
+    Wuthering Waves
 ```
 
-Implementation: `join_all()` for parallel providers, sequential `for` loop within each provider. Daily reward claims add a 500ms delay between games.
-
-## Error Handling
-
-```
-API Error
-    ├── HTTP Error (network, timeout)
-    │    └── reqwest-retry middleware retries with exponential backoff
-    │
-    ├── API Response Error (retcode != 0)
-    │    └── ClientError::ApiError { code, message }
-    │
-    └── Game Client Error
-         └── Type-erased Box<dyn Error>
-              └── Logged via tracing::warn!, game skipped in results
-
-Notification Error
-    └── Failed to send OS notification
-         └── Logged via tracing::warn!, cooldown NOT recorded (retries next cycle)
-```
-
-Failed game fetches don't crash the app or block other games. The UI shows stale data for the failed game until the next successful fetch.
-
-## Timing Characteristics
-
-| Event | Typical Latency |
-|-------|----------------|
-| Background poll | ~1-3s (depends on enabled games) |
-| Manual refresh | ~1-3s (same, but blocks UI with loading) |
-| Config reload | ~50-100ms (file I/O + registry recreation) |
-| Daily reward claim | ~500ms-1s (single API call) |
-| Notification check | <10ms (reads cached state only) |
-| Event propagation (backend → frontend) | <10ms (in-process IPC) |
-| UI update | <16ms (single React render frame) |
+This is the constraint behind the fetch strategy and behind daily claims being spaced out rather than fired at once. Any new game inherits it by being grouped under its provider.

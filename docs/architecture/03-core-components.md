@@ -1,428 +1,106 @@
-# Core Components
+# Core Concepts
 
-In-depth analysis of key architectural components and design patterns.
+The parts of the system whose behaviour is not obvious from reading a single file. Everything here is about intent and invariants; the code is the reference for signatures and fields.
 
-## 1. Trait-Based Abstraction
+## Game Abstraction
 
-### GameClient Trait
+Two traits define what a game can do: fetching resources, and claiming daily rewards. They are separate because not every game supports daily rewards and because the two have different lifecycles, one polled on an interval and one claimed once a day.
 
-Defines the contract for all game implementations. Located in `storekeeper-core/src/game.rs`.
+Implementations carry their own resource and error types, so they cannot be stored together. The application layer therefore works with type-erased versions that hand back JSON, which is also the form it forwards to the frontend. The consequence worth remembering: once past the game crate boundary, the backend treats resources as opaque data and never re-parses them into typed values.
 
-```rust
-#[async_trait]
-pub trait GameClient: Send + Sync {
-    type Resource: Send + Serialize;
-    type Error: std::error::Error + Send + Sync + 'static;
+## Resource Model
 
-    fn game_id(&self) -> GameId;
-    fn game_name(&self) -> &'static str;
-    async fn fetch_resources(&self) -> Result<Vec<Self::Resource>, Self::Error>;
-    async fn is_authenticated(&self) -> Result<bool, Self::Error>;
-}
-```
+Three shared resource shapes cover every game: regenerating resources, one-time cooldowns, and timed dispatches. Each game wraps them in a tagged enum, which serializes as a discriminated union so the frontend can match on the resource kind.
 
-**Why associated types?** Each game has exactly one resource type — associated types make this 1:1 relationship explicit and avoid generic parameter proliferation.
+Resource kinds appear twice on purpose: as data (what was fetched) and as identifiers (config keys for tracked resources and notification settings). Both serialize to the same strings, so a config key always names a real resource.
 
-**Why `Send + Sync`?** Game clients are stored in `AppState` behind `Arc<RwLock<_>>` and accessed from multiple tokio tasks (polling loop, IPC commands, scheduled claims).
+## HTTP and Authentication
 
-### DynGameClient (Type Erasure)
+The infrastructure crate owns client construction and the retry policy so no game or provider crate reimplements backoff. Retries apply only to transient failures; an API-level rejection is a real error and surfaces immediately.
 
-Different `GameClient` implementations have incompatible associated types, so they can't be stored in a single collection. `DynGameClient` solves this by serializing resources to `serde_json::Value`:
+The two providers authenticate differently. HoYoLab needs user-supplied cookie credentials plus a per-request signature. Kuro reads credentials from the game launcher's local cache, so Wuthering Waves needs no manual credential entry as long as the user has signed into the launcher.
 
-```rust
-#[async_trait]
-pub trait DynGameClient: Send + Sync {
-    fn game_id(&self) -> GameId;
-    async fn fetch_resources_json(&self)
-        -> Result<serde_json::Value, Box<dyn Error + Send + Sync>>;
-}
+## Registries and Fetch Strategy
 
-// Blanket implementation: any GameClient is automatically a DynGameClient
-#[async_trait]
-impl<T: GameClient> DynGameClient for T {
-    fn game_id(&self) -> GameId { GameClient::game_id(self) }
+Registries hold the enabled game clients, rebuilt from config whenever the settings that determine client setup change. Fetching groups clients by API provider: sequential within a provider, parallel across providers. HoYoLab games share a rate limit, so overlapping their requests causes throttling; Kuro is independent, so it runs alongside.
 
-    async fn fetch_resources_json(&self)
-        -> Result<serde_json::Value, Box<dyn Error + Send + Sync>>
-    {
-        let resources = self.fetch_resources().await?;
-        Ok(serde_json::to_value(resources)?)
-    }
-}
-```
+Each game emits its own update event as soon as it finishes, before the batch completes, so the dashboard fills in progressively instead of waiting for the slowest game.
 
-This enables `HashMap<GameId, Box<dyn DynGameClient>>` in the registry.
+## Application State
 
-**Trade-off**: Slight runtime overhead (vtable dispatch + JSON serialization) in exchange for plugin-style extensibility.
+One lock guards the shared state: cached resources, registries, daily reward status, config and secrets, and notification cooldowns. Multiple readers or one writer, all async.
 
-### DailyRewardClient Trait
+Two things deliberately sit outside that lock:
 
-Separate trait for daily reward claiming, located in `storekeeper-core/src/daily_reward.rs`. Separated from `GameClient` because:
-- Not all games support daily rewards (Wuthering Waves doesn't)
-- Different lifecycle: claim once per day vs poll every N minutes
+- The refresh flag is atomic, so a caller can claim the right to refresh without waiting on the write lock. This is what makes overlapping fetches impossible.
+- The auto-claim scheduler waits on a notification handle, so a settings change can wake it immediately rather than after its current sleep.
 
-Uses the same type erasure pattern (`DynDailyRewardClient`) with a blanket implementation.
+Secrets are kept in memory alongside config only so a save can be diffed against the previous state without re-reading files.
 
-## 2. Resource Type System
+## Background Tasks
 
-### Core Resource Types
+Three independent tokio tasks, each cancellable at shutdown:
 
-Located in `storekeeper-core/src/resource.rs`. Shared across all games:
+**Polling** refreshes resources on the configured interval, after a short startup delay, skipping the cycle if a refresh is already running or no games are configured.
 
-| Type | Used For | Examples |
-|------|----------|---------|
-| `StaminaResource` | Regenerating resources | Resin, Trailblaze Power, Battery, Waveplates |
-| `CooldownResource` | One-time cooldowns | Parametric Transformer |
-| `ExpeditionResource` | Timed dispatches | Genshin Expeditions |
+**Scheduled claims** claims daily rewards at each game's configured time. Sleeps are chunked so a claim time is not missed when the OS suspends, and the task also claims anything outstanding at startup. Failures retry with backoff.
 
-All use `#[serde(rename_all = "camelCase")]` to convert Rust's snake_case to JavaScript's camelCase at the serialization boundary.
+**Notification checking** runs on its own minute timer and reads cached state only. Notification accuracy therefore follows polling freshness, which is the intended trade: alerting never makes network calls.
 
-### Game-Specific Resource Enums
+Keeping these independent means a slow poll cycle cannot delay a claim or an alert.
 
-Each game wraps core types in a tagged enum:
+## Notifications
 
-```rust
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", content = "data", rename_all = "camelCase")]
-pub enum GenshinResource {
-    Resin(StaminaResource),
-    RealmCurrency(StaminaResource),
-    ParametricTransformer(CooldownResource),
-    Expeditions(ExpeditionResource),
-}
-```
+Per resource, a user can notify on one of two mutually exclusive thresholds: a lead time before the resource completes, or a value the resource reaches (regenerating resources only). With neither set, the notification fires on completion.
 
-Produces JSON discriminated unions:
+Cooldown semantics are the subtle part:
 
-```json
-{ "type": "resin", "data": { "current": 100, "max": 160, "fullAt": "...", "regenRateSeconds": 480 } }
-```
+- A positive cooldown re-notifies on that interval while the resource stays inside the notification window.
+- A zero cooldown notifies once per entry into the window.
+- Leaving the window clears the cooldown, so re-entering notifies again. Spending stamina and regenerating past the threshold is a fresh alert, not a suppressed one.
+- Saving settings clears cooldowns only for games whose notification config changed.
 
-The frontend consumes these as TypeScript discriminated unions with `switch (resource.type)`.
+The checker identifies a resource's kind from the shape of its JSON rather than carrying type information through the erasure boundary. Notification text comes from the shared locale catalog, with durations and clock times formatted for the active locale rather than assembled by hand.
 
-## 3. HTTP Client Infrastructure
+Users can send a preview notification from settings; it uses cached data when available so the preview matches what a real alert would look like.
 
-### HttpClientBuilder
+## IPC Surface
 
-Located in `storekeeper-client-core/src/client.rs`. Uses the builder pattern:
+Commands cover reading resources, reading and saving settings, daily reward status and claiming, and locale queries. Events cover refresh started, a single game updated, all resources updated, and a daily reward claimed. Commands return typed error codes rather than opaque strings, so the frontend can branch on the failure.
 
-```rust
-let client = HttpClientBuilder::new()
-    .header_static("x-rpc-app_version", "1.5.0")
-    .header_static("x-rpc-client_type", "5")
-    .build()?;
-```
+Event names are the one contract that both sides hardcode, so each side declares them once and a Rust test asserts the frontend's declarations still match the backend's.
 
-Two build methods:
-- `build()` → plain `reqwest::Client`
-- `build_with_retry(max_retries)` → `ClientWithMiddleware` wrapping reqwest with exponential backoff, jitter, and transient error retry
+### Saving Settings Applies the Minimum
 
-### HoYoLab Authentication
+Saving is a single command that writes both config files and then applies only what changed, diffed in memory against the state snapshot. What changed determines what happens: a locale change switches the backend locale and rebuilds the tray, an autostart change syncs the OS integration, and only games whose client-relevant settings changed get new clients and a refetch.
 
-`HoyolabClient` adds two authentication mechanisms per request:
-1. **Cookie header**: `ltuid_v2` and `ltoken_v2` from user config
-2. **DS header**: Cryptographic signature using MD5 — `md5(salt={salt}&t={timestamp}&r={random})`
+This matters because the alternative (rebuild everything and refetch) turns every settings save into API calls, which the providers rate limit. Editing a notification threshold costs nothing on the network.
 
-### Kuro Authentication
+## Internationalization
 
-`KuroClient` auto-loads credentials from the Kuro launcher cache file at a known path, requiring no manual credential entry from users.
+One catalog per locale, shared by both runtimes.
 
-## 4. Game Client Registry
+The backend embeds catalogs at compile time and holds the active locale in a global that can be switched at runtime, which is what lets a language change take effect without a restart. It parses ICU MessageFormat and uses ICU4X for plurals, durations, and times.
 
-Located in `storekeeper-app-tauri/src/registry.rs`. Stores type-erased game clients and orchestrates fetching.
+The frontend compiles the same catalog into tree-shakeable message functions at build time. Paraglide restores the persisted locale at startup, then the app asks the backend which locale is actually in effect and follows it, since a config value of "no language set" resolves against the system locale on the Rust side.
 
-```rust
-pub struct GameClientRegistry {
-    clients: HashMap<GameId, Box<dyn DynGameClient>>,
-}
-```
+## Frontend State Ownership
 
-### Fetch Strategy
+Two homes, split by what owns the truth:
 
-```
-fetch_all()
-  ├── Group clients by ApiProvider
-  ├── Fetch providers in PARALLEL (join_all)
-  │    └── Within provider: fetch games SEQUENTIALLY
-  │         └── Emit "game-resource-updated" per game (incremental UI updates)
-  └── Collect results into HashMap<GameId, Value>
-```
+- **Server state** lives in the query cache. Query and mutation options are defined per module; components consume them. Backend events write into the cache directly, so pushed updates and fetched updates land in the same place.
+- **Client state** lives in state modules: module-scope Solid singletons that export accessors and named actions and never their setters. This keeps business logic testable without rendering and gives every write a name worth grepping for.
 
-**Why sequential within provider?** HoYoLab games (Genshin, HSR, ZZZ) share an API rate limit. Fetching them sequentially avoids 429 errors. Different providers (HoYoLab vs Kuro) have independent rate limits, so they run in parallel.
+Components hold only view-local state. Values that derive from the passage of time read the app-wide tick rather than starting their own timers.
 
-**Why per-game events?** Emitting `game-resource-updated` after each game completes allows the frontend to progressively render results rather than waiting for all games to finish.
-
-## 5. Application State
-
-Located in `storekeeper-app-tauri/src/state.rs`.
-
-```rust
-pub struct AppState {
-    pub inner: Arc<RwLock<StateData>>,
-}
-
-pub struct StateData {
-    pub resources: AllResources,
-    pub refreshing: bool,
-    pub registry: GameClientRegistry,
-    pub daily_reward_registry: DailyRewardRegistry,
-    pub daily_reward_status: AllDailyRewardStatus,
-    pub config: AppConfig,
-    pub notification_tracker: NotificationTracker,
-}
-```
-
-**Concurrency model**: `Arc<RwLock<_>>` allows multiple concurrent readers (Tauri commands) or a single writer (polling updates). All access is async (`.read().await`, `.write().await`).
-
-**Access patterns**:
-- Tauri commands: `state: State<'_, AppState>`
-- Background tasks: `app_handle.state::<AppState>()`
-
-**Config reload**: `reload_config()` re-reads TOML files, recreates registries, clears the notification tracker, and updates the i18n locale — all without restarting the app.
-
-## 6. Background Tasks
-
-### Polling Loop
-
-Located in `storekeeper-app-tauri/src/polling.rs`. Uses `tokio::select!` with a `CancellationToken` for graceful shutdown:
-
-```rust
-loop {
-    tokio::select! {
-        () = cancel_token.cancelled() => break,
-        () = tokio::time::sleep(poll_interval) => {
-            poll_resources(&app_handle).await;
-        }
-    }
-}
-```
-
-A `refreshing` flag in state prevents overlapping fetches.
-
-### Scheduled Claims
-
-Located in `storekeeper-app-tauri/src/scheduled_claim.rs`. Runs on a separate tokio task:
-1. **Startup**: Checks and claims any unclaimed rewards
-2. **Scheduled loop**: Calculates next claim time, sleeps until then, claims with retry and exponential backoff
-
-Retries on transient errors with exponential backoff (3 retries, 500ms base, 30s max).
-
-### Notification Checker
-
-Located in `storekeeper-app-tauri/src/notification.rs`. Runs on a separate 60-second timer. **Does not make API calls** — reads cached resources from state only.
-
-```
-Every 60 seconds:
-  ├── Read cached resources from AppState (read lock)
-  ├── Read per-game notification configs from AppState
-  ├── For each (game, resource) pair with notifications enabled:
-  │    ├── Extract timing info (fullAt, readyAt, earliestFinishAt)
-  │    ├── Check if resource is in notification window
-  │    ├── Check cooldown tracker (write lock)
-  │    └── Send OS toast notification if conditions met
-  └── Record notification timestamp for cooldown tracking
-```
-
-See [04-data-flow.md](04-data-flow.md) for the complete notification flow.
-
-## 7. Notification System
-
-### ResourceNotificationConfig
-
-Located in `storekeeper-core/src/config.rs`. Per-resource notification settings stored in each game's config section:
-
-```rust
-pub struct ResourceNotificationConfig {
-    pub enabled: bool,
-    pub notify_minutes_before_full: Option<u32>,  // Minutes-before-full mode
-    pub notify_at_value: Option<u64>,              // Value-threshold mode (stamina only)
-    pub cooldown_minutes: u32,                     // Minutes between repeated notifications
-}
-```
-
-**Two threshold modes** (mutually exclusive):
-- **Minutes before full**: Fire when time-to-completion drops below N minutes. Works for all resource types.
-- **At value**: Fire when resource value reaches N. Converts to time-based comparison using the regen rate. Stamina resources only.
-
-If both are `None`, notifications fire only when the resource is full/ready.
-
-### NotificationTracker
-
-Located in `storekeeper-app-tauri/src/notification.rs`. Tracks cooldown state per `(GameId, resource_type)` pair.
-
-```rust
-pub struct NotificationTracker {
-    cooldowns: HashMap<(GameId, String), DateTime<Utc>>,
-}
-```
-
-**Cooldown behavior**:
-- `cooldown_minutes > 0`: Re-notify every N minutes while the resource stays in the notification window
-- `cooldown_minutes == 0`: Notify once per window entry, no repeats until the resource leaves and re-enters the window
-- When a resource leaves the notification window (e.g., stamina consumed), the cooldown is cleared. Re-entering triggers a fresh notification.
-- On config reload, all cooldowns are cleared to prevent stale state.
-
-### Resource Info Extraction
-
-The notification checker detects resource kind by JSON field presence (no type information needed):
-- Has `fullAt` + `current` + `max` → `StaminaResource`
-- Has `readyAt` + `isReady` → `CooldownResource`
-- Has `earliestFinishAt` → `ExpeditionResource`
-
-### Notification Messages
-
-Notification title and body are built using the backend i18n system with ICU MessageFormat:
-
-```
-Title: "{game_name} — {resource_name}"
-Body (before full): "{resource_name} will be full in {minutes, plural, one {# minute} other {# minutes}}"
-Body (full): "{resource_name} is full!"
-Body (overdue): "{resource_name} has been full for {minutes, plural, one {# minute} other {# minutes}}"
-Body (value mode): "{resource_name} has reached {current}/{max}"
-```
-
-### Preview Notifications
-
-The `send_preview_notification` Tauri command lets users test notifications from the settings UI. It uses cached resource data to build a realistic notification body, or falls back to a "no data" message if the resource hasn't been fetched yet.
-
-## 8. Tauri IPC Layer
-
-Located in `storekeeper-app-tauri/src/commands.rs`. Exposes Rust functions to the frontend:
-
-| Command | Purpose |
-|---------|---------|
-| `get_all_resources` | Return cached resources |
-| `refresh_resources` | Trigger manual refresh, return results |
-| `get_config` | Load current config from file |
-| `save_config` | Write config to file |
-| `get_secrets` | Load current secrets from file |
-| `save_secrets` | Write secrets to file |
-| `reload_config` | Re-read config, recreate registries, update locale |
-| `open_config_folder` | Open config directory in file manager |
-| `send_preview_notification` | Send test OS notification for a resource |
-| `get_daily_reward_status` | Return cached daily reward status |
-| `refresh_daily_reward_status` | Fetch fresh daily reward status |
-| `claim_daily_rewards` | Claim all pending daily rewards |
-| `claim_daily_reward_for_game` | Claim daily reward for one game |
-| `get_daily_reward_status_for_game` | Get status for one game |
-| `get_supported_locales` | Return list of supported locale codes |
-
-Events flow backend → frontend via `app_handle.emit()`:
-
-| Event | Payload | Purpose |
-|-------|---------|---------|
-| `resources-updated` | `AllResources` | Full resource update after polling |
-| `game-resource-updated` | `{ gameId, data }` | Incremental per-game update |
-| `refresh-started` | `()` | Manual refresh initiated |
-| `daily-reward-claimed` | Claim result | Daily reward claimed |
-
-## 9. Internationalization (i18n)
-
-### Backend i18n Module
-
-Located in `storekeeper-app-tauri/src/i18n.rs`. Provides localized strings for OS notifications and system tray labels.
-
-**Architecture**:
-- Locale JSON files are embedded at compile time via `include_str!()` from `locales/*.json`
-- Messages stored in a global `OnceLock<RwLock<Messages>>` — initialized once, switchable at runtime
-- ICU4X `PluralRules` created on-demand per `t_args` call (not stored, because `PluralRules` is `!Send + !Sync`)
-
-**API**:
-
-```rust
-// Simple lookup — returns the key itself if not found
-i18n::t("tray.quit") // → "Quit"
-
-// Substitution with plural support
-i18n::t_args("notification.resource_full_in", &[
-    ("resource_name", Value::from("Original Resin")),
-    ("minutes", Value::Number(45)),
-]) // → "Original Resin will be full in 45 minutes"
-```
-
-**Message format**: ICU MessageFormat syntax with `{name}` for simple substitution and `{name, plural, one {...} other {...}}` for plural dispatch. `#` in plural branches is replaced by the count value.
-
-**Locale switching**: `i18n::set_locale("en")` replaces the message store at runtime. Called during config reload to pick up language changes. Also rebuilds the tray menu with new locale strings.
-
-**Key naming convention** (backend `locales/*.json`):
-- `notification.*` — Notification title/body templates
-- `tray.*` — System tray menu labels
-- `game.{short_id}.name` — Game display names
-- `game.{short_id}.resource.{type}` — Resource display names
-- `resource.unknown` — Fallback for unknown resources
-
-### Frontend i18n (Paraglide JS)
-
-Located in `frontend/messages/*.json` (source) and `frontend/src/paraglide/` (compiled output).
-
-**Architecture**:
-- Source messages in `frontend/messages/en.json` using inlang message format
-- `project.inlang/settings.json` configures locales and message path pattern
-- Paraglide JS compiles messages at build time into tree-shakeable function exports
-- Generated code in `frontend/src/paraglide/` (gitignored, do not edit manually)
-
-**Usage in components**:
-
-```typescript
-import * as m from "@/paraglide/messages";
-
-// Simple message
-<h3>{m.settings_notifications_title()}</h3>
-
-// Message with parameters
-<p>{m.settings_failed_to_load({ error: errorMessage })}</p>
-```
-
-**Key naming convention** (frontend `messages/en.json`):
-- `snake_case` with module prefix: `settings_notifications_title`, `dashboard_refresh_resources`
-- Parameter interpolation: `{error}`, `{name}`, `{current}`, `{max}`
-- Game names: `game_genshin_impact`, `game_honkai_star_rail`
-- Resource names: `resource_resin`, `resource_trailblaze_power`
-
-See the Paraglide JS section of [solidjs-ecosystem.md](../../.claude/skills/solidjs-rules/references/solidjs-ecosystem.md) for frontend i18n conventions.
-
-## 10. Frontend State Management
-
-### Jotai Atom Organization
-
-Located in `frontend/src/modules/`. Uses class-based containers for namespace grouping:
-
-```typescript
-export class CoreAtoms {
-    readonly resourcesQuery = atomWithQuery(() => resourcesQueryOptions());
-    readonly tick = atom((get) => { /* ... */ });
-    // ...
-}
-
-// Singleton instance
-export const atoms = new AtomsContainer();
-// Usage: atoms.core.resourcesQuery, atoms.settings.saveConfig
-```
-
-### Key Patterns
-
-- **Tick system**: `atomEffect` that runs `setInterval(60s)` to update countdown timers
-- **Event listeners**: `atomEffect` that calls `listen()` from Tauri API, updates Query cache on events
-- **Query integration**: `atomWithQuery()` bridges Jotai atoms and TanStack Query for Tauri IPC
-- **Derived atoms**: Per-game atoms select specific resources from the shared query cache
-
-### Data Update Flow
-
-```
-Backend event → atomEffect → setQueryData() → atom re-evaluates → component re-renders
-```
-
-See [04-data-flow.md](04-data-flow.md) for complete flow diagrams.
-
-## Design Patterns Summary
+## Patterns in Use
 
 | Pattern | Where | Purpose |
-|---------|-------|---------|
-| Trait Objects | `DynGameClient`, `DynDailyRewardClient` | Type erasure for heterogeneous collections |
-| Registry | `GameClientRegistry`, `DailyRewardRegistry` | Dynamic client management |
-| Builder | `HttpClientBuilder` | Fluent HTTP client configuration |
-| Strategy | Per-game `GameClient` implementations | Pluggable game-specific logic |
-| Observer | Tauri event system | Backend → frontend real-time updates |
-| Repository | `AppState` with `Arc<RwLock<_>>` | Thread-safe state management |
-| Cooldown Tracker | `NotificationTracker` | Dedup/rate-limit OS notifications |
-| Global Singleton | `i18n::MESSAGES` with `OnceLock<RwLock<_>>` | Runtime-switchable locale store |
+|---|---|---|
+| Trait objects | Game and daily reward clients | Heterogeneous collections behind one interface |
+| Registry | Game and daily reward registries | Config-driven client lifecycle |
+| Builder | HTTP client construction | Shared transport configuration |
+| Strategy | Per-game client implementations | Pluggable game-specific logic |
+| Observer | Tauri events | Backend to frontend updates without polling |
+| Cooldown tracker | Notification state | Deduplicating OS notifications |
+| Runtime-switchable singleton | Backend locale store | Language changes without restart |

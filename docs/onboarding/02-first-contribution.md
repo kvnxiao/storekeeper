@@ -1,126 +1,56 @@
 # First Contribution
 
-This guide walks through common contribution patterns. See [DEVELOPMENT.md](../../DEVELOPMENT.md) for architecture and conventions reference.
+Where to make changes for the common tasks. Follow the shape of the existing code in each place rather than the outline here; the closest existing game or component is the best template.
 
 ## Adding a New Game
 
-The most common contribution is adding support for a new game. The architecture is designed to make this straightforward.
+Adding a game touches both sides but changes no shared logic. Registries, polling, notifications, and state work with any game that implements the traits.
 
-### 1. Create the Game Crate
+**Backend**
 
-```bash
-cargo init storekeeper-game-{name} --lib
-```
+1. **New crate**: `storekeeper-game-{name}`, added to the workspace members. Copy the structure of an existing game crate: client, resource enum, errors.
+2. **API client**: if the game's provider is new, add a `storekeeper-client-{provider}` crate for authentication and requests. Otherwise reuse the existing provider client.
+3. **Resources**: map the API response into the shared resource shapes, wrapped in the game's tagged resource enum. Add the matching resource identifiers used as config keys.
+4. **Identity**: add the game to the game identifier enum and to its provider grouping. The grouping is what gives the game correct rate limit behaviour.
+5. **Config**: add the game's config section and its defaults, including whether it supports daily rewards.
+6. **Registration**: register the client from config in the Tauri crate's client factory.
 
-Follow the standard structure:
+**Frontend**
 
-```
-storekeeper-game-{name}/src/
-├── lib.rs          # Public exports
-├── client.rs       # GameClient implementation
-├── resource.rs     # Game-specific resource enum
-└── error.rs        # Error types using thiserror
-```
+7. **Module**: add `frontend/src/modules/games/{name}/` with a section component and its resource selectors.
+8. **Wiring**: render the section on the dashboard and add a settings section for it. Reuse the shared game settings section if the game's config matches an existing provider's shape.
+9. **Config mirror**: mirror the new config section in the settings types, snake_case, matching the Rust names exactly.
 
-### 2. Define Resources
+**Shared**
 
-Create a tagged enum wrapping the core resource types:
+10. **Locale strings**: add the game name and one entry per resource to every file in `locales/`. Both the backend and the frontend read them.
+11. **Icons**: add resource icons under `frontend/public/` and register their paths with the other per-resource metadata.
 
-```rust
-use serde::{Deserialize, Serialize};
-use storekeeper_core::resource::StaminaResource;
+## Adding a Resource to an Existing Game
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", content = "data", rename_all = "camelCase")]
-pub enum NewGameResource {
-    Stamina(StaminaResource),
-    // Add variants for each tracked resource
-}
-```
-
-### 3. Implement GameClient
-
-Implement the `GameClient` trait from `storekeeper-core`:
-
-```rust
-use async_trait::async_trait;
-use storekeeper_core::game::{GameClient, GameId};
-
-#[async_trait]
-impl GameClient for NewGameClient {
-    type Resource = NewGameResource;
-    type Error = Error;
-
-    fn game_id(&self) -> GameId { GameId::NewGame }
-    fn game_name(&self) -> &'static str { "New Game" }
-
-    async fn fetch_resources(&self) -> Result<Vec<Self::Resource>, Self::Error> {
-        // Call the game's API and transform to resource types
-    }
-
-    async fn is_authenticated(&self) -> Result<bool, Self::Error> {
-        // Check if credentials are valid
-    }
-}
-```
-
-If the game uses a new API provider, create a `storekeeper-client-{provider}` crate first. Otherwise, use an existing client crate.
-
-### 4. Register in the App
-
-Update `storekeeper-app-tauri/src/clients.rs` to create the client from config:
-
-```rust
-if let Some(ref cfg) = config.games.new_game {
-    if cfg.enabled {
-        if let Ok(client) = NewGameClient::new(/* credentials */) {
-            registry.register(Box::new(client));
-        }
-    }
-}
-```
-
-Add the `GameId` variant in `storekeeper-core/src/game_id.rs` and wire up config fields.
-
-### 5. Add Frontend Components
-
-Create `frontend/src/modules/games/{name}/`:
-
-```
-{name}/
-├── components/
-│   └── {Name}Section.tsx    # Main section component
-└── {name}.atoms.ts          # Atoms to select resources (if needed)
-```
-
-Add the section to the dashboard in `frontend/src/routes/index.tsx`.
-
-### 6. Update Configuration
-
-Update `default_config_content()` in `storekeeper-core/src/config.rs` and the config types.
-
-## Modifying an Existing Game
-
-To add a new tracked resource to an existing game:
-
-1. Add the API response field to the game's response struct
-2. Add a variant to the game's resource enum
-3. Map the API response to the new resource in `fetch_resources()`
-4. Add a frontend component to display it
+1. Extend the game's API response and map the new field into a resource variant.
+2. Add the matching resource identifier so it can be tracked and configured.
+3. Add its locale entry and icon.
+4. Render it from the game's section component using the shared resource cards.
 
 ## Working with the Frontend
 
-Key patterns to follow:
-- **State**: Use Solid state modules. See [solidjs-state-architecture.md](../../.claude/skills/solidjs-rules/references/solidjs-state-architecture.md)
-- **Queries**: Use TanStack Query options. See [solidjs-data-fetching.md](../../.claude/skills/solidjs-rules/references/solidjs-data-fetching.md)
-- **Components**: Use Kobalte primitives styled with Tailwind `tv()`. See [solidjs-ecosystem.md](../../.claude/skills/solidjs-rules/references/solidjs-ecosystem.md)
-- **Styling**: Use Tailwind CSS with `tv()` from tailwind-variants
+Read the [`solidjs-rules`](../../.claude/skills/solidjs-rules/) skill before touching frontend code; it covers reactivity, component conventions, state architecture, data fetching, forms, i18n, and testing. The short version:
+
+- Business state and logic go in state modules, not components. Components read accessors and render.
+- Server state stays in the query cache. Modules export query and mutation options; components consume them.
+- Values derived from elapsed time read the app-wide tick instead of starting their own timer.
+- Use the shared UI kit and Kobalte primitives before writing new markup, and `tv()` variants for styling.
+- File names follow the `<module>.<type>.ts` convention in [02-directory-structure.md](../architecture/02-directory-structure.md).
+
+For Rust, read the [`rust-rules`](../../.claude/skills/rust-rules/) skill.
 
 ## Checklist Before Submitting
 
-- [ ] `just fix` passes (Rust linting + formatting)
-- [ ] `just fix-web` passes (frontend linting + formatting)
-- [ ] `just test` passes (Rust tests)
-- [ ] No `unwrap()` or `expect()` in non-test code
+- [ ] `just fix` passes (Rust linting and formatting)
+- [ ] `just fix-web` passes (frontend linting, formatting, type checking)
+- [ ] `just test` passes
+- [ ] `just test-web` passes
+- [ ] No `unwrap()` or `expect()` outside tests
 - [ ] Error types use `thiserror` with descriptive messages
 - [ ] New public APIs have documentation comments

@@ -10,6 +10,7 @@ Stamina resource tracking desktop tray application for various gacha games.
 - **System Tray Application**: Runs quietly in the background with a convenient system tray interface
 - **Desktop Notifications**: Get notified when your stamina reaches configurable thresholds or is full
 - **Auto Daily Rewards**: Automatically claim daily check-in rewards for HoYoLab games (optional)
+- **Localized**: UI, tray, and notifications in English, 简体中文, 한국어, and 日本語, following your system language by default
 - **Multi-Game Support**:
   - Genshin Impact (Original Resin, Realm Currency, Parametric Transformer, Expeditions)
   - Honkai: Star Rail (Trailblaze Power)
