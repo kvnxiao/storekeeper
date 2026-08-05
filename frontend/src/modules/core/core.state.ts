@@ -1,12 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { createMemo, createRoot, createSignal } from "solid-js";
+import { AppEvent } from "@/modules/core/core.constants";
 import { queryClient } from "@/modules/core/core.queryClient";
-import {
-  checkDailyReset,
-  invalidateDailyRewardStatus,
-  refreshDailyRewardStatus,
-} from "@/modules/daily-rewards/daily-rewards.query";
+import { invalidateDailyRewardStatus } from "@/modules/daily-rewards/daily-rewards.query";
+import { dailyRewardsState } from "@/modules/daily-rewards/daily-rewards.state";
 import { resourcesQueryOptions } from "@/modules/resources/resources.query";
 import { resourcesState } from "@/modules/resources/resources.state";
 import type { AllResources, GameResourcePayload } from "@/modules/resources/resources.types";
@@ -66,20 +64,12 @@ function createCore() {
 
   function startTickInterval(): void {
     clearInterval(tickInterval);
-    tickInterval = setInterval(() => {
-      setTick(Date.now());
-      checkDailyReset();
-    }, 60_000);
+    tickInterval = setInterval(() => setTick(Date.now()), 60_000);
   }
 
-  /**
-   * Resets the tick to now and restarts the minute interval. Runs the daily
-   * reset check here too: frequent backend events keep pushing the interval
-   * out, so the check cannot rely on the interval alone.
-   */
+  /** Resets the tick to now and restarts the minute interval. */
   function refreshTick(): void {
     setTick(Date.now());
-    checkDailyReset();
     startTickInterval();
   }
 
@@ -97,17 +87,17 @@ function createCore() {
 
     startTickInterval();
 
-    void listen("refresh-started", () => {
+    void listen(AppEvent.RefreshStarted, () => {
       resourcesState.refreshStarted();
     });
 
-    void listen<AllResources>("resources-updated", (event) => {
+    void listen<AllResources>(AppEvent.ResourcesUpdated, (event) => {
       resourcesState.refreshSettled();
       queryClient.setQueryData(resourcesQueryOptions().queryKey, event.payload);
       refreshTick();
     });
 
-    void listen<GameResourcePayload>("game-resource-updated", (event) => {
+    void listen<GameResourcePayload>(AppEvent.GameResourceUpdated, (event) => {
       const { gameId, data } = event.payload;
       queryClient.setQueryData(
         resourcesQueryOptions().queryKey,
@@ -119,11 +109,11 @@ function createCore() {
       refreshTick();
     });
 
-    void listen("daily-reward-claimed", () => {
+    void listen(AppEvent.DailyRewardClaimed, () => {
       invalidateDailyRewardStatus().catch(console.error);
     });
 
-    refreshDailyRewardStatus().catch(console.error);
+    dailyRewardsState.init(tick);
 
     // Sync Paraglide locale from backend config on startup
     invoke<string>("get_effective_locale")

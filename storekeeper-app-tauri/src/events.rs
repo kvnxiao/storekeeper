@@ -43,6 +43,18 @@ pub struct GameResourcePayload<'a> {
 mod tests {
     use super::*;
 
+    /// The frontend listens with the constants in this file, so a rename here
+    /// must fail a test rather than silently stop event delivery.
+    const FRONTEND_EVENT_CONSTANTS: &str =
+        include_str!("../../frontend/src/modules/core/core.constants.ts");
+
+    const EVENTS: [AppEvent; 4] = [
+        AppEvent::ResourcesUpdated,
+        AppEvent::RefreshStarted,
+        AppEvent::GameResourceUpdated,
+        AppEvent::DailyRewardClaimed,
+    ];
+
     // =========================================================================
     // AppEvent::as_str - verify each variant
     // =========================================================================
@@ -79,17 +91,26 @@ mod tests {
 
     #[test]
     fn all_events_are_kebab_case() {
-        let events = [
-            AppEvent::ResourcesUpdated,
-            AppEvent::RefreshStarted,
-            AppEvent::GameResourceUpdated,
-            AppEvent::DailyRewardClaimed,
-        ];
-        for event in events {
+        for event in EVENTS {
             let s = event.as_str();
             assert!(
                 !s.contains('_') && !s.contains(' ') && s == s.to_lowercase(),
                 "Event {s:?} should be lowercase kebab-case"
+            );
+        }
+    }
+
+    // =========================================================================
+    // AppEvent - frontend constants mirror every variant
+    // =========================================================================
+
+    #[test]
+    fn frontend_constants_declare_every_event() {
+        for event in EVENTS {
+            let literal = format!("\"{}\"", event.as_str());
+            assert!(
+                FRONTEND_EVENT_CONSTANTS.contains(&literal),
+                "core.constants.ts should declare event {literal}"
             );
         }
     }

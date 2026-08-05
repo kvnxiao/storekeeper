@@ -19,6 +19,7 @@ import { Button } from "@/modules/ui/components/Button";
 import { ButtonLink } from "@/modules/ui/components/ButtonLink";
 import { ErrorBanner } from "@/modules/ui/components/ErrorBanner";
 import { cn } from "@/modules/ui/ui.styles";
+import { setViewTransitionDirection } from "@/modules/ui/ui.utils";
 import * as m from "@/paraglide/messages";
 
 const DashboardPage: VoidComponent = () => {
@@ -50,9 +51,7 @@ const DashboardPage: VoidComponent = () => {
             to="/settings"
             variant="plain"
             aria-label={m.dashboard_settings()}
-            onClick={() => {
-              document.documentElement.dataset.viewTransitionDirection = "forward";
-            }}
+            onClick={() => setViewTransitionDirection("forward")}
           >
             <Settings aria-hidden="true" class="size-5" />
           </ButtonLink>

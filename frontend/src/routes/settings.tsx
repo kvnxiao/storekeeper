@@ -25,6 +25,7 @@ import { ButtonLink } from "@/modules/ui/components/ButtonLink";
 import { ErrorBanner } from "@/modules/ui/components/ErrorBanner";
 import { Tooltip } from "@/modules/ui/components/Tooltip";
 import { cn } from "@/modules/ui/ui.styles";
+import { setViewTransitionDirection } from "@/modules/ui/ui.utils";
 import * as m from "@/paraglide/messages";
 
 // =============================================================================
@@ -103,9 +104,7 @@ const SettingsForm: VoidComponent<SettingsFormProps> = (props) => {
             to="/"
             variant="plain"
             aria-label={m.settings_back()}
-            onClick={() => {
-              document.documentElement.dataset.viewTransitionDirection = "back";
-            }}
+            onClick={() => setViewTransitionDirection("back")}
           >
             <ArrowLeft aria-hidden="true" class="size-5" />
           </ButtonLink>

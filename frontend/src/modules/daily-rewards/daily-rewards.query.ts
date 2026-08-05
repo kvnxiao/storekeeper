@@ -23,7 +23,8 @@ function extractClaimStatus(status: AllDailyRewardStatus): Map<GameId, boolean> 
  * Query options for per-game daily-reward claim status.
  *
  * Never goes stale on its own: the cache is updated by the daily-reward
- * events wired in `core.init()` and by the daily reset watcher below.
+ * events wired in `core.init()` and by the reset watcher in
+ * `daily-rewards.state.ts`.
  */
 export function dailyRewardStatusQueryOptions() {
   return queryOptions({
@@ -53,28 +54,4 @@ export function claimDailyRewardMutationOptions() {
     onSuccess: () => invalidateDailyRewardStatus(),
     onError: (error) => console.error("Failed to claim daily reward:", error),
   });
-}
-
-/** UTC+8 offset in milliseconds (all HoYoLab games reset at midnight UTC+8). */
-const UTC8_OFFSET_MS = 8 * 3_600_000;
-
-function getUtc8DateString(): string {
-  return new Date(Date.now() + UTC8_OFFSET_MS).toISOString().slice(0, 10);
-}
-
-let lastUtc8Date = getUtc8DateString();
-
-/**
- * Detects the UTC+8 date rollover and re-fetches claim status after a buffer
- * for game server reset propagation. Driven by the core minute tick.
- */
-export function checkDailyReset(): void {
-  const currentDate = getUtc8DateString();
-  if (currentDate === lastUtc8Date) {
-    return;
-  }
-  lastUtc8Date = currentDate;
-  setTimeout(() => {
-    refreshDailyRewardStatus().catch(console.error);
-  }, 60_000);
 }
