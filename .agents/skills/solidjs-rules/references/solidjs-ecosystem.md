@@ -55,8 +55,8 @@ The Solid adapters share conventions that differ from their React counterparts; 
 
 - Messages are plain typed functions, callable from components and domain modules alike; there is no hook to thread through the UI layer.
 - With TanStack Start, follow the TanStack Router repo's `start-i18n-paraglide` Solid example: `paraglideMiddleware` on the server, router `rewrite` with `localizeUrl`/`deLocalizeUrl`, and a strategy array like `["url", "cookie", "preferredLanguage", "baseLocale"]`.
-- Locale switching is a full document navigation by design — `setLocale()` navigates or reloads so `<html lang>`, SSR state, and URLs stay in sync. Do not convert locale changes into signal-driven re-renders in URL-routed apps; the `setLocale(locale, { reload: false })` + `overwriteGetLocale(localeSignal)` escape hatch is only for fully client-rendered surfaces whose strategy excludes `url`.
-- Do not use solid-i18next (archived upstream). `@solid-primitives/i18n` is the fallback only when instant in-app locale switching with fine-grained reactivity outweighs generated message types.
+- Strategy configuration, locale switching, and custom locale strategies are covered in the i18n rules.
+- Do not use solid-i18next (archived upstream). `@solid-primitives/i18n` is the fallback only when instant in-app locale switching with fine-grained reactivity outweighs generated message types; its usage patterns are in the i18n rules.
 
 ## Do Not Confuse the Stores
 
