@@ -18,34 +18,23 @@ export interface WuwaSectionProps {
 }
 
 export const WuwaSection: VoidComponent<WuwaSectionProps> = (props) => {
-  const enabled = () => props.config?.enabled ?? false;
-  const uid = () => props.config?.uid ?? "";
+  // Normalizes the possibly-undefined config once so every onChange handler
+  // only states the field it changes.
+  const current = (): WuwaConfig => ({ enabled: false, uid: "", ...props.config });
 
   return (
     <Section title={m.game_wuwa_name()} description={m.settings_game_configure_wuwa()}>
       <Switch
-        checked={enabled()}
-        onChange={(checked) =>
-          props.onChange({
-            ...props.config,
-            enabled: checked,
-            uid: uid(),
-          })
-        }
+        checked={current().enabled}
+        onChange={(checked) => props.onChange({ ...current(), enabled: checked })}
       >
         {m.settings_wuwa_enable_tracking()}
       </Switch>
-      <Show when={enabled()}>
+      <Show when={current().enabled}>
         <TextField
           label={m.settings_game_uid()}
-          value={uid()}
-          onChange={(value) =>
-            props.onChange({
-              ...props.config,
-              enabled: enabled(),
-              uid: value,
-            })
-          }
+          value={current().uid}
+          onChange={(value) => props.onChange({ ...current(), uid: value })}
           placeholder={m.settings_game_uid_placeholder()}
         />
         <NotificationSection
@@ -53,14 +42,7 @@ export const WuwaSection: VoidComponent<WuwaSectionProps> = (props) => {
           resourceTypes={RESOURCE_TYPES}
           notifications={props.config?.notifications}
           resourceLimits={props.resourceLimits}
-          onChange={(notifications) =>
-            props.onChange({
-              ...props.config,
-              enabled: enabled(),
-              uid: uid(),
-              notifications,
-            })
-          }
+          onChange={(notifications) => props.onChange({ ...current(), notifications })}
         />
       </Show>
     </Section>

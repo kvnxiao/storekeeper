@@ -33,7 +33,7 @@ export function formatTimeRemaining(
     days: days > 0 ? days : undefined,
     hours: days > 0 || hours > 0 ? hours : undefined,
     minutes: minutes > 0 ? minutes : undefined,
-    seconds: hours === 0 && seconds > 0 ? seconds : undefined,
+    seconds: days === 0 && hours === 0 && seconds > 0 ? seconds : undefined,
   });
 }
 
@@ -69,6 +69,9 @@ export function formatAbsoluteDateTime(
     return null;
   }
   const target = new Date(datetime);
+  if (Number.isNaN(target.getTime())) {
+    return null;
+  }
   const now = new Date(nowMs);
   const isToday =
     target.getFullYear() === now.getFullYear() &&

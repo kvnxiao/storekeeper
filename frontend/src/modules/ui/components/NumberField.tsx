@@ -3,18 +3,7 @@ import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronUp from "lucide-solid/icons/chevron-up";
 import { Show, type VoidComponent } from "solid-js";
 import { tv } from "tailwind-variants";
-
-const fieldStyle = tv({
-  base: "group flex flex-col gap-1 font-sans",
-});
-
-const labelStyle = tv({
-  base: "text-sm font-medium text-zinc-950 dark:text-white",
-});
-
-const descriptionStyle = tv({
-  base: "text-sm text-zinc-500 dark:text-zinc-400",
-});
+import { descriptionStyle, fieldStyle, labelStyle } from "@/modules/ui/ui.styles";
 
 const groupStyle = tv({
   base: [

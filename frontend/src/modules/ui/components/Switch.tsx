@@ -1,5 +1,5 @@
 import * as SwitchPrimitive from "@kobalte/core/switch";
-import { type JSX, type ParentComponent, Show } from "solid-js";
+import { children, type ParentComponent, Show } from "solid-js";
 import { tv } from "tailwind-variants";
 import { cn } from "@/modules/ui/ui.styles";
 
@@ -46,11 +46,12 @@ export interface SwitchProps {
   checked: boolean;
   onChange: (checked: boolean) => void;
   disabled?: boolean;
-  children?: JSX.Element;
   class?: string;
 }
 
 export const Switch: ParentComponent<SwitchProps> = (props) => {
+  const label = children(() => props.children);
+
   return (
     <SwitchPrimitive.Root
       checked={props.checked}
@@ -67,8 +68,8 @@ export const Switch: ParentComponent<SwitchProps> = (props) => {
       <SwitchPrimitive.Control class={trackStyle({ disabled: props.disabled })}>
         <SwitchPrimitive.Thumb class={handleStyle()} />
       </SwitchPrimitive.Control>
-      <Show when={props.children}>
-        <SwitchPrimitive.Label>{props.children}</SwitchPrimitive.Label>
+      <Show when={label()}>
+        <SwitchPrimitive.Label>{label()}</SwitchPrimitive.Label>
       </Show>
     </SwitchPrimitive.Root>
   );

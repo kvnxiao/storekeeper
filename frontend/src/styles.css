@@ -89,8 +89,6 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-
-  --scrollbar-width: 8px;
 }
 
 /* Touch target utility - expands hit area to 44x44px on touch devices */

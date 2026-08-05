@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vite-plus/test";
-import { formatTimeRemaining } from "./resources.utils";
+import { formatAbsoluteDateTime, formatTimeRemaining } from "./resources.utils";
 
 vi.mock("@/paraglide/messages", () => ({
   time_remaining_full: () => "Full",
@@ -63,6 +63,7 @@ const LOCALE_CONFIGS = [
       "1d": "1d",
       "1d 5h 30m": "1d 5h 30m",
       "1d 0h 30m": "1d 30m",
+      "1d 0h 0m 45s": "1d",
       "7d 12h": "7d 12h",
     },
   },
@@ -84,6 +85,7 @@ const LOCALE_CONFIGS = [
       "1d": "1 日",
       "1d 5h 30m": "1 日 5 時間 30 分",
       "1d 0h 30m": "1 日 30 分",
+      "1d 0h 0m 45s": "1 日",
       "7d 12h": "7 日 12 時間",
     },
   },
@@ -105,6 +107,7 @@ const LOCALE_CONFIGS = [
       "1d": "1일",
       "1d 5h 30m": "1일 5시간 30분",
       "1d 0h 30m": "1일 30분",
+      "1d 0h 0m 45s": "1일",
       "7d 12h": "7일 12시간",
     },
   },
@@ -126,6 +129,7 @@ const LOCALE_CONFIGS = [
       "1d": "1天",
       "1d 5h 30m": "1天5小时30分钟",
       "1d 0h 30m": "1天30分钟",
+      "1d 0h 0m 45s": "1天",
       "7d 12h": "7天12小时",
     },
   },
@@ -148,6 +152,7 @@ const DURATION_DELTAS: Record<string, number> = {
   "1d": MS.d,
   "1d 5h 30m": MS.d + 5 * MS.h + 30 * MS.m,
   "1d 0h 30m": MS.d + 30 * MS.m,
+  "1d 0h 0m 45s": MS.d + 45 * MS.s,
   "7d 12h": 7 * MS.d + 12 * MS.h,
 };
 
@@ -158,5 +163,42 @@ describe.each(LOCALE_CONFIGS)("formatTimeRemaining - $locale", ({ locale, expect
   it.each(Object.entries(expected))("%s → %s", (label, output) => {
     const dt = futureIso(now, DURATION_DELTAS[label]);
     expect(formatTimeRemaining(dt, now, fmt)).toBe(output);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// formatAbsoluteDateTime
+// ---------------------------------------------------------------------------
+
+describe("formatAbsoluteDateTime", () => {
+  const now = Date.now();
+  const timeOnlyFmt = new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit" });
+  const weekdayTimeFmt = new Intl.DateTimeFormat("en", {
+    weekday: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+  it.each([
+    ["null", null],
+    ["undefined", undefined],
+    ["empty string", ""],
+    ["invalid date string", "not-a-date"],
+  ])("returns null for %s instead of throwing", (_label, datetime) => {
+    expect(formatAbsoluteDateTime(datetime, now, timeOnlyFmt, weekdayTimeFmt)).toBeNull();
+  });
+
+  it("formats same-day targets as time only", () => {
+    const target = new Date(now);
+    expect(formatAbsoluteDateTime(target.toISOString(), now, timeOnlyFmt, weekdayTimeFmt)).toBe(
+      timeOnlyFmt.format(target),
+    );
+  });
+
+  it("formats other-day targets with the weekday", () => {
+    const target = new Date(now + 3 * MS.d);
+    expect(formatAbsoluteDateTime(target.toISOString(), now, timeOnlyFmt, weekdayTimeFmt)).toBe(
+      weekdayTimeFmt.format(target),
+    );
   });
 });

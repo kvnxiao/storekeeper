@@ -57,8 +57,10 @@ export function withNotifyMode(
   config: ResourceNotificationConfig,
   mode: NotifyMode,
 ): ResourceNotificationConfig {
+  // The value-mode field's minimum is 1; a 0 default would persist a
+  // threshold the UI refuses to let the user enter.
   return mode === "value"
-    ? { ...config, notify_minutes_before_full: null, notify_at_value: config.notify_at_value ?? 0 }
+    ? { ...config, notify_minutes_before_full: null, notify_at_value: config.notify_at_value ?? 1 }
     : {
         ...config,
         notify_at_value: null,

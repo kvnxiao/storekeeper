@@ -1,6 +1,6 @@
 import { Link, type LinkComponentProps } from "@tanstack/solid-router";
 import { type Component, splitProps } from "solid-js";
-import { type ButtonStyleProps, buttonStyle } from "@/modules/ui/components/Button";
+import { type ButtonStyleProps, buttonClass } from "@/modules/ui/components/Button";
 
 export interface ButtonLinkProps extends LinkComponentProps, ButtonStyleProps {}
 
@@ -11,20 +11,8 @@ export interface ButtonLinkProps extends LinkComponentProps, ButtonStyleProps {}
 export const ButtonLink: Component<ButtonLinkProps> = (props) => {
   const [local, rest] = splitProps(props, ["variant", "color", "size", "class", "children"]);
 
-  // Only apply color for solid variant
-  const effectiveColor = () =>
-    local.variant === "solid" || !local.variant ? local.color : undefined;
-
   return (
-    <Link
-      {...rest}
-      class={buttonStyle({
-        variant: local.variant,
-        color: effectiveColor(),
-        size: local.size,
-        class: local.class,
-      })}
-    >
+    <Link {...rest} class={buttonClass(local)}>
       {local.children}
     </Link>
   );

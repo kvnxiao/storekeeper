@@ -19,7 +19,7 @@ export const WuwaSection: VoidComponent = () => {
       <StaminaCard
         iconPath={getResourceIconPath(WuwaResource.Waveplates)}
         name={getResourceDisplayName(WuwaResource.Waveplates)}
-        data={wuwa.waveplates() ?? undefined}
+        data={wuwa.waveplates()}
         formattedTime={wuwa.waveplatesTime()}
         isRefreshing={isRefreshing()}
       />

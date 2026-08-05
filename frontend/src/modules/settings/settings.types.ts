@@ -1,9 +1,4 @@
-import type {
-  GenshinResourceType,
-  HsrResourceType,
-  WuwaResourceType,
-  ZzzResourceType,
-} from "@/modules/games/games.constants";
+import type { WuwaResourceType } from "@/modules/games/games.constants";
 
 // =============================================================================
 // Configuration Types (matching Rust AppConfig - snake_case)
@@ -37,21 +32,6 @@ export interface HoyolabGameConfig {
   notifications?: Partial<Record<string, ResourceNotificationConfig>>;
 }
 
-/** Genshin Impact configuration */
-export interface GenshinConfig extends HoyolabGameConfig {
-  notifications?: Partial<Record<GenshinResourceType, ResourceNotificationConfig>>;
-}
-
-/** Honkai: Star Rail configuration */
-export interface HsrConfig extends HoyolabGameConfig {
-  notifications?: Partial<Record<HsrResourceType, ResourceNotificationConfig>>;
-}
-
-/** Zenless Zone Zero configuration */
-export interface ZzzConfig extends HoyolabGameConfig {
-  notifications?: Partial<Record<ZzzResourceType, ResourceNotificationConfig>>;
-}
-
 /** Wuthering Waves configuration */
 export interface WuwaConfig {
   enabled: boolean;
@@ -63,9 +43,9 @@ export interface WuwaConfig {
 
 /** Per-game configuration */
 export interface GamesConfig {
-  genshin_impact?: GenshinConfig;
-  honkai_star_rail?: HsrConfig;
-  zenless_zone_zero?: ZzzConfig;
+  genshin_impact?: HoyolabGameConfig;
+  honkai_star_rail?: HoyolabGameConfig;
+  zenless_zone_zero?: HoyolabGameConfig;
   wuthering_waves?: WuwaConfig;
 }
 

@@ -3,19 +3,8 @@ import Eye from "lucide-solid/icons/eye";
 import EyeOff from "lucide-solid/icons/eye-off";
 import { createSignal, Show, type VoidComponent } from "solid-js";
 import { tv } from "tailwind-variants";
+import { descriptionStyle, fieldStyle, labelStyle } from "@/modules/ui/ui.styles";
 import * as m from "@/paraglide/messages";
-
-const fieldStyle = tv({
-  base: "group flex flex-col gap-1 font-sans",
-});
-
-const labelStyle = tv({
-  base: "text-sm font-medium text-zinc-950 dark:text-white",
-});
-
-const descriptionStyle = tv({
-  base: "text-sm text-zinc-500 dark:text-zinc-400",
-});
 
 const inputStyle = tv({
   base: [

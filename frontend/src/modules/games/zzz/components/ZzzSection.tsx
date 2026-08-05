@@ -1,5 +1,5 @@
 import type { VoidComponent } from "solid-js";
-import { createClaimStatus } from "@/modules/daily-rewards/daily-rewards.primitives";
+import { DailyClaimBadge } from "@/modules/daily-rewards/components/DailyClaimBadge";
 import {
   getResourceDisplayName,
   getResourceIconPath,
@@ -14,19 +14,17 @@ import * as m from "@/paraglide/messages";
 
 export const ZzzSection: VoidComponent = () => {
   const zzz = createZzzResources();
-  const claimStatus = createClaimStatus(GameId.ZenlessZoneZero);
   const isRefreshing = createIsRefreshing();
 
   return (
     <GameSection
       title={m.game_zzz_name()}
-      gameId={GameId.ZenlessZoneZero}
-      claimStatus={claimStatus()}
+      badge={<DailyClaimBadge gameId={GameId.ZenlessZoneZero} />}
     >
       <StaminaCard
         iconPath={getResourceIconPath(ZzzResource.Battery)}
         name={getResourceDisplayName(ZzzResource.Battery)}
-        data={zzz.battery() ?? undefined}
+        data={zzz.battery()}
         formattedTime={zzz.batteryTime()}
         isRefreshing={isRefreshing()}
       />

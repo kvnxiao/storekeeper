@@ -3,12 +3,7 @@ import Check from "lucide-solid/icons/check";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import { Show, type VoidComponent } from "solid-js";
 import { tv } from "tailwind-variants";
-import { cn } from "@/modules/ui/ui.styles";
-
-// Label style (matches TextField)
-const labelStyle = tv({
-  base: "text-sm font-medium text-zinc-950 dark:text-white",
-});
+import { fieldStyle, labelStyle } from "@/modules/ui/ui.styles";
 
 // Select trigger button
 const selectTriggerStyle = tv({
@@ -86,7 +81,7 @@ export const Select: VoidComponent<SelectProps> = (props) => {
           <SelectPrimitive.ItemLabel>{itemProps.item.rawValue.label}</SelectPrimitive.ItemLabel>
         </SelectPrimitive.Item>
       )}
-      class={cn("flex flex-col gap-1", props.class)}
+      class={fieldStyle({ class: props.class })}
     >
       <Show when={props.label}>
         <SelectPrimitive.Label class={labelStyle()}>{props.label}</SelectPrimitive.Label>

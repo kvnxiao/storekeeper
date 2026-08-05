@@ -1,5 +1,5 @@
 import type { GameId, GameResourceTypeMap } from "@/modules/games/games.types";
-import type { AllResources, GameResource } from "@/modules/resources/resources.types";
+import type { AllResources } from "@/modules/resources/resources.types";
 
 /**
  * Selects a single resource by game and type, narrowing `.data` via the
@@ -11,7 +11,7 @@ export function selectResource<G extends GameId, T>(
   resourceType: GameResourceTypeMap[G],
   guard: (data: unknown) => data is T,
 ): T | null {
-  const resource = resources?.games?.[gameId]?.find((r: GameResource) => r.type === resourceType);
+  const resource = resources?.games?.[gameId]?.find((r) => r.type === resourceType);
   if (!resource || !guard(resource.data)) {
     return null;
   }

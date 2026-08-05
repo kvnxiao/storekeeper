@@ -19,48 +19,34 @@ export interface HoyolabGameSectionProps {
 }
 
 export const HoyolabGameSection: VoidComponent<HoyolabGameSectionProps> = (props) => {
-  const enabled = () => props.config?.enabled ?? false;
-  const uid = () => props.config?.uid ?? "";
-  const autoClaimDailyRewards = () => props.config?.auto_claim_daily_rewards ?? false;
+  // Normalizes the possibly-undefined config once so every onChange handler
+  // only states the field it changes.
+  const current = (): HoyolabGameConfig => ({
+    enabled: false,
+    uid: "",
+    auto_claim_daily_rewards: false,
+    ...props.config,
+  });
 
   return (
     <Section title={props.title} description={props.description}>
       <Switch
-        checked={enabled()}
-        onChange={(checked) =>
-          props.onChange({
-            ...props.config,
-            enabled: checked,
-            uid: uid(),
-            auto_claim_daily_rewards: autoClaimDailyRewards(),
-          })
-        }
+        checked={current().enabled}
+        onChange={(checked) => props.onChange({ ...current(), enabled: checked })}
       >
         {m.settings_game_enable_tracking({ title: props.title })}
       </Switch>
-      <Show when={enabled()}>
+      <Show when={current().enabled}>
         <TextField
           label={m.settings_game_uid()}
-          value={uid()}
-          onChange={(value) =>
-            props.onChange({
-              ...props.config,
-              enabled: enabled(),
-              uid: value,
-              auto_claim_daily_rewards: autoClaimDailyRewards(),
-            })
-          }
+          value={current().uid}
+          onChange={(value) => props.onChange({ ...current(), uid: value })}
           placeholder={m.settings_game_uid_placeholder()}
         />
         <Switch
-          checked={autoClaimDailyRewards()}
+          checked={current().auto_claim_daily_rewards}
           onChange={(checked) =>
-            props.onChange({
-              ...props.config,
-              enabled: enabled(),
-              uid: uid(),
-              auto_claim_daily_rewards: checked,
-            })
+            props.onChange({ ...current(), auto_claim_daily_rewards: checked })
           }
         >
           {m.settings_game_auto_claim()}
@@ -70,15 +56,7 @@ export const HoyolabGameSection: VoidComponent<HoyolabGameSectionProps> = (props
           resourceTypes={props.resourceTypes}
           notifications={props.config?.notifications}
           resourceLimits={props.resourceLimits}
-          onChange={(notifications) =>
-            props.onChange({
-              ...props.config,
-              enabled: enabled(),
-              uid: uid(),
-              auto_claim_daily_rewards: autoClaimDailyRewards(),
-              notifications,
-            })
-          }
+          onChange={(notifications) => props.onChange({ ...current(), notifications })}
         />
       </Show>
     </Section>

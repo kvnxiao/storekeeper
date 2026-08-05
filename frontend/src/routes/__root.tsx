@@ -6,7 +6,7 @@ import {
   Outlet,
   Scripts,
 } from "@tanstack/solid-router";
-import { type Component, onMount, type ParentComponent, Show } from "solid-js";
+import { type Component, createEffect, onMount, type ParentComponent, Show } from "solid-js";
 import { HydrationScript } from "solid-js/web";
 import { queryClient } from "@/modules/core/core.queryClient";
 import { core } from "@/modules/core/core.state";
@@ -34,6 +34,11 @@ const RootDocument: ParentComponent = (props) => (
 
 const RootComponent: Component = () => {
   onMount(() => core.init());
+
+  // The shell's static lang="en" never re-renders; keep it on the real locale.
+  createEffect(() => {
+    document.documentElement.lang = core.locale();
+  });
 
   return (
     <QueryClientProvider client={queryClient}>

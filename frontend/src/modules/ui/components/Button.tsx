@@ -4,8 +4,7 @@ import { type JSX, type ParentComponent, Show, splitProps } from "solid-js";
 import { tv, type VariantProps } from "tailwind-variants";
 
 // Catalyst-style button with layered pseudo-elements
-// Exported for reuse in ButtonLink
-export const buttonStyle = tv({
+const buttonStyle = tv({
   base: [
     // Base layout
     "relative isolate inline-flex items-center justify-center gap-x-2 rounded-lg border text-sm font-semibold",
@@ -102,6 +101,17 @@ export const buttonStyle = tv({
 
 export type ButtonStyleProps = VariantProps<typeof buttonStyle>;
 
+/** Button classes for any element styled as a button (see ButtonLink). */
+export function buttonClass(props: ButtonStyleProps & { class?: string }): string {
+  return buttonStyle({
+    variant: props.variant,
+    // Color only applies to the solid variant
+    color: props.variant === "solid" || !props.variant ? props.color : undefined,
+    size: props.size,
+    class: props.class,
+  });
+}
+
 export interface ButtonProps extends JSX.ButtonHTMLAttributes<HTMLButtonElement>, ButtonStyleProps {
   isPending?: boolean;
 }
@@ -117,20 +127,11 @@ export const Button: ParentComponent<ButtonProps> = (props) => {
     "disabled",
   ]);
 
-  // Only apply color for solid variant
-  const effectiveColor = () =>
-    local.variant === "solid" || !local.variant ? local.color : undefined;
-
   return (
     <ButtonPrimitive.Root
       {...rest}
       disabled={local.disabled || local.isPending}
-      class={buttonStyle({
-        variant: local.variant,
-        color: effectiveColor(),
-        size: local.size,
-        class: local.class,
-      })}
+      class={buttonClass(local)}
     >
       <Show when={local.isPending}>
         <RefreshClockwise aria-hidden="true" class="size-4 animate-spin" />

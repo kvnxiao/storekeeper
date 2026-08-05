@@ -47,11 +47,11 @@ describe("enabledNotificationConfig", () => {
 });
 
 describe("withNotifyMode", () => {
-  it("switching to value clears minutes and defaults the value to 0", () => {
+  it("switching to value clears minutes and defaults the value to 1", () => {
     expect(withNotifyMode(base, "value")).toEqual({
       ...base,
       notify_minutes_before_full: null,
-      notify_at_value: 0,
+      notify_at_value: 1,
     });
   });
 

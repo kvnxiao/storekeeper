@@ -72,9 +72,14 @@ function createCore() {
     }, 60_000);
   }
 
-  /** Resets the tick to now and restarts the minute interval. */
+  /**
+   * Resets the tick to now and restarts the minute interval. Runs the daily
+   * reset check here too: frequent backend events keep pushing the interval
+   * out, so the check cannot rely on the interval alone.
+   */
   function refreshTick(): void {
     setTick(Date.now());
+    checkDailyReset();
     startTickInterval();
   }
 
@@ -132,7 +137,6 @@ function createCore() {
     timeOnlyFormatter,
     weekdayTimeFormatter,
     tick,
-    refreshTick,
     setAppLocale,
     init,
   };

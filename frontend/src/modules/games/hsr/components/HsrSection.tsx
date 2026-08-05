@@ -1,5 +1,5 @@
 import type { VoidComponent } from "solid-js";
-import { createClaimStatus } from "@/modules/daily-rewards/daily-rewards.primitives";
+import { DailyClaimBadge } from "@/modules/daily-rewards/components/DailyClaimBadge";
 import {
   getResourceDisplayName,
   getResourceIconPath,
@@ -14,19 +14,17 @@ import * as m from "@/paraglide/messages";
 
 export const HsrSection: VoidComponent = () => {
   const hsr = createHsrResources();
-  const claimStatus = createClaimStatus(GameId.HonkaiStarRail);
   const isRefreshing = createIsRefreshing();
 
   return (
     <GameSection
       title={m.game_hsr_name()}
-      gameId={GameId.HonkaiStarRail}
-      claimStatus={claimStatus()}
+      badge={<DailyClaimBadge gameId={GameId.HonkaiStarRail} />}
     >
       <StaminaCard
         iconPath={getResourceIconPath(HsrResource.TrailblazePower)}
         name={getResourceDisplayName(HsrResource.TrailblazePower)}
-        data={hsr.trailblazePower() ?? undefined}
+        data={hsr.trailblazePower()}
         formattedTime={hsr.trailblazePowerTime()}
         isRefreshing={isRefreshing()}
       />

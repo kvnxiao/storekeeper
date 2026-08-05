@@ -4,7 +4,6 @@ import { createFileRoute } from "@tanstack/solid-router";
 import ArrowLeft from "lucide-solid/icons/arrow-left";
 import CircleAlert from "lucide-solid/icons/circle-alert";
 import { For, Show, type VoidComponent } from "solid-js";
-import { unwrap } from "solid-js/store";
 import { GenshinResource, HsrResource, ZzzResource } from "@/modules/games/games.constants";
 import { GameId } from "@/modules/games/games.types";
 import { resourcesQueryOptions } from "@/modules/resources/resources.query";
@@ -77,12 +76,7 @@ const SettingsForm: VoidComponent<SettingsFormProps> = (props) => {
   const save = useMutation(() => saveSettingsMutationOptions(queryClient));
 
   const form = createForm(() => ({
-    // Snapshot the cache objects: clone so form edits never alias them,
-    // unwrap because structuredClone rejects store proxies.
-    ...settingsFormOptions({
-      config: structuredClone(unwrap(props.config)),
-      secrets: structuredClone(unwrap(props.secrets)),
-    }),
+    ...settingsFormOptions({ config: props.config, secrets: props.secrets }),
     onSubmit: async ({ value, formApi }) => {
       try {
         await save.mutateAsync(value);
@@ -122,8 +116,10 @@ const SettingsForm: VoidComponent<SettingsFormProps> = (props) => {
       {/* Error display */}
       <Show when={saveError()}>{(error) => <ErrorBanner class="mb-4">{error()}</ErrorBanner>}</Show>
 
-      {/* Settings sections */}
-      <div class="space-y-6">
+      {/* Settings sections. Disabled while a save is in flight so edits can't
+          land between submit and the post-save formApi.reset(value), which
+          would silently revert them. */}
+      <fieldset class="min-w-0 space-y-6" disabled={save.isPending}>
         <form.Field name="config.general">
           {(field) => (
             <GeneralSection
@@ -178,7 +174,7 @@ const SettingsForm: VoidComponent<SettingsFormProps> = (props) => {
             />
           )}
         </form.Field>
-      </div>
+      </fieldset>
 
       {/* Floating action bar */}
       <div

@@ -2,36 +2,41 @@ import { useQuery } from "@tanstack/solid-query";
 import { createMemo } from "solid-js";
 import { core } from "@/modules/core/core.state";
 import { GenshinResource } from "@/modules/games/games.constants";
-import { createFormattedTime, createStaminaResource } from "@/modules/games/games.primitives";
+import {
+  createCooldownResource,
+  createFormattedTime,
+  createStaminaResource,
+} from "@/modules/games/games.primitives";
 import { GameId } from "@/modules/games/games.types";
 import { selectResource } from "@/modules/games/games.utils";
 import { resourcesQueryOptions } from "@/modules/resources/resources.query";
-import { isCooldownResource, isExpeditionResource } from "@/modules/resources/resources.types";
+import { type CooldownResource, isExpeditionResource } from "@/modules/resources/resources.types";
 import { isPastDateTime } from "@/modules/resources/resources.utils";
 
 /** Reactive Genshin Impact resource selectors over the resources query. */
 export function createGenshinResources() {
-  const resourcesQuery = useQuery(() => resourcesQueryOptions());
+  const query = useQuery(() => resourcesQueryOptions());
+  const resources = () => query.data;
 
-  const [resin, resinTime] = createStaminaResource(GameId.GenshinImpact, GenshinResource.Resin);
+  const [resin, resinTime] = createStaminaResource(
+    resources,
+    GameId.GenshinImpact,
+    GenshinResource.Resin,
+  );
   const [realmCurrency, realmCurrencyTime] = createStaminaResource(
+    resources,
     GameId.GenshinImpact,
     GenshinResource.RealmCurrency,
   );
-
-  const parametricTransformer = createMemo(() =>
-    selectResource(
-      resourcesQuery.data,
-      GameId.GenshinImpact,
-      GenshinResource.ParametricTransformer,
-      isCooldownResource,
-    ),
+  const [parametricTransformer, parametricTransformerTime] = createCooldownResource(
+    resources,
+    GameId.GenshinImpact,
+    GenshinResource.ParametricTransformer,
   );
-  const parametricTransformerTime = createFormattedTime(() => parametricTransformer()?.readyAt);
 
   const expeditions = createMemo(() =>
     selectResource(
-      resourcesQuery.data,
+      resources(),
       GameId.GenshinImpact,
       GenshinResource.Expeditions,
       isExpeditionResource,
@@ -47,6 +52,13 @@ export function createGenshinResources() {
     return isPastDateTime(data.earliestFinishAt, core.tick());
   });
 
+  // Expeditions render as a cooldown: ready when every dispatched expedition
+  // has finished.
+  const expeditionsCooldown = createMemo<CooldownResource | null>(() => {
+    const data = expeditions();
+    return data ? { isReady: expeditionsReady(), readyAt: data.earliestFinishAt } : null;
+  });
+
   return {
     resin,
     resinTime,
@@ -54,8 +66,7 @@ export function createGenshinResources() {
     parametricTransformerTime,
     realmCurrency,
     realmCurrencyTime,
-    expeditions,
+    expeditionsCooldown,
     expeditionsTime,
-    expeditionsReady,
   };
 }

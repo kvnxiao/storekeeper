@@ -107,7 +107,7 @@ export const NotificationResourceRow: VoidComponent<NotificationResourceRowProps
                             })
                           : m.settings_notification_value()
                       }
-                      value={config().notify_at_value ?? 0}
+                      value={config().notify_at_value ?? 1}
                       onChange={(value) => props.onChange(withNotifyAtValue(config(), value))}
                       minValue={1}
                       maxValue={props.limits?.maxValue ?? 9999}

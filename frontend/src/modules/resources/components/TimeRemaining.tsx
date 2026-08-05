@@ -1,7 +1,6 @@
 import { Show, type VoidComponent } from "solid-js";
 import { tv } from "tailwind-variants";
 import { Tooltip } from "@/modules/ui/components/Tooltip";
-import { cn } from "@/modules/ui/ui.styles";
 
 const interactiveStyle = tv({
   base: [
@@ -13,20 +12,16 @@ const interactiveStyle = tv({
 export interface TimeRemainingProps {
   relativeTime: string;
   absoluteTime: string | null;
-  class?: string;
   /** Skip background styling (use when nested inside Badge) */
   plain?: boolean;
 }
 
 export const TimeRemaining: VoidComponent<TimeRemainingProps> = (props) => {
   return (
-    <Show
-      when={props.absoluteTime}
-      fallback={<time class={props.class}>{props.relativeTime}</time>}
-    >
+    <Show when={props.absoluteTime} fallback={<time>{props.relativeTime}</time>}>
       <Tooltip
         content={props.absoluteTime}
-        triggerClass={cn(!props.plain && interactiveStyle(), props.class)}
+        triggerClass={props.plain ? undefined : interactiveStyle()}
       >
         {props.relativeTime}
       </Tooltip>
