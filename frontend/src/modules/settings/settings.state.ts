@@ -42,17 +42,20 @@ function createSettingsForm() {
    *
    * Clones the working copies too - the arguments are the query cache's own
    * objects, and `produce` in the updaters would otherwise mutate the cache
-   * in place, leaking unsaved edits to other cache readers.
+   * in place, leaking unsaved edits to other cache readers. solid-query hands
+   * out store proxies, which structuredClone rejects, so unwrap first.
    */
   function initialize(config: AppConfig, secrets: SecretsConfig): void {
     if (state.config || state.secrets) {
       return;
     }
+    const rawConfig = unwrap(config);
+    const rawSecrets = unwrap(secrets);
     setState({
-      config: structuredClone(config),
-      secrets: structuredClone(secrets),
-      originalConfig: structuredClone(config),
-      originalSecrets: structuredClone(secrets),
+      config: structuredClone(rawConfig),
+      secrets: structuredClone(rawSecrets),
+      originalConfig: structuredClone(rawConfig),
+      originalSecrets: structuredClone(rawSecrets),
     });
   }
 
