@@ -1,3 +1,8 @@
+---
+paths: .github/workflows/*.{yml,yaml}
+description: "Pin third-party GitHub Actions to the latest published major (or a SHA with a version comment); never float on @main or @master."
+---
+
 # GitHub Actions Versioning
 
 When authoring or editing files under `.github/workflows/`, **always

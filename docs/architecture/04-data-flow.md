@@ -306,7 +306,11 @@ sequenceDiagram
 | Backend i18n keys | dot.separated | `notification.resource_full` |
 | Frontend i18n keys | snake_case | `settings_notifications_title` |
 
-Serde's `#[serde(rename_all = "camelCase")]` handles the Rust↔JSON conversion automatically. See [frontend-tauri-bridge.md](../standards/frontend/frontend-tauri-bridge.md) for full details.
+Serde's `#[serde(rename_all = "camelCase")]` handles the Rust↔JSON conversion automatically.
+
+Config and secrets types are the deliberate exception: they stay snake_case end to end (`AppConfig`, `GeneralConfig`, `GamesConfig` and the per-game configs, `SecretsConfig`, `HoyolabSecrets`, `KuroSecrets`) so Rust types serialize directly with no DTO layer and stay consistent with the snake_case TOML files. Resource types (`StaminaResource`, `CooldownResource`, `ExpeditionResource`, `AllResources`) are camelCase in JSON and TypeScript via the serde rename.
+
+To add a config field: add it snake_case to the Rust type in `storekeeper-core/src/config.rs`, mirror it snake_case in `frontend/src/modules/settings/settings.types.ts`, and use it in the UI — no conversion layer. To add a resource field: add it snake_case to the Rust type in the game crate (the struct must carry `#[serde(rename_all = "camelCase")]`), then mirror it camelCase in `frontend/src/modules/resources/resources.types.ts`.
 
 ## Rate Limiting Strategy
 

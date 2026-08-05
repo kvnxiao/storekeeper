@@ -111,10 +111,10 @@ To add a new tracked resource to an existing game:
 ## Working with the Frontend
 
 Key patterns to follow:
-- **State**: Use Jotai atoms. See [frontend-atoms.md](../standards/frontend/frontend-atoms.md)
-- **Queries**: Use TanStack Query options. See [frontend-queries.md](../standards/frontend/frontend-queries.md)
-- **Components**: Use React Aria Components. See [frontend-react-aria.md](../standards/frontend/frontend-react-aria.md)
-- **Styling**: Use Tailwind CSS with `tv()`. See [frontend-styling.md](../standards/frontend/frontend-styling.md)
+- **State**: Use Solid state modules. See [solidjs-state-architecture.md](../../.claude/skills/solidjs-rules/references/solidjs-state-architecture.md)
+- **Queries**: Use TanStack Query options. See [solidjs-data-fetching.md](../../.claude/skills/solidjs-rules/references/solidjs-data-fetching.md)
+- **Components**: Use Kobalte primitives styled with Tailwind `tv()`. See [solidjs-ecosystem.md](../../.claude/skills/solidjs-rules/references/solidjs-ecosystem.md)
+- **Styling**: Use Tailwind CSS with `tv()` from tailwind-variants
 
 ## Checklist Before Submitting
 

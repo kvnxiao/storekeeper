@@ -29,4 +29,4 @@ Read [`docs/README.md`](docs/README.md) for the full documentation index.
 - Consult `docs/architecture/` for system design and data flow
 - Consult `docs/onboarding/` for setup and contribution guides
 - Follow all patterns in `docs/standards/rust/`
-- Follow all patterns in `docs/standards/frontend/`
+- Frontend, Rust, and GitHub Actions rules live in `.claude/skills/` (`solidjs-rules`, `rust-rules`, `github-actions-rules`); agents load them via the Skill tool, humans can read them directly

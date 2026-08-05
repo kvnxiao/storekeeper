@@ -1,10 +1,11 @@
 ---
 paths: **/*.{rs,toml}
+description: "Multi-crate Cargo workspace layout; root-level crates, workspace dependencies, lints, and package inheritance, inter-crate deps, and avoiding cycles."
 ---
 
 # Multi-Crate Workspaces
 
-> **Scope:** This rule applies only when the project is structured as a multi-crate Cargo workspace (i.e. the root `Cargo.toml` contains a `[workspace]` table). For a single-crate project, ignore the workspace-specific guidance below; use crate-level `[lints]`, `[dependencies]`, and `[package]` sections per the other rule files in this directory.
+> **Scope:** This rule applies only when the project is structured as a multi-crate Cargo workspace (i.e. the root `Cargo.toml` contains a `[workspace]` table). For a single-crate project, ignore the workspace-specific guidance below and use crate-level `[lints]`, `[dependencies]`, and `[package]` sections instead.
 
 ## Workspace Structure: Root-Level Crates
 
@@ -41,13 +42,14 @@ members = ["my-core", "my-cli", "my-utils"]
 resolver = "2"
 
 [workspace.dependencies]
-tokio = { version = "1.35", features = ["full"] }
+tokio = { version = "1.35", features = ["rt-multi-thread", "macros"] }
 serde = { version = "1.0", features = ["derive"] }
 thiserror = "2.0"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
 missing_docs = "warn"
+missing_debug_implementations = "warn"
 
 # Clippy lints: configure the project's strict set under
 # `[workspace.lints.clippy]` (not `[lints.clippy]`) at the workspace root,
@@ -59,11 +61,6 @@ missing_docs = "warn"
 edition = "2024"
 rust-version = "1.95"
 license = "MIT OR Apache-2.0"
-
-[profile.release]
-opt-level = 3
-lto = "thin"
-strip = true
 ```
 
 Member crates inherit the lint set via `[lints] workspace = true` (see the member-crate example below).

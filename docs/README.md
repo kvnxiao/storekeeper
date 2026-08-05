@@ -15,7 +15,7 @@ System design, component relationships, and data flow:
 
 Actionable patterns and conventions for both humans and AI agents:
 
-- **[Frontend Standards](standards/frontend/)** — React, TypeScript, Tailwind, React Aria conventions
+- **[SolidJS Rules](../.claude/skills/solidjs-rules/)** — SolidJS, TypeScript, TanStack, Kobalte, and Tailwind conventions (Claude Code skill; reference docs under `references/`)
 - **[Rust Standards](standards/rust/)** — Linting, error handling, testing, workspace conventions
 
 ## Onboarding

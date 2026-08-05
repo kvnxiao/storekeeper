@@ -228,15 +228,29 @@ Each feature module follows this pattern:
 
 ```
 {feature}/
-├── components/               # UI components
-├── {feature}.atoms.ts       # Jotai atoms
+├── components/               # UI components (PascalCase .tsx, no suffix)
+├── {feature}.state.ts       # SolidJS state module (optional)
+├── {feature}.primitives.ts  # SolidJS primitives (optional)
 ├── {feature}.query.ts       # TanStack Query options
 ├── {feature}.types.ts       # TypeScript types
-├── {feature}.hooks.ts       # Custom React hooks (optional)
 └── {feature}.utils.ts       # Utility functions (optional)
 ```
 
-See [frontend-components.md](../standards/frontend/frontend-components.md) for naming conventions.
+TypeScript files use `<module>.<type>.ts` naming: the `<module>` prefix matches the
+parent directory and `<type>` indicates the file's single role.
+
+| Suffix | Purpose |
+|---|---|
+| `.state.ts` | SolidJS state modules (`createRoot` singletons with accessors and actions) |
+| `.primitives.ts` | SolidJS primitives (component-scoped `create*` composables) |
+| `.query.ts` | TanStack Query options and mutations |
+| `.types.ts` | TypeScript type/interface definitions |
+| `.utils.ts` | Pure utility/helper functions |
+| `.constants.ts` | Static constant values |
+| `.styles.ts` | Style definitions (Tailwind helpers, etc.) |
+| `.config.ts` | Configuration setup (query clients, etc.) |
+
+One file per role. Auto-generated files (e.g. `routeTree.gen.ts`) are exempt.
 
 ## Adding a New Game
 

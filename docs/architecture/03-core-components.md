@@ -379,7 +379,7 @@ import * as m from "@/paraglide/messages";
 - Game names: `game_genshin_impact`, `game_honkai_star_rail`
 - Resource names: `resource_resin`, `resource_trailblaze_power`
 
-See [frontend-i18n.md](../standards/frontend/frontend-i18n.md) for frontend i18n standards.
+See the Paraglide JS section of [solidjs-ecosystem.md](../../.claude/skills/solidjs-rules/references/solidjs-ecosystem.md) for frontend i18n conventions.
 
 ## 10. Frontend State Management
 

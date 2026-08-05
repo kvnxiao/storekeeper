@@ -76,7 +76,7 @@ Key entry points:
 
 Before submitting code, familiarise yourself with the project standards:
 - [Rust standards](../standards/rust/) — Linting, error handling, testing, performance
-- [Frontend standards](../standards/frontend/) — Components, state management, styling
+- [SolidJS rules](../../.claude/skills/solidjs-rules/) — Components, state management, data fetching
 
 **Always run linters before committing**:
 
