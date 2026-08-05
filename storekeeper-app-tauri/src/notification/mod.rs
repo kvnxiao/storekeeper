@@ -49,7 +49,7 @@ fn resolve_notifiable_resource<'a>(
 /// Starts the background notification checker.
 ///
 /// Runs every 60 seconds, checking cached resources against per-game
-/// notification thresholds. Does not make API calls — reads state only.
+/// notification thresholds. Does not make API calls - reads state only.
 pub fn start_notification_checker(app_handle: AppHandle, cancel_token: CancellationToken) {
     tauri::async_runtime::spawn(async move {
         tracing::info!("Starting notification checker task");

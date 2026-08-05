@@ -1,6 +1,6 @@
 import { Show, type VoidComponent } from "solid-js";
 import type { GameId } from "@/modules/games/games.types";
-import type { ResourceLimits } from "@/modules/settings/components/NotificationResourceRow";
+import type { ResourceLimits } from "@/modules/resources/resources.types";
 import { NotificationSection } from "@/modules/settings/components/NotificationSection";
 import { Section } from "@/modules/settings/components/Section";
 import type { HoyolabGameConfig } from "@/modules/settings/settings.types";

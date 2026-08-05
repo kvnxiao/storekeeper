@@ -7,7 +7,7 @@ use serde::Serialize;
 /// Notification configuration for a specific resource.
 ///
 /// Controls when and how often OS notifications are sent for a tracked
-/// resource. Supports two threshold modes (mutually exclusive — set one, leave
+/// resource. Supports two threshold modes (mutually exclusive - set one, leave
 /// the other `None`):
 /// - `notify_minutes_before_full`: fire N minutes before the resource is full
 /// - `notify_at_value`: fire when the resource value reaches N (stamina

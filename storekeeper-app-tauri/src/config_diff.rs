@@ -82,7 +82,7 @@ pub(crate) fn compute(
         games_to_reset_notifications.extend(change.game_to_reset_notifications);
     }
 
-    // Check secrets changes — affects all games of the corresponding provider
+    // Check secrets changes - affects all games of the corresponding provider
     if old_secrets.hoyolab != new_secrets.hoyolab {
         needs_registry_rebuild = true;
         for &game_id in &[
@@ -229,7 +229,7 @@ fn check_game_config<T: ClientFields>(
 
     match (old, new) {
         (None, None) => none,
-        // Game added or removed — needs rebuild + refresh
+        // Game added or removed - needs rebuild + refresh
         (None, Some(cfg)) if cfg.enabled() => GameConfigChange {
             needs_registry_rebuild: true,
             game_to_refresh: Some(game_id),
@@ -240,7 +240,7 @@ fn check_game_config<T: ClientFields>(
             ..none
         },
         (None, Some(_)) | (Some(_), None) => GameConfigChange {
-            // Disabled game added/removed — rebuild but no fetch needed
+            // Disabled game added/removed - rebuild but no fetch needed
             needs_registry_rebuild: true,
             ..none
         },

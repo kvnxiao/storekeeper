@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import BellRing from "lucide-solid/icons/bell-ring";
 import { createSignal, Show, type VoidComponent } from "solid-js";
 import type { GameId } from "@/modules/games/games.types";
+import type { ResourceLimits } from "@/modules/resources/resources.types";
 import type { ResourceNotificationConfig } from "@/modules/settings/settings.types";
 import { Button } from "@/modules/ui/components/Button";
 import { NumberField } from "@/modules/ui/components/NumberField";
@@ -16,14 +17,6 @@ function getNotifyMode(config: ResourceNotificationConfig): NotifyMode {
     return "value";
   }
   return "minutes";
-}
-
-/** Resource limits derived from backend data, used for input constraints */
-export interface ResourceLimits {
-  /** Maximum resource value (e.g., 160 for resin, 240 for trailblaze power) */
-  maxValue: number;
-  /** Seconds to regenerate one unit */
-  regenRateSeconds: number;
 }
 
 export interface NotificationResourceRowProps {

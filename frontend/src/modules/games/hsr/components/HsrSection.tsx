@@ -1,27 +1,30 @@
 import type { VoidComponent } from "solid-js";
-import { core } from "@/modules/core/core.state";
+import { createClaimStatus } from "@/modules/daily-rewards/daily-rewards.primitives";
 import { getResourceDisplayName, HsrResource } from "@/modules/games/games.constants";
 import { GameId } from "@/modules/games/games.types";
 import { createHsrResources } from "@/modules/games/hsr/hsr.primitives";
+import { createIsRefreshing } from "@/modules/resources/resources.primitives";
 import { StaminaCard } from "@/modules/resources/components/StaminaCard";
 import { GameSection } from "@/modules/ui/components/GameSection";
 import * as m from "@/paraglide/messages";
 
 export const HsrSection: VoidComponent = () => {
   const hsr = createHsrResources();
+  const claimStatus = createClaimStatus(GameId.HonkaiStarRail);
+  const isRefreshing = createIsRefreshing();
 
   return (
     <GameSection
       title={m.game_hsr_name()}
       gameId={GameId.HonkaiStarRail}
-      claimStatus={core.dailyClaimStatus().get(GameId.HonkaiStarRail) ?? null}
+      claimStatus={claimStatus()}
     >
       <StaminaCard
         iconPath="/icons/game/hsr/Item_Trailblaze_Power.webp"
         name={getResourceDisplayName(HsrResource.TrailblazePower)}
         data={hsr.trailblazePower() ?? undefined}
         formattedTime={hsr.trailblazePowerTime()}
-        isRefreshing={core.isRefreshing()}
+        isRefreshing={isRefreshing()}
       />
     </GameSection>
   );

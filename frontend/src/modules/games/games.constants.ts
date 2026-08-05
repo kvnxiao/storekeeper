@@ -38,19 +38,21 @@ export const STAMINA_RESOURCE_TYPES: ReadonlySet<string> = new Set([
   WuwaResource.Waveplates,
 ]);
 
+const RESOURCE_DISPLAY_NAMES: Record<string, () => string> = {
+  [GenshinResource.Resin]: m.resource_resin,
+  [GenshinResource.ParametricTransformer]: m.resource_parametric_transformer,
+  [GenshinResource.RealmCurrency]: m.resource_realm_currency,
+  [GenshinResource.Expeditions]: m.resource_expeditions,
+  [HsrResource.TrailblazePower]: m.resource_trailblaze_power,
+  [ZzzResource.Battery]: m.resource_battery,
+  [WuwaResource.Waveplates]: m.resource_waveplates,
+};
+
 /** Returns the localized display name for a resource type, evaluated at call time */
 export function getResourceDisplayName(type: string): string {
-  const names: Record<string, () => string> = {
-    [GenshinResource.Resin]: m.resource_resin,
-    [GenshinResource.ParametricTransformer]: m.resource_parametric_transformer,
-    [GenshinResource.RealmCurrency]: m.resource_realm_currency,
-    [GenshinResource.Expeditions]: m.resource_expeditions,
-    [HsrResource.TrailblazePower]: m.resource_trailblaze_power,
-    [ZzzResource.Battery]: m.resource_battery,
-    [WuwaResource.Waveplates]: m.resource_waveplates,
-  };
-  // names[type] is undefined at runtime for unknown resource types (Record
-  // index access is not modelled by the type), so this guard is intentional.
+  // RESOURCE_DISPLAY_NAMES[type] is undefined at runtime for unknown resource
+  // types (Record index access is not modelled by the type), so this guard is
+  // intentional.
   // oxlint-disable-next-line typescript/no-unnecessary-condition
-  return names[type]?.() ?? type;
+  return RESOURCE_DISPLAY_NAMES[type]?.() ?? type;
 }

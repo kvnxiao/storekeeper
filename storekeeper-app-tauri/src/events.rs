@@ -44,7 +44,7 @@ mod tests {
     use super::*;
 
     // =========================================================================
-    // AppEvent::as_str — verify each variant
+    // AppEvent::as_str - verify each variant
     // =========================================================================
 
     #[test]
@@ -74,7 +74,7 @@ mod tests {
     }
 
     // =========================================================================
-    // AppEvent — all events use lowercase kebab-case
+    // AppEvent - all events use lowercase kebab-case
     // =========================================================================
 
     #[test]
@@ -95,7 +95,7 @@ mod tests {
     }
 
     // =========================================================================
-    // GameResourcePayload serde — camelCase field names
+    // GameResourcePayload serde - camelCase field names
     // =========================================================================
 
     #[test]

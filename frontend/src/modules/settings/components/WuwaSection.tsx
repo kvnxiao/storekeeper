@@ -1,7 +1,7 @@
 import { Show, type VoidComponent } from "solid-js";
 import { WuwaResource } from "@/modules/games/games.constants";
 import { GameId } from "@/modules/games/games.types";
-import type { ResourceLimits } from "@/modules/settings/components/NotificationResourceRow";
+import type { ResourceLimits } from "@/modules/resources/resources.types";
 import { NotificationSection } from "@/modules/settings/components/NotificationSection";
 import { Section } from "@/modules/settings/components/Section";
 import type { WuwaConfig } from "@/modules/settings/settings.types";
@@ -9,7 +9,7 @@ import { Switch } from "@/modules/ui/components/Switch";
 import { TextField } from "@/modules/ui/components/TextField";
 import * as m from "@/paraglide/messages";
 
-const RESOURCE_TYPES = [WuwaResource.Waveplates] as const;
+const RESOURCE_TYPES = Object.values(WuwaResource);
 
 export interface WuwaSectionProps {
   config: WuwaConfig | undefined;

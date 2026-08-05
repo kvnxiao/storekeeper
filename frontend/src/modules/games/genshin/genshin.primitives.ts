@@ -2,30 +2,22 @@ import { useQuery } from "@tanstack/solid-query";
 import { createMemo } from "solid-js";
 import { core } from "@/modules/core/core.state";
 import { GenshinResource } from "@/modules/games/games.constants";
-import { createFormattedTime } from "@/modules/games/games.primitives";
+import { createFormattedTime, createStaminaResource } from "@/modules/games/games.primitives";
 import { GameId } from "@/modules/games/games.types";
 import { selectResource } from "@/modules/games/games.utils";
 import { resourcesQueryOptions } from "@/modules/resources/resources.query";
-import {
-  isCooldownResource,
-  isExpeditionResource,
-  isStaminaResource,
-} from "@/modules/resources/resources.types";
+import { isCooldownResource, isExpeditionResource } from "@/modules/resources/resources.types";
 import { isPastDateTime } from "@/modules/resources/resources.utils";
 
 /** Reactive Genshin Impact resource selectors over the resources query. */
 export function createGenshinResources() {
   const resourcesQuery = useQuery(() => resourcesQueryOptions());
 
-  const resin = createMemo(() =>
-    selectResource(
-      resourcesQuery.data,
-      GameId.GenshinImpact,
-      GenshinResource.Resin,
-      isStaminaResource,
-    ),
+  const [resin, resinTime] = createStaminaResource(GameId.GenshinImpact, GenshinResource.Resin);
+  const [realmCurrency, realmCurrencyTime] = createStaminaResource(
+    GameId.GenshinImpact,
+    GenshinResource.RealmCurrency,
   );
-  const resinTime = createFormattedTime(() => resin()?.fullAt);
 
   const parametricTransformer = createMemo(() =>
     selectResource(
@@ -36,16 +28,6 @@ export function createGenshinResources() {
     ),
   );
   const parametricTransformerTime = createFormattedTime(() => parametricTransformer()?.readyAt);
-
-  const realmCurrency = createMemo(() =>
-    selectResource(
-      resourcesQuery.data,
-      GameId.GenshinImpact,
-      GenshinResource.RealmCurrency,
-      isStaminaResource,
-    ),
-  );
-  const realmCurrencyTime = createFormattedTime(() => realmCurrency()?.fullAt);
 
   const expeditions = createMemo(() =>
     selectResource(

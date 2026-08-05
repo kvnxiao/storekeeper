@@ -1,18 +1,22 @@
 import type { VoidComponent } from "solid-js";
-import { core } from "@/modules/core/core.state";
 import { GenshinResource, getResourceDisplayName } from "@/modules/games/games.constants";
-import { createGenshinResources } from "@/modules/games/genshin/genshin.primitives";
 import { CooldownCard } from "@/modules/resources/components/CooldownCard";
+import type { ExpeditionResource, FormattedTime } from "@/modules/resources/resources.types";
 
 const RESOURCE_ICON = "/icons/game/genshin/Expeditions.webp";
 
-export const ExpeditionsCard: VoidComponent = () => {
-  const genshin = createGenshinResources();
+export interface ExpeditionsCardProps {
+  expeditions: ExpeditionResource | null;
+  ready: boolean;
+  formattedTime: FormattedTime;
+  isRefreshing: boolean;
+}
 
+export const ExpeditionsCard: VoidComponent<ExpeditionsCardProps> = (props) => {
   const data = () => {
-    const expeditions = genshin.expeditions();
+    const expeditions = props.expeditions;
     return expeditions
-      ? { isReady: genshin.expeditionsReady(), readyAt: expeditions.earliestFinishAt }
+      ? { isReady: props.ready, readyAt: expeditions.earliestFinishAt }
       : undefined;
   };
 
@@ -21,8 +25,8 @@ export const ExpeditionsCard: VoidComponent = () => {
       iconPath={RESOURCE_ICON}
       name={getResourceDisplayName(GenshinResource.Expeditions)}
       data={data()}
-      formattedTime={genshin.expeditionsTime()}
-      isRefreshing={core.isRefreshing()}
+      formattedTime={props.formattedTime}
+      isRefreshing={props.isRefreshing}
     />
   );
 };

@@ -1,13 +1,14 @@
 import type { VoidComponent } from "solid-js";
-import { core } from "@/modules/core/core.state";
 import { getResourceDisplayName, WuwaResource } from "@/modules/games/games.constants";
 import { createWuwaResources } from "@/modules/games/wuwa/wuwa.primitives";
+import { createIsRefreshing } from "@/modules/resources/resources.primitives";
 import { StaminaCard } from "@/modules/resources/components/StaminaCard";
 import { GameSection } from "@/modules/ui/components/GameSection";
 import * as m from "@/paraglide/messages";
 
 export const WuwaSection: VoidComponent = () => {
   const wuwa = createWuwaResources();
+  const isRefreshing = createIsRefreshing();
 
   return (
     <GameSection title={m.game_wuwa_name()}>
@@ -16,7 +17,7 @@ export const WuwaSection: VoidComponent = () => {
         name={getResourceDisplayName(WuwaResource.Waveplates)}
         data={wuwa.waveplates() ?? undefined}
         formattedTime={wuwa.waveplatesTime()}
-        isRefreshing={core.isRefreshing()}
+        isRefreshing={isRefreshing()}
       />
     </GameSection>
   );

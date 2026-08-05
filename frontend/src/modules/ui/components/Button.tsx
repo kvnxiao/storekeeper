@@ -1,5 +1,5 @@
 import * as ButtonPrimitive from "@kobalte/core/button";
-import RefreshCw from "lucide-solid/icons/refresh-cw";
+import RefreshClockwise from "lucide-solid/icons/refresh-cw";
 import { type JSX, type ParentComponent, Show, splitProps } from "solid-js";
 import { tv, type VariantProps } from "tailwind-variants";
 
@@ -133,7 +133,7 @@ export const Button: ParentComponent<ButtonProps> = (props) => {
       })}
     >
       <Show when={local.isPending}>
-        <RefreshCw aria-hidden="true" class="size-4 animate-spin" />
+        <RefreshClockwise aria-hidden="true" class="size-4 animate-spin" />
       </Show>
       {local.children}
     </ButtonPrimitive.Root>

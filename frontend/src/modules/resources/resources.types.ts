@@ -57,3 +57,11 @@ export interface FormattedTime {
   relativeTime: string;
   absoluteTime: string | null;
 }
+
+/** Stamina input constraints derived from backend resource data */
+export interface ResourceLimits {
+  /** Maximum resource value (e.g., 160 for resin, 240 for trailblaze power) */
+  maxValue: number;
+  /** Seconds to regenerate one unit */
+  regenRateSeconds: number;
+}

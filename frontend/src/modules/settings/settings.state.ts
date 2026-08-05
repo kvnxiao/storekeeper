@@ -1,10 +1,10 @@
+import { useMutation } from "@tanstack/solid-query";
 import { deepEqual } from "fast-equals";
-import { createMemo, createRoot, createSignal } from "solid-js";
+import { createMemo, createRoot } from "solid-js";
 import { createStore, produce, unwrap } from "solid-js/store";
 import { queryClient } from "@/modules/core/core.queryClient";
-import { core } from "@/modules/core/core.state";
-import { saveAndApply } from "@/modules/settings/settings.query";
-import type { AppConfig, SecretsConfig } from "@/modules/settings/settings.types";
+import { saveSettingsMutationOptions } from "@/modules/settings/settings.query";
+import type { AppConfig, GamesConfig, SecretsConfig } from "@/modules/settings/settings.types";
 
 interface SettingsFormState {
   config: AppConfig | null;
@@ -21,8 +21,10 @@ function createSettingsForm() {
     originalSecrets: null,
   });
 
-  const [saveError, setSaveError] = createSignal<string | null>(null);
-  const [isSaving, setIsSaving] = createSignal(false);
+  const saveMutation = useMutation(
+    () => saveSettingsMutationOptions(queryClient),
+    () => queryClient,
+  );
 
   const isDirty = createMemo(() => {
     if (!state.config || !state.secrets || !state.originalConfig || !state.originalSecrets) {
@@ -34,14 +36,20 @@ function createSettingsForm() {
     );
   });
 
-  /** Seeds the form from loaded queries; no-op once initialized. */
+  /**
+   * Seeds the form from loaded queries; no-op once initialized.
+   *
+   * Clones the working copies too - the arguments are the query cache's own
+   * objects, and `produce` in the updaters would otherwise mutate the cache
+   * in place, leaking unsaved edits to other cache readers.
+   */
   function initialize(config: AppConfig, secrets: SecretsConfig): void {
     if (state.config || state.secrets) {
       return;
     }
     setState({
-      config,
-      secrets,
+      config: structuredClone(config),
+      secrets: structuredClone(secrets),
       originalConfig: structuredClone(config),
       originalSecrets: structuredClone(secrets),
     });
@@ -67,54 +75,46 @@ function createSettingsForm() {
     );
   }
 
-  /** Reverts edited state back to original snapshots. */
-  function reset(): void {
-    const { originalConfig, originalSecrets } = unwrap(state);
+  function updateGameConfig<K extends keyof GamesConfig>(game: K, value: GamesConfig[K]): void {
     setState(
       produce((s) => {
-        if (originalConfig) {
-          s.config = structuredClone(originalConfig);
-        }
-        if (originalSecrets) {
-          s.secrets = structuredClone(originalSecrets);
+        if (s.config) {
+          s.config.games[game] = value;
         }
       }),
     );
+  }
+
+  /** Reverts edited state back to original snapshots. */
+  function reset(): void {
+    const { originalConfig, originalSecrets } = unwrap(state);
+    setState({
+      config: structuredClone(originalConfig),
+      secrets: structuredClone(originalSecrets),
+    });
   }
 
   /** Updates original snapshots after a successful save. */
   function markAsSaved(): void {
     const { config, secrets } = unwrap(state);
-    setState(
-      produce((s) => {
-        if (config) {
-          s.originalConfig = structuredClone(config);
-        }
-        if (secrets) {
-          s.originalSecrets = structuredClone(secrets);
-        }
-      }),
-    );
+    setState({
+      originalConfig: structuredClone(config),
+      originalSecrets: structuredClone(secrets),
+    });
   }
 
-  /** Coordinated save action — single IPC: write + diff + apply. */
+  /** Coordinated save action - delegates to the save-settings mutation. */
   async function save(): Promise<void> {
     const { config, secrets } = unwrap(state);
     if (!config || !secrets) {
       return;
     }
 
-    setSaveError(null);
-    setIsSaving(true);
     try {
-      const result = await saveAndApply({ config, secrets });
-      queryClient.setQueryData(["config"], structuredClone(config));
+      await saveMutation.mutateAsync({ config, secrets });
       markAsSaved();
-      await core.setAppLocale(result.effective_locale);
-    } catch (e) {
-      setSaveError(`Failed to save settings: ${String(e)}`);
-    } finally {
-      setIsSaving(false);
+    } catch {
+      // Surfaced reactively via saveError.
     }
   }
 
@@ -122,11 +122,13 @@ function createSettingsForm() {
     config: () => state.config,
     secrets: () => state.secrets,
     isDirty,
-    saveError,
-    isSaving,
+    saveError: () =>
+      saveMutation.error ? `Failed to save settings: ${String(saveMutation.error)}` : null,
+    isSaving: () => saveMutation.isPending,
     initialize,
     updateConfig,
     updateSecrets,
+    updateGameConfig,
     save,
     reset,
   };

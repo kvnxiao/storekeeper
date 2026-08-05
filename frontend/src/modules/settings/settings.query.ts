@@ -1,5 +1,6 @@
-import { queryOptions } from "@tanstack/solid-query";
+import { mutationOptions, type QueryClient, queryOptions } from "@tanstack/solid-query";
 import { invoke } from "@tauri-apps/api/core";
+import { core } from "@/modules/core/core.state";
 import type { AppConfig, SaveResult, SecretsConfig } from "@/modules/settings/settings.types";
 
 /** Query options for fetching config from backend */
@@ -20,10 +21,27 @@ export function secretsQueryOptions() {
   });
 }
 
-/** Saves config + secrets and applies changes in a single IPC call */
-export async function saveAndApply(params: {
+// A type alias (not an interface) so it satisfies Tauri's InvokeArgs via an
+// implicit index signature.
+export type SettingsDraft = {
   config: AppConfig;
   secrets: SecretsConfig;
-}): Promise<SaveResult> {
-  return invoke<SaveResult>("save_and_apply", params);
+};
+
+/**
+ * Mutation options for saving config + secrets in a single IPC call.
+ *
+ * On success the saved draft becomes the cached config/secrets and the
+ * backend-effective locale is applied.
+ */
+export function saveSettingsMutationOptions(queryClient: QueryClient) {
+  return mutationOptions({
+    mutationKey: ["save-settings"],
+    mutationFn: async (draft: SettingsDraft) => invoke<SaveResult>("save_and_apply", draft),
+    onSuccess: async (result, draft) => {
+      queryClient.setQueryData(configQueryOptions().queryKey, structuredClone(draft.config));
+      queryClient.setQueryData(secretsQueryOptions().queryKey, structuredClone(draft.secrets));
+      await core.setAppLocale(result.effective_locale);
+    },
+  });
 }

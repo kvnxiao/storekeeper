@@ -2,16 +2,15 @@ import { useQuery } from "@tanstack/solid-query";
 import { createFileRoute } from "@tanstack/solid-router";
 import ArrowLeft from "lucide-solid/icons/arrow-left";
 import CircleAlert from "lucide-solid/icons/circle-alert";
-import { createEffect, createMemo, For, Show, type VoidComponent } from "solid-js";
+import { createEffect, For, Show, type VoidComponent } from "solid-js";
 import { GenshinResource, HsrResource, ZzzResource } from "@/modules/games/games.constants";
 import { GameId } from "@/modules/games/games.types";
 import { resourcesQueryOptions } from "@/modules/resources/resources.query";
-import { type AllResources, isStaminaResource } from "@/modules/resources/resources.types";
+import { getResourceLimitsForGame } from "@/modules/resources/resources.utils";
 import { GeneralSection } from "@/modules/settings/components/GeneralSection";
 import { HoyolabGameSection } from "@/modules/settings/components/HoyolabGameSection";
 import { HoyolabSecretsSection } from "@/modules/settings/components/HoyolabSecretsSection";
 import { KuroSecretsSection } from "@/modules/settings/components/KuroSecretsSection";
-import type { ResourceLimits } from "@/modules/settings/components/NotificationResourceRow";
 import { WuwaSection } from "@/modules/settings/components/WuwaSection";
 import { configQueryOptions, secretsQueryOptions } from "@/modules/settings/settings.query";
 import { settingsForm } from "@/modules/settings/settings.state";
@@ -21,28 +20,6 @@ import { ButtonLink } from "@/modules/ui/components/ButtonLink";
 import { Tooltip } from "@/modules/ui/components/Tooltip";
 import { cn } from "@/modules/ui/ui.styles";
 import * as m from "@/paraglide/messages";
-
-/** Extract resource limits from backend resource data for a given game */
-function getResourceLimitsForGame(
-  resources: AllResources | undefined,
-  gameId: GameId,
-): Partial<Record<string, ResourceLimits>> | undefined {
-  const gameResources = resources?.games?.[gameId];
-  if (!gameResources) {
-    return undefined;
-  }
-
-  const limits: Record<string, ResourceLimits> = {};
-  for (const resource of gameResources) {
-    if (isStaminaResource(resource.data)) {
-      limits[resource.type] = {
-        maxValue: resource.data.max,
-        regenRateSeconds: resource.data.regenRateSeconds,
-      };
-    }
-  }
-  return Object.keys(limits).length > 0 ? limits : undefined;
-}
 
 // =============================================================================
 // HoYoLab game configuration metadata
@@ -60,26 +37,21 @@ const HOYOLAB_GAMES: {
     configKey: "genshin_impact",
     title: m.game_genshin_name,
     description: m.settings_game_configure_genshin,
-    resourceTypes: [
-      GenshinResource.Resin,
-      GenshinResource.ParametricTransformer,
-      GenshinResource.RealmCurrency,
-      GenshinResource.Expeditions,
-    ],
+    resourceTypes: Object.values(GenshinResource),
   },
   {
     gameId: GameId.HonkaiStarRail,
     configKey: "honkai_star_rail",
     title: m.game_hsr_name,
     description: m.settings_game_configure_hsr,
-    resourceTypes: [HsrResource.TrailblazePower],
+    resourceTypes: Object.values(HsrResource),
   },
   {
     gameId: GameId.ZenlessZoneZero,
     configKey: "zenless_zone_zero",
     title: m.game_zzz_name,
     description: m.settings_game_configure_zzz,
-    resourceTypes: [ZzzResource.Battery],
+    resourceTypes: Object.values(ZzzResource),
   },
 ];
 
@@ -107,12 +79,7 @@ const SettingsPage: VoidComponent = () => {
     }
   });
 
-  const resourceLimits = createMemo(() => ({
-    GENSHIN_IMPACT: getResourceLimitsForGame(resourcesQuery.data, GameId.GenshinImpact),
-    HONKAI_STAR_RAIL: getResourceLimitsForGame(resourcesQuery.data, GameId.HonkaiStarRail),
-    ZENLESS_ZONE_ZERO: getResourceLimitsForGame(resourcesQuery.data, GameId.ZenlessZoneZero),
-    WUTHERING_WAVES: getResourceLimitsForGame(resourcesQuery.data, GameId.WutheringWaves),
-  }));
+  const resourceLimits = (gameId: GameId) => getResourceLimitsForGame(resourcesQuery.data, gameId);
 
   const loadError = () => configQuery.error ?? secretsQuery.error;
 
@@ -175,26 +142,16 @@ const SettingsPage: VoidComponent = () => {
                   gameId={game.gameId}
                   resourceTypes={game.resourceTypes}
                   config={form().config.games[game.configKey]}
-                  resourceLimits={resourceLimits()[game.gameId]}
-                  onChange={(value) =>
-                    settingsForm.updateConfig("games", {
-                      ...form().config.games,
-                      [game.configKey]: value,
-                    })
-                  }
+                  resourceLimits={resourceLimits(game.gameId)}
+                  onChange={(value) => settingsForm.updateGameConfig(game.configKey, value)}
                 />
               )}
             </For>
 
             <WuwaSection
               config={form().config.games.wuthering_waves}
-              resourceLimits={resourceLimits().WUTHERING_WAVES}
-              onChange={(wuwa) =>
-                settingsForm.updateConfig("games", {
-                  ...form().config.games,
-                  wuthering_waves: wuwa,
-                })
-              }
+              resourceLimits={resourceLimits(GameId.WutheringWaves)}
+              onChange={(wuwa) => settingsForm.updateGameConfig("wuthering_waves", wuwa)}
             />
 
             <HoyolabSecretsSection

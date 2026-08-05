@@ -30,7 +30,7 @@ pub(crate) fn game_display_name(game_id: GameId) -> String {
 /// current/max, duration, and clock time; cooldown resources show "ready"
 /// or "ready in {duration}".
 ///
-/// The resource name is intentionally omitted — the notification title already
+/// The resource name is intentionally omitted - the notification title already
 /// contains both the game name and resource name.
 pub(crate) fn build_notification_body(info: &ResourceInfo, now: Timestamp) -> String {
     let is_stamina = info.max.is_some();
@@ -124,7 +124,7 @@ mod tests {
     }
 
     // =========================================================================
-    // body text tests — stamina resources
+    // body text tests - stamina resources
     // =========================================================================
 
     #[test]
@@ -160,7 +160,7 @@ mod tests {
     }
 
     // =========================================================================
-    // body text tests — cooldown resources
+    // body text tests - cooldown resources
     // =========================================================================
 
     #[test]

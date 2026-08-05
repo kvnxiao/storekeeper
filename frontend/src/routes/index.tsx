@@ -1,6 +1,6 @@
-import { useMutation, useQuery } from "@tanstack/solid-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/solid-query";
 import { createFileRoute } from "@tanstack/solid-router";
-import RefreshCw from "lucide-solid/icons/refresh-cw";
+import RefreshClockwise from "lucide-solid/icons/refresh-cw";
 import Settings from "lucide-solid/icons/settings";
 import { createMemo, Show, type VoidComponent } from "solid-js";
 import { GameId } from "@/modules/games/games.types";
@@ -8,6 +8,7 @@ import { GenshinSection } from "@/modules/games/genshin/components/GenshinSectio
 import { HsrSection } from "@/modules/games/hsr/components/HsrSection";
 import { WuwaSection } from "@/modules/games/wuwa/components/WuwaSection";
 import { ZzzSection } from "@/modules/games/zzz/components/ZzzSection";
+import { createIsRefreshing } from "@/modules/resources/resources.primitives";
 import {
   refreshResourcesMutationOptions,
   resourcesQueryOptions,
@@ -20,9 +21,11 @@ import { cn } from "@/modules/ui/ui.styles";
 import * as m from "@/paraglide/messages";
 
 const DashboardPage: VoidComponent = () => {
+  const queryClient = useQueryClient();
   const resourcesQuery = useQuery(() => resourcesQueryOptions());
   const configQuery = useQuery(() => configQueryOptions());
-  const refresh = useMutation(() => refreshResourcesMutationOptions());
+  const refresh = useMutation(() => refreshResourcesMutationOptions(queryClient));
+  const isRefreshing = createIsRefreshing();
 
   const enabledGames = createMemo(() => enabledGamesFromConfig(configQuery.data));
 
@@ -34,12 +37,12 @@ const DashboardPage: VoidComponent = () => {
           <Button
             variant="plain"
             aria-label={m.dashboard_refresh_resources()}
-            disabled={refresh.isPending}
+            disabled={isRefreshing()}
             onClick={() => refresh.mutate()}
           >
-            <RefreshCw
+            <RefreshClockwise
               aria-hidden="true"
-              class={cn("size-5", refresh.isPending && "animate-spin")}
+              class={cn("size-5", isRefreshing() && "animate-spin")}
             />
           </Button>
           <ButtonLink

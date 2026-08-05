@@ -1,10 +1,8 @@
 import { For, type VoidComponent } from "solid-js";
 import { getResourceDisplayName, STAMINA_RESOURCE_TYPES } from "@/modules/games/games.constants";
 import type { GameId } from "@/modules/games/games.types";
-import {
-  NotificationResourceRow,
-  type ResourceLimits,
-} from "@/modules/settings/components/NotificationResourceRow";
+import type { ResourceLimits } from "@/modules/resources/resources.types";
+import { NotificationResourceRow } from "@/modules/settings/components/NotificationResourceRow";
 import type { ResourceNotificationConfig } from "@/modules/settings/settings.types";
 import * as m from "@/paraglide/messages";
 

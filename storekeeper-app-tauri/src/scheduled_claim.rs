@@ -31,7 +31,7 @@ const IDLE_SLEEP: Duration = Duration::from_mins(15);
 enum WakeReason {
     /// The cancellation token was triggered (app shutdown).
     Cancelled,
-    /// Config changed — should re-read state and re-run startup claims.
+    /// Config changed - should re-read state and re-run startup claims.
     ConfigChanged,
     /// The timer expired normally.
     TimerExpired,

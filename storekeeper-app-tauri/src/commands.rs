@@ -67,7 +67,7 @@ pub struct SaveResult {
 ///
 /// Combines write + diff + selective apply into a single IPC call:
 /// 1. Writes config.toml and secrets.toml to disk
-/// 2. Diffs old (from state) vs new (from params) in-memory — no re-read
+/// 2. Diffs old (from state) vs new (from params) in-memory - no re-read
 /// 3. Selectively applies changes based on the diff
 /// 4. Returns the effective locale for frontend sync
 #[tauri::command]

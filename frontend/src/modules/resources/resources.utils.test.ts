@@ -1,4 +1,3 @@
-import "@formatjs/intl-durationformat/polyfill.js";
 import { describe, expect, it, vi } from "vite-plus/test";
 import { formatTimeRemaining } from "./resources.utils";
 
@@ -6,7 +5,7 @@ vi.mock("@/paraglide/messages", () => ({
   time_remaining_full: () => "Full",
 }));
 
-/** Mirrors the style logic in core.atoms.ts durationFormatter. */
+/** Mirrors the style logic in core.state.ts durationFormatter. */
 function makeDurationFmt(locale: string): Intl.DurationFormat {
   return new Intl.DurationFormat(locale, {
     style: locale.startsWith("en") ? "narrow" : "short",
@@ -21,10 +20,10 @@ function futureIso(now: number, deltaMs: number): string {
 const MS = { s: 1_000, m: 60_000, h: 3_600_000, d: 86_400_000 };
 
 // ---------------------------------------------------------------------------
-// "Full" early-return cases — locale-independent
+// "Full" early-return cases - locale-independent
 // ---------------------------------------------------------------------------
 
-describe("formatTimeRemaining — early returns", () => {
+describe("formatTimeRemaining - early returns", () => {
   const now = Date.now();
   const fmt = makeDurationFmt("en");
 
@@ -42,7 +41,7 @@ describe("formatTimeRemaining — early returns", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Duration formatting — parametrized per locale
+// Duration formatting - parametrized per locale
 // ---------------------------------------------------------------------------
 
 const LOCALE_CONFIGS = [
@@ -152,7 +151,7 @@ const DURATION_DELTAS: Record<string, number> = {
   "7d 12h": 7 * MS.d + 12 * MS.h,
 };
 
-describe.each(LOCALE_CONFIGS)("formatTimeRemaining — $locale", ({ locale, expected }) => {
+describe.each(LOCALE_CONFIGS)("formatTimeRemaining - $locale", ({ locale, expected }) => {
   const now = Date.now();
   const fmt = makeDurationFmt(locale);
 
