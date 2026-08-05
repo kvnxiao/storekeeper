@@ -36,7 +36,7 @@ export function todosQueryOptions(filter: TodoFilter) {
 
 ## Options In as a Function, Results Out Fine-Grained
 
-This is the pack-wide adapter convention (see the ecosystem rules); for Query specifically: `useQuery` takes an accessor returning options — signals read inside it are tracked, and changes re-key or re-run the query. Gate dependent queries with `enabled` instead of conditional calls. The result is a fine-grained store: read `query.data`, `query.isPending`, `query.isError` as properties inside tracking scopes, and never destructure it.
+This is the pack-wide adapter convention (see the ecosystem rules); for Query specifically: `useQuery` takes an accessor returning options — signals read inside it are tracked, and changes re-key or re-run the query. Gate dependent queries with `enabled` instead of conditional calls. The result is a fine-grained store: read `query.data`, `query.isPending`, `query.isError` as properties inside tracking scopes, and never destructure it. Being store-backed also means `query.data` is a proxy — `unwrap` it before cloning, serializing, or sending it across IPC (see the stores and state rules).
 
 ```tsx
 const [todo, setTodo] = createSignal(0);

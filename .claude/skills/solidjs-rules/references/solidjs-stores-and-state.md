@@ -1,6 +1,6 @@
 ---
 paths: **/*.{ts,tsx,js,jsx}
-description: "SolidJS state rules; signals vs createStore, path setters, produce, reconcile for server snapshots, context patterns, and global state ownership."
+description: "SolidJS state rules; signals vs createStore, path setters, produce, reconcile for server snapshots, unwrap at proxy-hostile boundaries, context patterns, and global state ownership."
 ---
 
 # Stores and State
@@ -45,6 +45,18 @@ Server state normally lives in the TanStack Query cache, not in stores (see the 
 
 ```tsx
 setState("todos", reconcile(fetchedTodos));
+```
+
+## Unwrap Before Leaving Reactivity
+
+Store values are proxies all the way down, and so is any library value backed by a store — solid-query's `query.data` among them (see the data fetching rules). Call `unwrap` whenever store data exits the reactive system: structured cloning, `postMessage`/Workers, IndexedDB, history state, IPC, or a snapshot kept for later comparison. Structured-clone surfaces throw `DataCloneError` on a proxy; APIs that instead walk the object (`JSON.stringify`, permissive deep-clone utilities) succeed but read every property through the traps, subscribing the current tracking scope to the entire tree. `unwrap` is a no-op on plain objects, so apply it defensively at these boundaries.
+
+```ts
+// Bad: query.data is a store proxy; structuredClone throws DataCloneError
+form.initialize(structuredClone(query.data));
+
+// Good
+form.initialize(structuredClone(unwrap(query.data)));
 ```
 
 ## Context: Provider-Created State, Throwing Accessor
