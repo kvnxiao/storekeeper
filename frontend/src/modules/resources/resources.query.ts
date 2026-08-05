@@ -9,6 +9,8 @@ export function resourcesQueryOptions() {
   return queryOptions({
     queryKey: ["resources"],
     queryFn: async () => invoke<AllResources>("get_all_resources"),
+    // Backend events keep this cache fresh; focus/navigation must not refetch.
+    staleTime: Number.POSITIVE_INFINITY,
   });
 }
 

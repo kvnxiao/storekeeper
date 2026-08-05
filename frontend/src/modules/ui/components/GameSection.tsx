@@ -1,7 +1,8 @@
 import * as Collapsible from "@kobalte/core/collapsible";
-import { invoke } from "@tauri-apps/api/core";
-import { type Component, createSignal, Match, type ParentComponent, Show, Switch } from "solid-js";
+import { useMutation } from "@tanstack/solid-query";
+import { type Component, Match, type ParentComponent, Show, Switch } from "solid-js";
 import { tv } from "tailwind-variants";
+import { claimDailyRewardMutationOptions } from "@/modules/daily-rewards/daily-rewards.query";
 import type { GameId } from "@/modules/games/games.types";
 import { Badge } from "@/modules/ui/components/Badge";
 import * as m from "@/paraglide/messages";
@@ -57,17 +58,14 @@ export interface GameSectionProps {
 }
 
 export const GameSection: ParentComponent<GameSectionProps> = (props) => {
-  const [isClaiming, setIsClaiming] = createSignal(false);
+  const claim = useMutation(() => claimDailyRewardMutationOptions());
 
   const handleClaim = (e: MouseEvent) => {
     e.stopPropagation();
-    if (isClaiming() || props.gameId == null) {
+    if (claim.isPending || props.gameId == null) {
       return;
     }
-    setIsClaiming(true);
-    invoke("claim_daily_reward_for_game", { gameId: props.gameId })
-      .catch((err: unknown) => console.error("Failed to claim daily reward:", err))
-      .finally(() => setIsClaiming(false));
+    claim.mutate(props.gameId);
   };
 
   return (
@@ -78,7 +76,7 @@ export const GameSection: ParentComponent<GameSectionProps> = (props) => {
           <Show when={props.claimStatus != null}>
             <ClaimBadge
               claimed={props.claimStatus === true}
-              isClaiming={isClaiming()}
+              isClaiming={claim.isPending}
               canClaim={props.gameId != null}
               onClaim={handleClaim}
             />

@@ -1,6 +1,7 @@
 import { mutationOptions, type QueryClient, queryOptions } from "@tanstack/solid-query";
 import { invoke } from "@tauri-apps/api/core";
 import { core } from "@/modules/core/core.state";
+import type { GameId } from "@/modules/games/games.types";
 import type { AppConfig, SaveResult, SecretsConfig } from "@/modules/settings/settings.types";
 
 /** Query options for fetching config from backend */
@@ -43,5 +44,15 @@ export function saveSettingsMutationOptions(queryClient: QueryClient) {
       queryClient.setQueryData(secretsQueryOptions().queryKey, structuredClone(draft.secrets));
       await core.setAppLocale(result.effective_locale);
     },
+  });
+}
+
+/** Mutation options for sending a preview notification for a resource. */
+export function previewNotificationMutationOptions() {
+  return mutationOptions({
+    mutationKey: ["preview-notification"],
+    mutationFn: async (params: { gameId: GameId; resourceType: string }) =>
+      invoke("send_preview_notification", params),
+    onError: (error) => console.error("Failed to send preview notification:", error),
   });
 }

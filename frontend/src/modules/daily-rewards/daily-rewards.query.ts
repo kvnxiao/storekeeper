@@ -1,4 +1,4 @@
-import { queryOptions } from "@tanstack/solid-query";
+import { mutationOptions, queryOptions } from "@tanstack/solid-query";
 import { invoke } from "@tauri-apps/api/core";
 import { queryClient } from "@/modules/core/core.queryClient";
 import type { GameId } from "@/modules/games/games.types";
@@ -43,6 +43,16 @@ export async function refreshDailyRewardStatus(): Promise<void> {
 /** Re-reads the backend's already-fresh status (cheap; used after claim events). */
 export async function invalidateDailyRewardStatus(): Promise<void> {
   await queryClient.invalidateQueries({ queryKey: dailyRewardStatusQueryOptions().queryKey });
+}
+
+/** Mutation options for manually claiming a game's daily reward. */
+export function claimDailyRewardMutationOptions() {
+  return mutationOptions({
+    mutationKey: ["claim-daily-reward"],
+    mutationFn: async (gameId: GameId) => invoke("claim_daily_reward_for_game", { gameId }),
+    onSuccess: () => invalidateDailyRewardStatus(),
+    onError: (error) => console.error("Failed to claim daily reward:", error),
+  });
 }
 
 /** UTC+8 offset in milliseconds (all HoYoLab games reset at midnight UTC+8). */
