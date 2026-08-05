@@ -47,6 +47,11 @@ export function saveSettingsMutationOptions(queryClient: QueryClient) {
   });
 }
 
+/** Opens the config directory in the OS file explorer. */
+export function openConfigFolder(): void {
+  invoke("open_config_folder").catch(console.error);
+}
+
 /** Mutation options for sending a preview notification for a resource. */
 export function previewNotificationMutationOptions() {
   return mutationOptions({

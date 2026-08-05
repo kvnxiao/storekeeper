@@ -1,5 +1,9 @@
 import type { VoidComponent } from "solid-js";
-import { getResourceDisplayName, WuwaResource } from "@/modules/games/games.constants";
+import {
+  getResourceDisplayName,
+  getResourceIconPath,
+  WuwaResource,
+} from "@/modules/games/games.constants";
 import { createWuwaResources } from "@/modules/games/wuwa/wuwa.primitives";
 import { createIsRefreshing } from "@/modules/resources/resources.primitives";
 import { StaminaCard } from "@/modules/resources/components/StaminaCard";
@@ -13,7 +17,7 @@ export const WuwaSection: VoidComponent = () => {
   return (
     <GameSection title={m.game_wuwa_name()}>
       <StaminaCard
-        iconPath="/icons/game/wuwa/Item_Waveplate.webp"
+        iconPath={getResourceIconPath(WuwaResource.Waveplates)}
         name={getResourceDisplayName(WuwaResource.Waveplates)}
         data={wuwa.waveplates() ?? undefined}
         formattedTime={wuwa.waveplatesTime()}

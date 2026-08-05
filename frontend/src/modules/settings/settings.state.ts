@@ -5,6 +5,7 @@ import { createStore, produce, unwrap } from "solid-js/store";
 import { queryClient } from "@/modules/core/core.queryClient";
 import { saveSettingsMutationOptions } from "@/modules/settings/settings.query";
 import type { AppConfig, GamesConfig, SecretsConfig } from "@/modules/settings/settings.types";
+import * as m from "@/paraglide/messages";
 
 interface SettingsFormState {
   config: AppConfig | null;
@@ -123,7 +124,7 @@ function createSettingsForm() {
     secrets: () => state.secrets,
     isDirty,
     saveError: () =>
-      saveMutation.error ? `Failed to save settings: ${String(saveMutation.error)}` : null,
+      saveMutation.error ? m.settings_failed_to_save({ error: String(saveMutation.error) }) : null,
     isSaving: () => saveMutation.isPending,
     initialize,
     updateConfig,

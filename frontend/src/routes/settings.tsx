@@ -17,6 +17,7 @@ import { settingsForm } from "@/modules/settings/settings.state";
 import type { HoyolabConfigKey } from "@/modules/settings/settings.types";
 import { Button } from "@/modules/ui/components/Button";
 import { ButtonLink } from "@/modules/ui/components/ButtonLink";
+import { ErrorBanner } from "@/modules/ui/components/ErrorBanner";
 import { Tooltip } from "@/modules/ui/components/Tooltip";
 import { cn } from "@/modules/ui/ui.styles";
 import * as m from "@/paraglide/messages";
@@ -120,11 +121,7 @@ const SettingsPage: VoidComponent = () => {
 
           {/* Error display */}
           <Show when={settingsForm.saveError()}>
-            {(error) => (
-              <div class="mb-4 rounded-lg bg-red-500/15 p-3 text-red-700 ring-1 ring-red-500/20 dark:text-red-400">
-                {error()}
-              </div>
-            )}
+            {(error) => <ErrorBanner class="mb-4">{error()}</ErrorBanner>}
           </Show>
 
           {/* Settings sections */}

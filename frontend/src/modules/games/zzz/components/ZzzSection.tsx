@@ -1,6 +1,10 @@
 import type { VoidComponent } from "solid-js";
 import { createClaimStatus } from "@/modules/daily-rewards/daily-rewards.primitives";
-import { getResourceDisplayName, ZzzResource } from "@/modules/games/games.constants";
+import {
+  getResourceDisplayName,
+  getResourceIconPath,
+  ZzzResource,
+} from "@/modules/games/games.constants";
 import { GameId } from "@/modules/games/games.types";
 import { createZzzResources } from "@/modules/games/zzz/zzz.primitives";
 import { createIsRefreshing } from "@/modules/resources/resources.primitives";
@@ -20,7 +24,7 @@ export const ZzzSection: VoidComponent = () => {
       claimStatus={claimStatus()}
     >
       <StaminaCard
-        iconPath="/icons/game/zzz/Item_Battery_Charge.webp"
+        iconPath={getResourceIconPath(ZzzResource.Battery)}
         name={getResourceDisplayName(ZzzResource.Battery)}
         data={zzz.battery() ?? undefined}
         formattedTime={zzz.batteryTime()}

@@ -1,5 +1,6 @@
 import * as Collapsible from "@kobalte/core/collapsible";
 import { useMutation } from "@tanstack/solid-query";
+import ChevronDown from "lucide-solid/icons/chevron-down";
 import { type Component, Match, type ParentComponent, Show, Switch } from "solid-js";
 import { tv } from "tailwind-variants";
 import { claimDailyRewardMutationOptions } from "@/modules/daily-rewards/daily-rewards.query";
@@ -82,9 +83,10 @@ export const GameSection: ParentComponent<GameSectionProps> = (props) => {
             />
           </Show>
         </span>
-        <span class="text-zinc-400 transition-transform duration-250 ease-out group-data-[closed]:-rotate-90 motion-reduce:transition-none">
-          ▼
-        </span>
+        <ChevronDown
+          aria-hidden="true"
+          class="size-4 text-zinc-400 transition-transform duration-250 ease-out group-data-[closed]:-rotate-90 motion-reduce:transition-none"
+        />
       </Collapsible.Trigger>
       <Collapsible.Content class="overflow-clip data-[expanded]:animate-[collapsible-down_250ms_ease-out] data-[closed]:animate-[collapsible-up_250ms_ease-out]">
         <div class="flex flex-col gap-1.5 px-2 pt-1.5 pb-2">{props.children}</div>

@@ -43,6 +43,7 @@
   "settings_title": "설정",
   "settings_back": "뒤로",
   "settings_failed_to_load": "설정 로드 실패: {error}",
+  "settings_failed_to_save": "설정 저장 실패: {error}",
   "settings_loading": "설정 로드 중…",
   "settings_unsaved_changes": "저장하지 않은 변경 사항이 있습니다.",
   "settings_undo": "변경 취소",

@@ -1,6 +1,10 @@
 import type { VoidComponent } from "solid-js";
 import { createClaimStatus } from "@/modules/daily-rewards/daily-rewards.primitives";
-import { GenshinResource, getResourceDisplayName } from "@/modules/games/games.constants";
+import {
+  GenshinResource,
+  getResourceDisplayName,
+  getResourceIconPath,
+} from "@/modules/games/games.constants";
 import { GameId } from "@/modules/games/games.types";
 import { ExpeditionsCard } from "@/modules/games/genshin/components/ExpeditionsCard";
 import { createGenshinResources } from "@/modules/games/genshin/genshin.primitives";
@@ -22,21 +26,21 @@ export const GenshinSection: VoidComponent = () => {
       claimStatus={claimStatus()}
     >
       <StaminaCard
-        iconPath="/icons/game/genshin/Item_Original_Resin.webp"
+        iconPath={getResourceIconPath(GenshinResource.Resin)}
         name={getResourceDisplayName(GenshinResource.Resin)}
         data={genshin.resin() ?? undefined}
         formattedTime={genshin.resinTime()}
         isRefreshing={isRefreshing()}
       />
       <CooldownCard
-        iconPath="/icons/game/genshin/Item_Parametric_Transformer.webp"
+        iconPath={getResourceIconPath(GenshinResource.ParametricTransformer)}
         name={getResourceDisplayName(GenshinResource.ParametricTransformer)}
         data={genshin.parametricTransformer() ?? undefined}
         formattedTime={genshin.parametricTransformerTime()}
         isRefreshing={isRefreshing()}
       />
       <StaminaCard
-        iconPath="/icons/game/genshin/Item_Realm_Currency.webp"
+        iconPath={getResourceIconPath(GenshinResource.RealmCurrency)}
         name={getResourceDisplayName(GenshinResource.RealmCurrency)}
         data={genshin.realmCurrency() ?? undefined}
         formattedTime={genshin.realmCurrencyTime()}

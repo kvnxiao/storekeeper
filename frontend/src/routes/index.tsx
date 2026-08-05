@@ -17,6 +17,7 @@ import { configQueryOptions } from "@/modules/settings/settings.query";
 import { enabledGamesFromConfig } from "@/modules/settings/settings.utils";
 import { Button } from "@/modules/ui/components/Button";
 import { ButtonLink } from "@/modules/ui/components/ButtonLink";
+import { ErrorBanner } from "@/modules/ui/components/ErrorBanner";
 import { cn } from "@/modules/ui/ui.styles";
 import * as m from "@/paraglide/messages";
 
@@ -59,11 +60,7 @@ const DashboardPage: VoidComponent = () => {
       </header>
 
       <Show when={resourcesQuery.error}>
-        {(error) => (
-          <div class="mb-3 rounded-lg bg-red-500/15 p-3 text-red-700 ring-1 ring-red-500/20 dark:text-red-400">
-            {String(error())}
-          </div>
-        )}
+        {(error) => <ErrorBanner class="mb-3">{String(error())}</ErrorBanner>}
       </Show>
 
       <main class="space-y-2">

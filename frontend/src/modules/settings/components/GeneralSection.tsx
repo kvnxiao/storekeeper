@@ -1,7 +1,7 @@
-import { invoke } from "@tauri-apps/api/core";
 import type { VoidComponent } from "solid-js";
-import { LOCALE_ENDONYMS } from "@/modules/i18n/locale-names";
+import { LOCALE_ENDONYMS } from "@/modules/i18n/i18n.constants";
 import { Section } from "@/modules/settings/components/Section";
+import { openConfigFolder } from "@/modules/settings/settings.query";
 import type { GeneralConfig } from "@/modules/settings/settings.types";
 import { Button } from "@/modules/ui/components/Button";
 import { NumberField } from "@/modules/ui/components/NumberField";
@@ -89,7 +89,7 @@ export const GeneralSection: VoidComponent<GeneralSectionProps> = (props) => {
         }
         options={logLevelOptions()}
       />
-      <Button color="light" onClick={() => void invoke("open_config_folder")}>
+      <Button color="light" onClick={() => openConfigFolder()}>
         {m.settings_general_open_config()}
       </Button>
     </Section>

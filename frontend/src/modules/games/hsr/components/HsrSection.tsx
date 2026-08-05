@@ -1,6 +1,10 @@
 import type { VoidComponent } from "solid-js";
 import { createClaimStatus } from "@/modules/daily-rewards/daily-rewards.primitives";
-import { getResourceDisplayName, HsrResource } from "@/modules/games/games.constants";
+import {
+  getResourceDisplayName,
+  getResourceIconPath,
+  HsrResource,
+} from "@/modules/games/games.constants";
 import { GameId } from "@/modules/games/games.types";
 import { createHsrResources } from "@/modules/games/hsr/hsr.primitives";
 import { createIsRefreshing } from "@/modules/resources/resources.primitives";
@@ -20,7 +24,7 @@ export const HsrSection: VoidComponent = () => {
       claimStatus={claimStatus()}
     >
       <StaminaCard
-        iconPath="/icons/game/hsr/Item_Trailblaze_Power.webp"
+        iconPath={getResourceIconPath(HsrResource.TrailblazePower)}
         name={getResourceDisplayName(HsrResource.TrailblazePower)}
         data={hsr.trailblazePower() ?? undefined}
         formattedTime={hsr.trailblazePowerTime()}

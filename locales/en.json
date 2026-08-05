@@ -43,6 +43,7 @@
   "settings_title": "Settings",
   "settings_back": "Back",
   "settings_failed_to_load": "Failed to load settings: {error}",
+  "settings_failed_to_save": "Failed to save settings: {error}",
   "settings_loading": "Loading settings...",
   "settings_unsaved_changes": "You have unsaved changes.",
   "settings_undo": "Undo Changes",
