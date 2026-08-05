@@ -55,4 +55,4 @@ See [`docs/`](docs/README.md) for comprehensive documentation:
 
 - **[Architecture](docs/architecture/)** — System design, crate layout, data flow
 - **[Onboarding](docs/onboarding/)** — Environment setup, adding a new game
-- **[Standards](docs/standards/)** — Rust and frontend coding conventions
+- **[Standards](.claude/skills/)** — Rust and frontend coding conventions (`rust-rules`, `solidjs-rules`)
