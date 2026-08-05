@@ -7,17 +7,29 @@ const trackStyle = tv({
   base: [
     "flex h-5 w-8 shrink-0 cursor-default items-center rounded-full px-px",
     "border border-transparent shadow-inner transition duration-200 ease-in-out",
-    // Default (unchecked)
-    "bg-zinc-200 dark:bg-zinc-600",
-    "group-active:bg-zinc-300 dark:group-active:bg-zinc-500",
-    // Checked
-    "group-data-[checked]:bg-zinc-700 group-active:group-data-[checked]:bg-zinc-800",
-    "dark:group-data-[checked]:bg-zinc-300 dark:group-active:group-data-[checked]:bg-zinc-200",
-    // Disabled
-    "group-data-[disabled]:cursor-not-allowed group-data-[disabled]:bg-zinc-100 dark:group-data-[disabled]:bg-zinc-800",
     // Focus ring (focus lands on the hidden peer input)
     "outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-background",
   ],
+  // Disabled is a variant rather than group-data-[disabled] overrides so the
+  // hover/active classes are absent entirely - no CSS-order ambiguity.
+  variants: {
+    disabled: {
+      false: [
+        // Unchecked: rest -> hover -> press
+        "bg-zinc-200 dark:bg-zinc-600",
+        "group-hover:bg-zinc-300 dark:group-hover:bg-zinc-500",
+        "group-active:bg-zinc-400 dark:group-active:bg-zinc-400",
+        // Checked: rest -> hover -> press
+        "group-data-[checked]:bg-zinc-700 dark:group-data-[checked]:bg-zinc-300",
+        "group-hover:group-data-[checked]:bg-zinc-800 dark:group-hover:group-data-[checked]:bg-zinc-200",
+        "group-active:group-data-[checked]:bg-zinc-900 dark:group-active:group-data-[checked]:bg-zinc-100",
+      ],
+      true: "cursor-not-allowed bg-zinc-100 dark:bg-zinc-800",
+    },
+  },
+  defaultVariants: {
+    disabled: false,
+  },
 });
 
 const handleStyle = tv({
@@ -52,7 +64,7 @@ export const Switch: ParentComponent<SwitchProps> = (props) => {
       )}
     >
       <SwitchPrimitive.Input class="peer" />
-      <SwitchPrimitive.Control class={trackStyle()}>
+      <SwitchPrimitive.Control class={trackStyle({ disabled: props.disabled })}>
         <SwitchPrimitive.Thumb class={handleStyle()} />
       </SwitchPrimitive.Control>
       <Show when={props.children}>

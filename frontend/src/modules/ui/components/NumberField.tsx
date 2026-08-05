@@ -67,7 +67,13 @@ export const NumberField: VoidComponent<NumberFieldProps> = (props) => {
   return (
     <NumberFieldPrimitive.Root
       rawValue={props.value}
-      onRawValueChange={(value) => props.onChange(value)}
+      // Kobalte echoes the current value at mount and NaN while the input is
+      // cleared; neither is a user edit and must not reach the form.
+      onRawValueChange={(value) => {
+        if (!Number.isNaN(value) && value !== props.value) {
+          props.onChange(value);
+        }
+      }}
       minValue={props.minValue}
       maxValue={props.maxValue}
       step={props.step}
