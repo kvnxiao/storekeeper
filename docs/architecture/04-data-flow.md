@@ -21,9 +21,11 @@ graph LR
 
 Both entry points share the same fetch path, so they cannot race: whichever claims the refresh flag first runs, and the other is rejected or skipped. Within the fetch, providers run in parallel and games within a provider run in sequence.
 
-Two kinds of update reach the frontend. Per-game events arrive as each game completes and let the dashboard fill in progressively; the full update arrives once the batch finishes. A manual refresh additionally returns its result to the caller, and announces itself with a start event so the UI can show a pending state immediately.
+Two kinds of update reach the frontend. Per-game events arrive as each game completes and let the dashboard fill in progressively; the full update arrives once the batch finishes. Those events are the frontend's only source of snapshots: the command response of a manual refresh is a completion signal only, because responses and events reach the webview over separate channels and either can arrive first.
 
-Failures are per game. A game that errors is logged and skipped, the rest of the batch continues, and the UI keeps showing that game's last known values until a later fetch succeeds.
+Every fetch announces itself with a start event, including the polls the user did not trigger, so the UI can show a pending state and refuse a refresh that would only be rejected.
+
+Failures are per game. A game that errors is logged and skipped, the rest of the batch continues, and the UI keeps showing that game's last known values until a later fetch succeeds. A full refresh keeps those stale values only while the game is still configured; removing a game drops its resources on the next one.
 
 ## Startup
 

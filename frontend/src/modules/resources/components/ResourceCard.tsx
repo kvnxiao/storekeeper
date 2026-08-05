@@ -20,29 +20,27 @@ export interface ResourceCardProps {
  */
 export const ResourceCard: ParentComponent<ResourceCardProps> = (props) => {
   return (
-    <div class="animate-card-in">
-      <div
-        class={cn(
-          "rounded-lg bg-zinc-50 p-2 transition-transform hover:translate-x-0.5 dark:bg-zinc-700",
-          (resourcesState.isRefreshing() || !props.hasData) && "mask-shimmer",
-        )}
-      >
-        <div class="flex items-center gap-2">
-          <ResourceIcon src={props.iconPath} />
-          <div
-            class={cn(
-              "flex min-w-0 flex-1 justify-between gap-2",
-              props.align === "baseline" ? "items-baseline" : "items-center",
-            )}
-          >
-            <span class="truncate text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              {props.name}
-            </span>
-            {props.trailing}
-          </div>
+    <div
+      class={cn(
+        "rounded-lg bg-zinc-50 p-2 transition-transform hover:translate-x-0.5 dark:bg-zinc-700",
+        (resourcesState.isRefreshing() || !props.hasData) && "mask-shimmer",
+      )}
+    >
+      <div class="flex items-center gap-2">
+        <ResourceIcon src={props.iconPath} />
+        <div
+          class={cn(
+            "flex min-w-0 flex-1 justify-between gap-2",
+            props.align === "baseline" ? "items-baseline" : "items-center",
+          )}
+        >
+          <span class="truncate text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            {props.name}
+          </span>
+          {props.trailing}
         </div>
-        {props.children}
       </div>
+      {props.children}
     </div>
   );
 };

@@ -16,6 +16,7 @@ export const ZzzSection: VoidComponent = () => {
 
   return (
     <GameSection
+      sectionId={GameId.ZenlessZoneZero}
       title={m.game_zzz_name()}
       badge={<DailyClaimBadge gameId={GameId.ZenlessZoneZero} />}
     >

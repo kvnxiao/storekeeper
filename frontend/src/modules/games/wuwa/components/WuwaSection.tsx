@@ -4,6 +4,7 @@ import {
   getResourceIconPath,
   WuwaResource,
 } from "@/modules/games/games.constants";
+import { GameId } from "@/modules/games/games.types";
 import { createWuwaResources } from "@/modules/games/wuwa/wuwa.primitives";
 import { StaminaCard } from "@/modules/resources/components/StaminaCard";
 import { GameSection } from "@/modules/ui/components/GameSection";
@@ -13,7 +14,7 @@ export const WuwaSection: VoidComponent = () => {
   const wuwa = createWuwaResources();
 
   return (
-    <GameSection title={m.game_wuwa_name()}>
+    <GameSection sectionId={GameId.WutheringWaves} title={m.game_wuwa_name()}>
       <StaminaCard
         iconPath={getResourceIconPath(WuwaResource.Waveplates)}
         name={getResourceDisplayName(WuwaResource.Waveplates)}

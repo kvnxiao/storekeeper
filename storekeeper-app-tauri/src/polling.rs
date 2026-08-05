@@ -92,14 +92,19 @@ async fn try_refresh(app_handle: &AppHandle) {
 ///
 /// Fetches resources from all game clients, updates state, emits events,
 /// and checks notification thresholds. Returns the fetched resources.
+///
+/// Announces itself so the UI disables its refresh control for the whole fetch,
+/// including the polls it did not start.
 async fn do_refresh(app_handle: &AppHandle) -> AllResources {
     let state = app_handle.state::<AppState>();
 
+    if let Err(e) = app_handle.emit(AppEvent::RefreshStarted.as_str(), ()) {
+        tracing::warn!(error = %e, "Failed to emit RefreshStarted event");
+    }
+
     tracing::debug!("Fetching resources from all game clients");
 
-    let resources = state.fetch_all_resources(app_handle).await;
-
-    state.set_resources(resources.clone()).await;
+    let resources = state.refresh_all_resources(app_handle).await;
 
     if let Err(e) = app_handle.emit(AppEvent::ResourcesUpdated.as_str(), &resources) {
         tracing::warn!(error = %e, "Failed to emit ResourcesUpdated event");
@@ -129,11 +134,6 @@ pub async fn refresh_now(app_handle: &AppHandle) -> Result<AllResources, String>
         let mut resources = state.get_resources().await;
         resources.last_updated = Some(Timestamp::now());
         return Ok(resources);
-    }
-
-    // Emit refresh started event to frontend
-    if let Err(e) = app_handle.emit(AppEvent::RefreshStarted.as_str(), ()) {
-        tracing::warn!(error = %e, "Failed to emit RefreshStarted event");
     }
 
     let resources = do_refresh(app_handle).await;

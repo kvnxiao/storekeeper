@@ -17,6 +17,7 @@ export const GenshinSection: VoidComponent = () => {
 
   return (
     <GameSection
+      sectionId={GameId.GenshinImpact}
       title={m.game_genshin_name()}
       badge={<DailyClaimBadge gameId={GameId.GenshinImpact} />}
     >

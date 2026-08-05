@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/solid-query";
+import { useMutation, useQuery } from "@tanstack/solid-query";
 import { createFileRoute } from "@tanstack/solid-router";
 import RefreshClockwise from "lucide-solid/icons/refresh-cw";
 import Settings from "lucide-solid/icons/settings";
@@ -23,10 +23,9 @@ import { setViewTransitionDirection } from "@/modules/ui/ui.utils";
 import * as m from "@/paraglide/messages";
 
 const DashboardPage: VoidComponent = () => {
-  const queryClient = useQueryClient();
   const resourcesQuery = useQuery(() => resourcesQueryOptions());
   const configQuery = useQuery(() => configQueryOptions());
-  const refresh = useMutation(() => refreshResourcesMutationOptions(queryClient));
+  const refresh = useMutation(() => refreshResourcesMutationOptions());
 
   const enabledGames = createMemo(() => enabledGamesFromConfig(configQuery.data));
 
@@ -66,13 +65,13 @@ const DashboardPage: VoidComponent = () => {
           <Show
             when={enabledGames().size > 0}
             fallback={
-              <div class="animate-fade-in py-8 text-center text-zinc-500 dark:text-zinc-400">
+              <div class="py-8 text-center text-zinc-500 dark:text-zinc-400">
                 <p class="mb-2">{m.dashboard_no_games()}</p>
                 <p class="text-sm">{m.dashboard_no_games_hint()}</p>
               </div>
             }
           >
-            <div class="animate-fade-in space-y-2">
+            <div class="space-y-2">
               <Show when={enabledGames().has(GameId.GenshinImpact)}>
                 <GenshinSection />
               </Show>

@@ -60,18 +60,32 @@ function createCore() {
   // Tick system - updates every minute for real-time countdown display
   // ---------------------------------------------------------------------------
 
-  const [tick, setTick] = createSignal<number>(Date.now());
+  const [tickVersion, setTickVersion] = createSignal(0);
 
   let tickInterval: ReturnType<typeof setInterval> | undefined;
 
-  function startTickInterval(): void {
-    clearInterval(tickInterval);
-    tickInterval = setInterval(() => setTick(Date.now()), 60_000);
+  /**
+   * Current time for every time-derived view.
+   *
+   * Reading the version is what subscribes callers to the minute interval and
+   * to snapshot arrivals; the time itself comes from the real clock. Sampling
+   * it into a signal instead measures deadlines the backend computed as
+   * `now + remaining` against a clock older than the fetch, so a snapshot
+   * landing between minute ticks shows more time than is left.
+   */
+  function tick(): number {
+    tickVersion();
+    return Date.now();
   }
 
-  /** Resets the tick to now and restarts the minute interval. */
+  function startTickInterval(): void {
+    clearInterval(tickInterval);
+    tickInterval = setInterval(() => setTickVersion((version) => version + 1), 60_000);
+  }
+
+  /** Recomputes the time-derived views now and restarts the minute interval. */
   function refreshTick(): void {
-    setTick(Date.now());
+    setTickVersion((version) => version + 1);
     startTickInterval();
   }
 

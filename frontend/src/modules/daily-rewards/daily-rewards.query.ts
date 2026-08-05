@@ -20,6 +20,9 @@ export function dailyRewardStatusQueryOptions() {
     queryFn: async () =>
       extractClaimStatus(await invoke<AllDailyRewardStatus>("get_daily_reward_status")),
     staleTime: Number.POSITIVE_INFINITY,
+    // Dashboard-only, like the resources snapshot: outliving a trip through
+    // settings keeps the claim badges from blanking on the way back.
+    gcTime: Number.POSITIVE_INFINITY,
   });
 }
 

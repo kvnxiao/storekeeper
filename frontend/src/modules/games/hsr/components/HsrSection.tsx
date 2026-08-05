@@ -16,6 +16,7 @@ export const HsrSection: VoidComponent = () => {
 
   return (
     <GameSection
+      sectionId={GameId.HonkaiStarRail}
       title={m.game_hsr_name()}
       badge={<DailyClaimBadge gameId={GameId.HonkaiStarRail} />}
     >

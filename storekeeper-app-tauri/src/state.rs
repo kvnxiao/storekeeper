@@ -50,6 +50,25 @@ pub struct AllDailyRewardStatus {
     pub last_checked: Option<Timestamp>,
 }
 
+/// Merges freshly fetched games over the previously cached ones.
+///
+/// A game whose fetch failed is absent from `fetched` and keeps its last known
+/// values, so one failing provider does not blank its cards. A game that is no
+/// longer configured is dropped instead of lingering as a resource nothing
+/// refreshes.
+fn merge_game_resources(
+    previous: HashMap<GameId, serde_json::Value>,
+    fetched: HashMap<GameId, serde_json::Value>,
+    configured: &HashSet<GameId>,
+) -> HashMap<GameId, serde_json::Value> {
+    let mut games: HashMap<GameId, serde_json::Value> = previous
+        .into_iter()
+        .filter(|(game_id, _)| configured.contains(game_id))
+        .collect();
+    games.extend(fetched);
+    games
+}
+
 /// Inner state data protected by RwLock.
 #[derive(Default)]
 pub struct StateData {
@@ -173,19 +192,24 @@ impl AppState {
         Arc::clone(&self.scheduler_notify)
     }
 
-    /// Fetches resources from all configured game clients using the registry.
+    /// Fetches every configured game client and merges the results into the
+    /// cached resources.
     ///
     /// Emits per-game update events via the app handle as each game completes.
-    pub async fn fetch_all_resources(&self, app_handle: &tauri::AppHandle) -> AllResources {
+    pub async fn refresh_all_resources(&self, app_handle: &tauri::AppHandle) -> AllResources {
         let registry = {
             let state = self.inner.read().await;
             Arc::clone(&state.registry)
         };
-        let games = registry.fetch_all(app_handle).await;
-        AllResources {
-            games,
+        let fetched = registry.fetch_all(app_handle).await;
+
+        let mut state = self.inner.write().await;
+        let previous = std::mem::take(&mut state.resources.games);
+        state.resources = AllResources {
+            games: merge_game_resources(previous, fetched, &registry.game_ids()),
             last_updated: Some(Timestamp::now()),
-        }
+        };
+        state.resources.clone()
     }
 
     /// Returns the poll interval from config.
@@ -359,6 +383,63 @@ impl Default for AppState {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // =========================================================================
+    // merge_game_resources tests
+    // =========================================================================
+
+    fn resources(entries: &[(GameId, &str)]) -> HashMap<GameId, serde_json::Value> {
+        entries
+            .iter()
+            .map(|(game_id, marker)| (*game_id, serde_json::json!([{ "type": marker }])))
+            .collect()
+    }
+
+    #[test]
+    fn merge_keeps_a_game_that_failed_to_fetch() {
+        let merged = merge_game_resources(
+            resources(&[
+                (GameId::GenshinImpact, "cached"),
+                (GameId::HonkaiStarRail, "cached"),
+            ]),
+            resources(&[(GameId::HonkaiStarRail, "fresh")]),
+            &HashSet::from([GameId::GenshinImpact, GameId::HonkaiStarRail]),
+        );
+
+        assert_eq!(
+            merged,
+            resources(&[
+                (GameId::GenshinImpact, "cached"),
+                (GameId::HonkaiStarRail, "fresh"),
+            ]),
+            "a game missing from the fetch should keep its last known values"
+        );
+    }
+
+    #[test]
+    fn merge_drops_a_game_that_is_no_longer_configured() {
+        let merged = merge_game_resources(
+            resources(&[
+                (GameId::GenshinImpact, "cached"),
+                (GameId::HonkaiStarRail, "cached"),
+            ]),
+            HashMap::new(),
+            &HashSet::from([GameId::GenshinImpact]),
+        );
+
+        assert_eq!(merged, resources(&[(GameId::GenshinImpact, "cached")]));
+    }
+
+    #[test]
+    fn merge_adds_a_newly_configured_game() {
+        let merged = merge_game_resources(
+            HashMap::new(),
+            resources(&[(GameId::ZenlessZoneZero, "fresh")]),
+            &HashSet::from([GameId::ZenlessZoneZero]),
+        );
+
+        assert_eq!(merged, resources(&[(GameId::ZenlessZoneZero, "fresh")]));
+    }
 
     // =========================================================================
     // AllResources tests
