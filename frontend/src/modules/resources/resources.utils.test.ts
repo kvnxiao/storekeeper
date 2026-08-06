@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vite-plus/test";
-import { formatAbsoluteDateTime, formatTimeRemaining } from "./resources.utils";
+import { formatAbsoluteDateTime, formatTimeRemaining } from "@/modules/resources/resources.utils";
 
 vi.mock("@/paraglide/messages", () => ({
   time_remaining_full: () => "Full",

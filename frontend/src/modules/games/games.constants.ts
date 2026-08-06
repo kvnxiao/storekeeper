@@ -36,7 +36,7 @@ export type ResourceType =
   | WuwaResourceType;
 
 /** Resource types that are stamina-based (support value-threshold notifications) */
-export const STAMINA_RESOURCE_TYPES: ReadonlySet<string> = new Set([
+export const STAMINA_RESOURCE_TYPES: ReadonlySet<ResourceType> = new Set([
   GenshinResource.Resin,
   GenshinResource.RealmCurrency,
   HsrResource.TrailblazePower,
@@ -59,7 +59,7 @@ export function getResourceIconPath(type: ResourceType): string {
   return RESOURCE_ICON_PATHS[type];
 }
 
-const RESOURCE_DISPLAY_NAMES: Record<string, () => string> = {
+const RESOURCE_DISPLAY_NAMES: Record<ResourceType, () => string> = {
   [GenshinResource.Resin]: m.resource_resin,
   [GenshinResource.ParametricTransformer]: m.resource_parametric_transformer,
   [GenshinResource.RealmCurrency]: m.resource_realm_currency,
@@ -70,10 +70,6 @@ const RESOURCE_DISPLAY_NAMES: Record<string, () => string> = {
 };
 
 /** Returns the localized display name for a resource type, evaluated at call time */
-export function getResourceDisplayName(type: string): string {
-  // RESOURCE_DISPLAY_NAMES[type] is undefined at runtime for unknown resource
-  // types (Record index access is not modelled by the type), so this guard is
-  // intentional.
-  // oxlint-disable-next-line typescript/no-unnecessary-condition
-  return RESOURCE_DISPLAY_NAMES[type]?.() ?? type;
+export function getResourceDisplayName(type: ResourceType): string {
+  return RESOURCE_DISPLAY_NAMES[type]();
 }

@@ -1,6 +1,7 @@
 import { useMutation } from "@tanstack/solid-query";
 import BellRing from "lucide-solid/icons/bell-ring";
 import { Show, type VoidComponent } from "solid-js";
+import type { ResourceType } from "@/modules/games/games.constants";
 import type { GameId } from "@/modules/games/games.types";
 import type { ResourceLimits } from "@/modules/resources/resources.types";
 import { previewNotificationMutationOptions } from "@/modules/settings/settings.query";
@@ -20,7 +21,7 @@ import * as m from "@/paraglide/messages";
 
 export interface NotificationResourceRowProps {
   gameId: GameId;
-  resourceType: string;
+  resourceType: ResourceType;
   label: string;
   config: ResourceNotificationConfig | undefined;
   isStaminaResource: boolean;

@@ -1,4 +1,5 @@
 import { Show, type VoidComponent } from "solid-js";
+import type { ResourceType } from "@/modules/games/games.constants";
 import type { GameId } from "@/modules/games/games.types";
 import type { ResourceLimits } from "@/modules/resources/resources.types";
 import { NotificationSection } from "@/modules/settings/components/NotificationSection";
@@ -12,7 +13,7 @@ export interface HoyolabGameSectionProps {
   title: string;
   description: string;
   gameId: GameId;
-  resourceTypes: readonly string[];
+  resourceTypes: readonly ResourceType[];
   config: HoyolabGameConfig | undefined;
   resourceLimits?: Partial<Record<string, ResourceLimits>>;
   onChange: (config: HoyolabGameConfig) => void;

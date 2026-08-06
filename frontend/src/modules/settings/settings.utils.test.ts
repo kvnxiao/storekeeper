@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { ResourceNotificationConfig } from "./settings.types";
+import type { ResourceNotificationConfig } from "@/modules/settings/settings.types";
 import {
   DEFAULT_NOTIFICATION_CONFIG,
   enabledNotificationConfig,
@@ -7,7 +7,7 @@ import {
   withNotifyAtValue,
   withNotifyMinutes,
   withNotifyMode,
-} from "./settings.utils";
+} from "@/modules/settings/settings.utils";
 
 const base: ResourceNotificationConfig = {
   enabled: false,

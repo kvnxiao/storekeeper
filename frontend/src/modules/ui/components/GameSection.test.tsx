@@ -1,6 +1,6 @@
 import { cleanup, render } from "@solidjs/testing-library";
 import { afterEach, describe, expect, it } from "vite-plus/test";
-import { GameSection } from "./GameSection";
+import { GameSection } from "@/modules/ui/components/GameSection";
 
 function renderSection(): { root: HTMLElement; trigger: HTMLElement } {
   const { container } = render(() => (

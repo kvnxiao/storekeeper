@@ -1,13 +1,10 @@
 import { Show, type VoidComponent } from "solid-js";
-import { tv } from "tailwind-variants";
 import { Tooltip } from "@/modules/ui/components/Tooltip";
 
-const interactiveStyle = tv({
-  base: [
-    "rounded bg-zinc-100 px-1 text-zinc-700 transition-colors",
-    "hover:bg-zinc-200 dark:bg-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-600",
-  ],
-});
+const interactiveStyle = [
+  "rounded bg-zinc-100 px-1 text-zinc-700 transition-colors",
+  "hover:bg-zinc-200 dark:bg-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-600",
+].join(" ");
 
 export interface TimeRemainingProps {
   relativeTime: string;
@@ -21,7 +18,7 @@ export const TimeRemaining: VoidComponent<TimeRemainingProps> = (props) => {
     <Show when={props.absoluteTime} fallback={<time>{props.relativeTime}</time>}>
       <Tooltip
         content={props.absoluteTime}
-        triggerClass={props.plain ? undefined : interactiveStyle()}
+        triggerClass={props.plain ? undefined : interactiveStyle}
       >
         {props.relativeTime}
       </Tooltip>

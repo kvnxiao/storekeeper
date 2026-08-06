@@ -1,6 +1,6 @@
 import { render, screen } from "@solidjs/testing-library";
 import { describe, expect, it } from "vite-plus/test";
-import { Badge } from "./Badge";
+import { Badge } from "@/modules/ui/components/Badge";
 
 describe("Badge", () => {
   it("renders children in a styled span", () => {

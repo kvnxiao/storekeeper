@@ -3,7 +3,7 @@ import Eye from "lucide-solid/icons/eye";
 import EyeOff from "lucide-solid/icons/eye-off";
 import { createSignal, Show, type VoidComponent } from "solid-js";
 import { tv } from "tailwind-variants";
-import { descriptionStyle, fieldStyle, labelStyle } from "@/modules/ui/ui.styles";
+import { fieldStyle, labelStyle } from "@/modules/ui/ui.styles";
 import * as m from "@/paraglide/messages";
 
 const inputStyle = tv({
@@ -31,10 +31,8 @@ const inputStyle = tv({
 
 export interface TextFieldProps {
   label?: string;
-  description?: string;
   placeholder?: string;
   type?: "text" | "password";
-  class?: string;
   value: string;
   onChange: (value: string) => void;
 }
@@ -47,10 +45,10 @@ export const TextField: VoidComponent<TextFieldProps> = (props) => {
     <TextFieldPrimitive.Root
       value={props.value}
       onChange={(value) => props.onChange(value)}
-      class={fieldStyle({ class: props.class })}
+      class={fieldStyle}
     >
       <Show when={props.label}>
-        <TextFieldPrimitive.Label class={labelStyle()}>{props.label}</TextFieldPrimitive.Label>
+        <TextFieldPrimitive.Label class={labelStyle}>{props.label}</TextFieldPrimitive.Label>
       </Show>
       <div class="relative">
         <TextFieldPrimitive.Input
@@ -71,11 +69,6 @@ export const TextField: VoidComponent<TextFieldProps> = (props) => {
           </button>
         </Show>
       </div>
-      <Show when={props.description}>
-        <TextFieldPrimitive.Description class={descriptionStyle()}>
-          {props.description}
-        </TextFieldPrimitive.Description>
-      </Show>
     </TextFieldPrimitive.Root>
   );
 };

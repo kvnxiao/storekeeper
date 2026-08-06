@@ -4,7 +4,12 @@ import { createFileRoute } from "@tanstack/solid-router";
 import ArrowLeft from "lucide-solid/icons/arrow-left";
 import CircleAlert from "lucide-solid/icons/circle-alert";
 import { For, Show, type VoidComponent } from "solid-js";
-import { GenshinResource, HsrResource, ZzzResource } from "@/modules/games/games.constants";
+import {
+  GenshinResource,
+  HsrResource,
+  type ResourceType,
+  ZzzResource,
+} from "@/modules/games/games.constants";
 import { GameId } from "@/modules/games/games.types";
 import { resourcesQueryOptions } from "@/modules/resources/resources.query";
 import { getResourceLimitsForGame } from "@/modules/resources/resources.utils";
@@ -12,7 +17,7 @@ import { GeneralSection } from "@/modules/settings/components/GeneralSection";
 import { HoyolabGameSection } from "@/modules/settings/components/HoyolabGameSection";
 import { HoyolabSecretsSection } from "@/modules/settings/components/HoyolabSecretsSection";
 import { KuroSecretsSection } from "@/modules/settings/components/KuroSecretsSection";
-import { WuwaSection } from "@/modules/settings/components/WuwaSection";
+import { WuwaGameSection } from "@/modules/settings/components/WuwaGameSection";
 import { settingsFormOptions } from "@/modules/settings/settings.form";
 import {
   configQueryOptions,
@@ -37,7 +42,7 @@ const HOYOLAB_GAMES: {
   configKey: HoyolabConfigKey;
   title: () => string;
   description: () => string;
-  resourceTypes: readonly string[];
+  resourceTypes: readonly ResourceType[];
 }[] = [
   {
     gameId: GameId.GenshinImpact,
@@ -115,97 +120,100 @@ const SettingsForm: VoidComponent<SettingsFormProps> = (props) => {
       {/* Error display */}
       <Show when={saveError()}>{(error) => <ErrorBanner class="mb-4">{error()}</ErrorBanner>}</Show>
 
-      {/* Settings sections. Disabled while a save is in flight so edits can't
-          land between submit and the post-save formApi.reset(value), which
-          would silently revert them. */}
-      <fieldset class="min-w-0 space-y-6" disabled={save.isPending}>
-        <form.Field name="config.general">
-          {(field) => (
-            <GeneralSection
-              config={field().state.value}
-              onChange={(general) => field().handleChange(general)}
-            />
-          )}
-        </form.Field>
-
-        <For each={HOYOLAB_GAMES}>
-          {(game) => (
-            <form.Field name={`config.games.${game.configKey}`}>
-              {(field) => (
-                <HoyolabGameSection
-                  title={game.title()}
-                  description={game.description()}
-                  gameId={game.gameId}
-                  resourceTypes={game.resourceTypes}
-                  config={field().state.value}
-                  resourceLimits={resourceLimits(game.gameId)}
-                  onChange={(value) => field().handleChange(value)}
-                />
-              )}
-            </form.Field>
-          )}
-        </For>
-
-        <form.Field name="config.games.wuthering_waves">
-          {(field) => (
-            <WuwaSection
-              config={field().state.value}
-              resourceLimits={resourceLimits(GameId.WutheringWaves)}
-              onChange={(wuwa) => field().handleChange(wuwa)}
-            />
-          )}
-        </form.Field>
-
-        <form.Field name="secrets.hoyolab">
-          {(field) => (
-            <HoyolabSecretsSection
-              secrets={field().state.value}
-              onChange={(hoyolab) => field().handleChange(hoyolab)}
-            />
-          )}
-        </form.Field>
-
-        <form.Field name="secrets.kuro">
-          {(field) => (
-            <KuroSecretsSection
-              secrets={field().state.value}
-              onChange={(kuro) => field().handleChange(kuro)}
-            />
-          )}
-        </form.Field>
-      </fieldset>
-
-      {/* Floating action bar */}
-      <div
-        class={cn(
-          "fixed bottom-0 left-0 right-0 z-50 border-t border-zinc-950/10 bg-white/80 px-4 py-3 backdrop-blur-lg dark:border-white/10 dark:bg-zinc-900/80",
-          "transition-transform duration-300 ease-out motion-reduce:transition-none",
-          isDefaultValue() ? "translate-y-full" : "translate-y-0",
-        )}
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          void form.handleSubmit();
+        }}
       >
-        <div class="flex items-center gap-3">
-          <Tooltip content={m.settings_unsaved_changes()} triggerClass="flex items-center">
-            <CircleAlert
-              aria-hidden="true"
-              class="size-5 animate-pulse text-amber-500 motion-reduce:animate-none"
-            />
-          </Tooltip>
+        {/* Settings sections. Disabled while a save is in flight so edits can't
+            land between submit and the post-save formApi.reset(value), which
+            would silently revert them. */}
+        <fieldset class="min-w-0 space-y-6" disabled={save.isPending}>
+          <form.Field name="config.general">
+            {(field) => (
+              <GeneralSection
+                config={field().state.value}
+                onChange={(general) => field().handleChange(general)}
+              />
+            )}
+          </form.Field>
 
-          <div class="flex-1" />
+          <For each={HOYOLAB_GAMES}>
+            {(game) => (
+              <form.Field name={`config.games.${game.configKey}`}>
+                {(field) => (
+                  <HoyolabGameSection
+                    title={game.title()}
+                    description={game.description()}
+                    gameId={game.gameId}
+                    resourceTypes={game.resourceTypes}
+                    config={field().state.value}
+                    resourceLimits={resourceLimits(game.gameId)}
+                    onChange={(value) => field().handleChange(value)}
+                  />
+                )}
+              </form.Field>
+            )}
+          </For>
 
-          <Button onClick={() => form.reset()} disabled={save.isPending}>
-            {m.settings_undo()}
-          </Button>
-          <Button
-            onClick={() => void form.handleSubmit()}
-            disabled={save.isPending}
-            isPending={save.isPending}
-            color="blue"
-          >
-            {m.settings_save()}
-          </Button>
+          <form.Field name="config.games.wuthering_waves">
+            {(field) => (
+              <WuwaGameSection
+                config={field().state.value}
+                resourceLimits={resourceLimits(GameId.WutheringWaves)}
+                onChange={(wuwa) => field().handleChange(wuwa)}
+              />
+            )}
+          </form.Field>
+
+          <form.Field name="secrets.hoyolab">
+            {(field) => (
+              <HoyolabSecretsSection
+                secrets={field().state.value}
+                onChange={(hoyolab) => field().handleChange(hoyolab)}
+              />
+            )}
+          </form.Field>
+
+          <form.Field name="secrets.kuro">
+            {(field) => (
+              <KuroSecretsSection
+                secrets={field().state.value}
+                onChange={(kuro) => field().handleChange(kuro)}
+              />
+            )}
+          </form.Field>
+        </fieldset>
+
+        {/* Floating action bar */}
+        <div
+          class={cn(
+            "fixed bottom-0 left-0 right-0 z-50 border-t border-zinc-950/10 bg-white/80 px-4 py-3 backdrop-blur-lg dark:border-white/10 dark:bg-zinc-900/80",
+            "transition-transform duration-300 ease-out motion-reduce:transition-none",
+            isDefaultValue() ? "translate-y-full" : "translate-y-0",
+          )}
+        >
+          <div class="flex items-center gap-3">
+            <Tooltip content={m.settings_unsaved_changes()} triggerClass="flex items-center">
+              <CircleAlert
+                aria-hidden="true"
+                class="size-5 animate-pulse text-amber-500 motion-reduce:animate-none"
+              />
+              <span class="sr-only">{m.settings_unsaved_changes()}</span>
+            </Tooltip>
+
+            <div class="flex-1" />
+
+            <Button onClick={() => form.reset()} disabled={save.isPending}>
+              {m.settings_undo()}
+            </Button>
+            <Button type="submit" disabled={save.isPending} isPending={save.isPending} color="blue">
+              {m.settings_save()}
+            </Button>
+          </div>
         </div>
-      </div>
+      </form>
     </div>
   );
 };

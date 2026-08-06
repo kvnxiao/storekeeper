@@ -29,6 +29,10 @@ const DashboardPage: VoidComponent = () => {
 
   const enabledGames = createMemo(() => enabledGamesFromConfig(configQuery.data));
 
+  // Without the config there is no game list, so its failure has to surface as
+  // an error rather than as the "no games configured" empty state.
+  const loadError = () => configQuery.error ?? resourcesQuery.error;
+
   return (
     <div class="mx-auto min-h-screen max-w-sm p-3">
       <header class="mb-3 flex items-center justify-between">
@@ -56,12 +60,12 @@ const DashboardPage: VoidComponent = () => {
         </div>
       </header>
 
-      <Show when={resourcesQuery.error}>
+      <Show when={loadError()}>
         {(error) => <ErrorBanner class="mb-3">{String(error())}</ErrorBanner>}
       </Show>
 
       <main class="space-y-2">
-        <Show when={!configQuery.isPending}>
+        <Show when={configQuery.isSuccess}>
           <Show
             when={enabledGames().size > 0}
             fallback={

@@ -1,7 +1,12 @@
 import * as SwitchPrimitive from "@kobalte/core/switch";
 import { children, type ParentComponent, Show } from "solid-js";
 import { tv } from "tailwind-variants";
-import { cn } from "@/modules/ui/ui.styles";
+
+const rootStyle = [
+  "group relative flex items-center gap-2 text-sm font-medium transition",
+  "text-zinc-950 dark:text-white",
+  "data-[disabled]:text-zinc-400 dark:data-[disabled]:text-zinc-500",
+].join(" ");
 
 const trackStyle = tv({
   base: [
@@ -32,21 +37,18 @@ const trackStyle = tv({
   },
 });
 
-const handleStyle = tv({
-  base: [
-    "size-4 rounded-full bg-white shadow-xs transition duration-200 ease-in-out",
-    "outline outline-1 -outline-offset-1 outline-transparent",
-    "dark:bg-zinc-900",
-    "translate-x-0 group-data-[checked]:translate-x-3",
-    "group-data-[disabled]:bg-zinc-50 dark:group-data-[disabled]:bg-zinc-700",
-  ],
-});
+const handleStyle = [
+  "size-4 rounded-full bg-white shadow-xs transition duration-200 ease-in-out",
+  "outline outline-1 -outline-offset-1 outline-transparent",
+  "dark:bg-zinc-900",
+  "translate-x-0 group-data-[checked]:translate-x-3",
+  "group-data-[disabled]:bg-zinc-50 dark:group-data-[disabled]:bg-zinc-700",
+].join(" ");
 
 export interface SwitchProps {
   checked: boolean;
   onChange: (checked: boolean) => void;
   disabled?: boolean;
-  class?: string;
 }
 
 export const Switch: ParentComponent<SwitchProps> = (props) => {
@@ -57,16 +59,11 @@ export const Switch: ParentComponent<SwitchProps> = (props) => {
       checked={props.checked}
       onChange={(checked) => props.onChange(checked)}
       disabled={props.disabled}
-      class={cn(
-        "group relative flex items-center gap-2 text-sm font-medium transition",
-        "text-zinc-950 dark:text-white",
-        "data-[disabled]:text-zinc-400 dark:data-[disabled]:text-zinc-500",
-        props.class,
-      )}
+      class={rootStyle}
     >
       <SwitchPrimitive.Input class="peer" />
       <SwitchPrimitive.Control class={trackStyle({ disabled: props.disabled })}>
-        <SwitchPrimitive.Thumb class={handleStyle()} />
+        <SwitchPrimitive.Thumb class={handleStyle} />
       </SwitchPrimitive.Control>
       <Show when={label()}>
         <SwitchPrimitive.Label>{label()}</SwitchPrimitive.Label>

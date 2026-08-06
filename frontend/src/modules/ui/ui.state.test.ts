@@ -1,5 +1,5 @@
 import { createRoot } from "solid-js";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { createUiState } from "@/modules/ui/ui.state";
 
 function withState<T>(run: (state: ReturnType<typeof createUiState>) => T): T {

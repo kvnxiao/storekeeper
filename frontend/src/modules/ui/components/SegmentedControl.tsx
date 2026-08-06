@@ -1,19 +1,14 @@
 import * as ToggleGroup from "@kobalte/core/toggle-group";
 import { For, type VoidComponent } from "solid-js";
-import { tv } from "tailwind-variants";
 
-const groupStyle = tv({
-  base: "inline-flex rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-800",
-});
+const groupStyle = "inline-flex rounded-lg bg-zinc-100 p-0.5 dark:bg-zinc-800";
 
-const buttonStyle = tv({
-  base: [
-    "cursor-default rounded-md px-2.5 py-1 text-xs font-medium text-zinc-500 outline-none transition-colors",
-    "hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50",
-    "data-[pressed]:bg-white data-[pressed]:text-zinc-950 data-[pressed]:shadow-sm",
-    "dark:text-zinc-400 dark:data-[pressed]:bg-zinc-700 dark:data-[pressed]:text-white",
-  ],
-});
+const buttonStyle = [
+  "cursor-default rounded-md px-2.5 py-1 text-xs font-medium text-zinc-500 outline-none transition-colors",
+  "hover:bg-zinc-200/50 dark:hover:bg-zinc-700/50",
+  "data-[pressed]:bg-white data-[pressed]:text-zinc-950 data-[pressed]:shadow-sm",
+  "dark:text-zinc-400 dark:data-[pressed]:bg-zinc-700 dark:data-[pressed]:text-white",
+].join(" ");
 
 interface SegmentedControlItem {
   id: string;
@@ -38,11 +33,11 @@ export const SegmentedControl: VoidComponent<SegmentedControlProps> = (props) =>
           props.onSelectionChange(value);
         }
       }}
-      class={groupStyle()}
+      class={groupStyle}
     >
       <For each={props.items}>
         {(item) => (
-          <ToggleGroup.Item value={item.id} class={buttonStyle()}>
+          <ToggleGroup.Item value={item.id} class={buttonStyle}>
             {item.label}
           </ToggleGroup.Item>
         )}

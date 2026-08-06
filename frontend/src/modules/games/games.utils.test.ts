@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { GenshinResource } from "@/modules/games/games.constants";
 import { GameId } from "@/modules/games/games.types";
 import {

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { extractClaimStatus, utc8DateString } from "@/modules/daily-rewards/daily-rewards.utils";
 import { GameId } from "@/modules/games/games.types";
 

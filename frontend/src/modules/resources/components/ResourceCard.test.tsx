@@ -1,6 +1,6 @@
 import { cleanup, render } from "@solidjs/testing-library";
 import { afterEach, describe, expect, it } from "vite-plus/test";
-import { ResourceCard } from "./ResourceCard";
+import { ResourceCard } from "@/modules/resources/components/ResourceCard";
 
 function renderCard(hasData: boolean): HTMLElement {
   const { container } = render(() => (

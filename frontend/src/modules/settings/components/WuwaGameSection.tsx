@@ -11,13 +11,13 @@ import * as m from "@/paraglide/messages";
 
 const RESOURCE_TYPES = Object.values(WuwaResource);
 
-export interface WuwaSectionProps {
+export interface WuwaGameSectionProps {
   config: WuwaConfig | undefined;
   resourceLimits?: Partial<Record<string, ResourceLimits>>;
   onChange: (config: WuwaConfig) => void;
 }
 
-export const WuwaSection: VoidComponent<WuwaSectionProps> = (props) => {
+export const WuwaGameSection: VoidComponent<WuwaGameSectionProps> = (props) => {
   // Normalizes the possibly-undefined config once so every onChange handler
   // only states the field it changes.
   const current = (): WuwaConfig => ({ enabled: false, uid: "", ...props.config });

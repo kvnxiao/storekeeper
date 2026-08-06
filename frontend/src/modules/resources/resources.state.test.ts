@@ -1,5 +1,5 @@
 import { createRoot } from "solid-js";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { queryClient } from "@/modules/core/core.queryClient";
 import { REFRESH_RESOURCES_MUTATION_KEY } from "@/modules/resources/resources.query";
 import { createResourcesState } from "@/modules/resources/resources.state";

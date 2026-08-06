@@ -1,5 +1,9 @@
 import { For, type VoidComponent } from "solid-js";
-import { getResourceDisplayName, STAMINA_RESOURCE_TYPES } from "@/modules/games/games.constants";
+import {
+  getResourceDisplayName,
+  type ResourceType,
+  STAMINA_RESOURCE_TYPES,
+} from "@/modules/games/games.constants";
 import type { GameId } from "@/modules/games/games.types";
 import type { ResourceLimits } from "@/modules/resources/resources.types";
 import { NotificationResourceRow } from "@/modules/settings/components/NotificationResourceRow";
@@ -8,7 +12,7 @@ import * as m from "@/paraglide/messages";
 
 export interface NotificationSectionProps {
   gameId: GameId;
-  resourceTypes: readonly string[];
+  resourceTypes: readonly ResourceType[];
   notifications: Partial<Record<string, ResourceNotificationConfig>> | undefined;
   resourceLimits?: Partial<Record<string, ResourceLimits>>;
   onChange: (notifications: Partial<Record<string, ResourceNotificationConfig>>) => void;

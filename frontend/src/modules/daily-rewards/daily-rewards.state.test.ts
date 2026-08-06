@@ -1,5 +1,5 @@
 import { createRoot, createSignal } from "solid-js";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { refreshDailyRewardStatus } from "@/modules/daily-rewards/daily-rewards.query";
 import { createDailyRewardsState } from "@/modules/daily-rewards/daily-rewards.state";
 
