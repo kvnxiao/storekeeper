@@ -14,6 +14,8 @@ pub enum AppEvent {
     GameResourceUpdated,
     /// Daily rewards have been claimed.
     DailyRewardClaimed,
+    /// The cached daily reward status changed without a claim.
+    DailyRewardStatusUpdated,
 }
 
 impl AppEvent {
@@ -25,6 +27,7 @@ impl AppEvent {
             Self::RefreshStarted => "refresh-started",
             Self::GameResourceUpdated => "game-resource-updated",
             Self::DailyRewardClaimed => "daily-reward-claimed",
+            Self::DailyRewardStatusUpdated => "daily-reward-status-updated",
         }
     }
 }
@@ -48,11 +51,12 @@ mod tests {
     const FRONTEND_EVENT_CONSTANTS: &str =
         include_str!("../../frontend/src/modules/core/core.constants.ts");
 
-    const EVENTS: [AppEvent; 4] = [
+    const EVENTS: [AppEvent; 5] = [
         AppEvent::ResourcesUpdated,
         AppEvent::RefreshStarted,
         AppEvent::GameResourceUpdated,
         AppEvent::DailyRewardClaimed,
+        AppEvent::DailyRewardStatusUpdated,
     ];
 
     // =========================================================================
@@ -82,6 +86,14 @@ mod tests {
         assert_eq!(
             AppEvent::DailyRewardClaimed.as_str(),
             "daily-reward-claimed"
+        );
+    }
+
+    #[test]
+    fn event_daily_reward_status_updated() {
+        assert_eq!(
+            AppEvent::DailyRewardStatusUpdated.as_str(),
+            "daily-reward-status-updated"
         );
     }
 

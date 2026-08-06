@@ -120,6 +120,10 @@ function createCore() {
       invalidateDailyRewardStatus().catch(console.error);
     });
 
+    void listen(AppEvent.DailyRewardStatusUpdated, () => {
+      invalidateDailyRewardStatus().catch(console.error);
+    });
+
     dailyRewardsState.init(tick);
 
     // Sync Paraglide locale from backend config on startup. Views wait on

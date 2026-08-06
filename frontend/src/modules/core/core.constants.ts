@@ -9,4 +9,5 @@ export const AppEvent = {
   RefreshStarted: "refresh-started",
   GameResourceUpdated: "game-resource-updated",
   DailyRewardClaimed: "daily-reward-claimed",
+  DailyRewardStatusUpdated: "daily-reward-status-updated",
 } as const;
