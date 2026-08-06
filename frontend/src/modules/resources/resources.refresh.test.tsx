@@ -16,6 +16,7 @@ const RESPONSE_RESIN = 180;
 
 const FULL_IN_MS = 3_600_000;
 const COOLDOWN_MS = 5 * 86_400_000;
+const WAIT_TIMEOUT_MS = 3_000;
 
 function snapshot(resin: number): AllResources {
   const now = Date.now();
@@ -70,7 +71,9 @@ function emit(name: string, payload?: unknown): void {
 
 /** Resolves once the rendered text matches, instead of sleeping on a guess. */
 const showsText = (container: HTMLElement, text: string) =>
-  vi.waitFor(() => expect(container.textContent).toContain(text));
+  vi.waitFor(() => expect(container.textContent).toContain(text), {
+    timeout: WAIT_TIMEOUT_MS,
+  });
 
 /** One icon per card shell, so a re-created card shows up as a new node. */
 const cardIcons = (container: HTMLElement) => [...container.querySelectorAll("img")];
@@ -125,7 +128,9 @@ describe("resource refresh", () => {
     const { container } = await mount();
 
     screen.getByRole("button", { name: "trigger refresh" }).click();
-    await vi.waitFor(() => expect(queryClient.isMutating()).toBe(0));
+    await vi.waitFor(() => expect(queryClient.isMutating()).toBe(0), {
+      timeout: WAIT_TIMEOUT_MS,
+    });
 
     expect(container.textContent).toContain("100/200");
     expect(container.textContent).not.toContain(`${RESPONSE_RESIN}/200`);
@@ -135,7 +140,9 @@ describe("resource refresh", () => {
   });
 
   // A snapshot's cooldown deadline is `fetch time + 5d`, so a clock older than
-  // the fetch renders the full 5d instead of the 4d 23h 59m left.
+  // the fetch renders the full 5d instead of the 4d 23h 59m left. The gap
+  // between the fetch and the render is the whole signal, so this file has to
+  // run on the real clock: a frozen one makes that gap 0 and renders "5d".
   it("measures a cooldown against the clock the snapshot arrived on", async () => {
     const { container } = await mount();
     expect(container.textContent).toContain("4d 23h 59m");

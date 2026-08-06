@@ -1,7 +1,6 @@
 //! Scheduled auto-claim for daily rewards.
 
 use crate::events::AppEvent;
-use crate::retry_helpers::retry_with_backoff;
 use crate::state::AppState;
 use anyhow::Context;
 use jiff::Timestamp;
@@ -159,7 +158,7 @@ async fn idle_wait(
 /// Runs startup claims for games that have auto-claim enabled.
 ///
 /// For each game, checks the API status first - if not claimed today,
-/// attempts to claim with retry on network failures.
+/// attempts to claim.
 async fn run_startup_claims(state: &AppState, app_handle: &AppHandle) {
     tracing::info!("Running startup auto-claim check");
 
@@ -276,37 +275,18 @@ async fn sleep_short(cancel_token: &CancellationToken, notify: &Arc<Notify>) -> 
 /// Returns `Ok(true)` if claimed, `Ok(false)` if already claimed, `Err` on
 /// failure.
 async fn claim_with_status_check(state: &AppState, game_id: GameId) -> anyhow::Result<bool> {
-    // Step 1: Check status first
-    let status = fetch_status_with_retry(state, game_id).await?;
+    let status = state.get_daily_reward_status_for_game(game_id).await?;
 
-    // Step 2: Check if already claimed via typed deserialization
     let reward_status: DailyRewardStatus =
         serde_json::from_value(status).context("failed to deserialize daily reward status")?;
 
     if reward_status.info.is_signed {
-        return Ok(false); // Already claimed
+        return Ok(false);
     }
 
-    // Step 3: Attempt to claim with retry
-    claim_reward_with_retry(state, game_id).await?;
+    state.claim_daily_reward_for_game(game_id).await?;
 
     Ok(true)
-}
-
-/// Fetches daily reward status with retry on network failures.
-async fn fetch_status_with_retry(
-    state: &AppState,
-    game_id: GameId,
-) -> anyhow::Result<serde_json::Value> {
-    retry_with_backoff(|| state.get_daily_reward_status_for_game(game_id)).await
-}
-
-/// Claims daily reward with retry on network failures.
-async fn claim_reward_with_retry(
-    state: &AppState,
-    game_id: GameId,
-) -> anyhow::Result<serde_json::Value> {
-    retry_with_backoff(|| state.claim_daily_reward_for_game(game_id)).await
 }
 
 /// Calculates the next claim time and which games to claim.

@@ -118,38 +118,35 @@ pub(crate) fn compute(
 /// data is fetched. Changes to these fields require a registry rebuild and API
 /// re-fetch.
 trait ClientFields {
+    /// The game's resource enum, compared field-wise between two configs.
+    type Resource: Eq;
+
     fn enabled(&self) -> bool;
-    fn client_identity(&self) -> ClientIdentity<'_>;
+    fn client_identity(&self) -> ClientIdentity<'_, Self::Resource>;
     fn notification_changed(&self, other: &Self) -> bool;
 }
 
 /// Identity fields that determine the HTTP client configuration.
 #[derive(PartialEq, Eq)]
-struct ClientIdentity<'a> {
+struct ClientIdentity<'a, R> {
     enabled: bool,
     uid: &'a str,
     region: Option<&'a storekeeper_core::region::Region>,
-    tracked_resources_hash: u64,
-}
-
-fn hash_vec<T: std::hash::Hash>(items: &[T]) -> u64 {
-    use std::hash::Hash;
-    use std::hash::Hasher;
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    items.hash(&mut hasher);
-    hasher.finish()
+    tracked_resources: &'a [R],
 }
 
 impl ClientFields for storekeeper_core::GenshinConfig {
+    type Resource = storekeeper_core::GenshinResourceType;
+
     fn enabled(&self) -> bool {
         self.enabled
     }
-    fn client_identity(&self) -> ClientIdentity<'_> {
+    fn client_identity(&self) -> ClientIdentity<'_, Self::Resource> {
         ClientIdentity {
             enabled: self.enabled,
             uid: &self.uid,
             region: self.region.as_ref(),
-            tracked_resources_hash: hash_vec(&self.tracked_resources),
+            tracked_resources: &self.tracked_resources,
         }
     }
     fn notification_changed(&self, other: &Self) -> bool {
@@ -158,15 +155,17 @@ impl ClientFields for storekeeper_core::GenshinConfig {
 }
 
 impl ClientFields for storekeeper_core::HsrConfig {
+    type Resource = storekeeper_core::HsrResourceType;
+
     fn enabled(&self) -> bool {
         self.enabled
     }
-    fn client_identity(&self) -> ClientIdentity<'_> {
+    fn client_identity(&self) -> ClientIdentity<'_, Self::Resource> {
         ClientIdentity {
             enabled: self.enabled,
             uid: &self.uid,
             region: self.region.as_ref(),
-            tracked_resources_hash: hash_vec(&self.tracked_resources),
+            tracked_resources: &self.tracked_resources,
         }
     }
     fn notification_changed(&self, other: &Self) -> bool {
@@ -175,15 +174,17 @@ impl ClientFields for storekeeper_core::HsrConfig {
 }
 
 impl ClientFields for storekeeper_core::ZzzConfig {
+    type Resource = storekeeper_core::ZzzResourceType;
+
     fn enabled(&self) -> bool {
         self.enabled
     }
-    fn client_identity(&self) -> ClientIdentity<'_> {
+    fn client_identity(&self) -> ClientIdentity<'_, Self::Resource> {
         ClientIdentity {
             enabled: self.enabled,
             uid: &self.uid,
             region: self.region.as_ref(),
-            tracked_resources_hash: hash_vec(&self.tracked_resources),
+            tracked_resources: &self.tracked_resources,
         }
     }
     fn notification_changed(&self, other: &Self) -> bool {
@@ -192,15 +193,17 @@ impl ClientFields for storekeeper_core::ZzzConfig {
 }
 
 impl ClientFields for storekeeper_core::WuwaConfig {
+    type Resource = storekeeper_core::WuwaResourceType;
+
     fn enabled(&self) -> bool {
         self.enabled
     }
-    fn client_identity(&self) -> ClientIdentity<'_> {
+    fn client_identity(&self) -> ClientIdentity<'_, Self::Resource> {
         ClientIdentity {
             enabled: self.enabled,
             uid: &self.uid,
             region: self.region.as_ref(),
-            tracked_resources_hash: hash_vec(&self.tracked_resources),
+            tracked_resources: &self.tracked_resources,
         }
     }
     fn notification_changed(&self, other: &Self) -> bool {

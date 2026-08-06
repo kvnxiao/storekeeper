@@ -14,7 +14,6 @@ mod notification;
 mod polling;
 mod provider_batch;
 mod registry;
-mod retry_helpers;
 mod scheduled_claim;
 mod state;
 mod tray;

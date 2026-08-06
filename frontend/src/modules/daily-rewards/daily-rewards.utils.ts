@@ -21,10 +21,17 @@ export function extractClaimStatus(status: AllDailyRewardStatus): Map<GameId, bo
   return map;
 }
 
-/** UTC+8 offset in milliseconds (all HoYoLab games reset at midnight UTC+8). */
-const UTC8_OFFSET_MS = 8 * 3_600_000;
+const UTC8_DATE_FORMAT = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Shanghai",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
 
-/** The calendar date in UTC+8, the boundary the games reset on. */
+/** The `YYYY-MM-DD` calendar date in UTC+8, the boundary the games reset on. */
 export function utc8DateString(nowMs: number): string {
-  return new Date(nowMs + UTC8_OFFSET_MS).toISOString().slice(0, 10);
+  const { year, month, day } = Object.fromEntries(
+    UTC8_DATE_FORMAT.formatToParts(nowMs).map(({ type, value }) => [type, value]),
+  );
+  return `${year}-${month}-${day}`;
 }

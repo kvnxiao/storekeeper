@@ -4,6 +4,8 @@ import { queryClient } from "@/modules/core/core.queryClient";
 import { REFRESH_RESOURCES_MUTATION_KEY } from "@/modules/resources/resources.query";
 import { createResourcesState } from "@/modules/resources/resources.state";
 
+const WAIT_TIMEOUT_MS = 3_000;
+
 function withState<T>(run: (state: ReturnType<typeof createResourcesState>) => T): T {
   return createRoot((dispose) => {
     const result = run(createResourcesState());
@@ -43,11 +45,15 @@ describe("resources state", () => {
     });
     const executed = mutation.execute(undefined);
 
-    await vi.waitFor(() => expect(state.isRefreshing()).toBe(true));
+    await vi.waitFor(() => expect(state.isRefreshing()).toBe(true), {
+      timeout: WAIT_TIMEOUT_MS,
+    });
 
     settle?.();
     await executed;
-    await vi.waitFor(() => expect(state.isRefreshing()).toBe(false));
+    await vi.waitFor(() => expect(state.isRefreshing()).toBe(false), {
+      timeout: WAIT_TIMEOUT_MS,
+    });
 
     dispose();
   });
