@@ -304,7 +304,7 @@ mod tests {
     }
 
     // =========================================================================
-    // Serialization contract — locks the JSON shape the TS frontend parses
+    // Serialization contract - locks the JSON shape the TS frontend parses
     // =========================================================================
 
     #[test]

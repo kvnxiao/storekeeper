@@ -1,268 +1,223 @@
-import { ArrowLeftIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
-import { createFileRoute } from "@tanstack/react-router";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useMemo } from "react";
-import { Button as AriaButton, TooltipTrigger } from "react-aria-components";
-import { atoms } from "@/modules/atoms";
-import { GenshinResource, HsrResource, ZzzResource } from "@/modules/games/games.constants";
-import { GameId } from "@/modules/games/games.types";
-import { type AllResources, isStaminaResource } from "@/modules/resources/resources.types";
+import { createForm } from "@tanstack/solid-form";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/solid-query";
+import { createFileRoute } from "@tanstack/solid-router";
+import ArrowLeft from "lucide-solid/icons/arrow-left";
+import CircleAlert from "lucide-solid/icons/circle-alert";
+import { createMemo, For, Show, type VoidComponent } from "solid-js";
+import type { ResourceType } from "@/modules/games/games.constants";
+import { GAMES } from "@/modules/games/games.registry";
+import type { GameId } from "@/modules/games/games.types";
+import { resourcesQueryOptions } from "@/modules/resources/resources.query";
+import type { ResourceLimits } from "@/modules/resources/resources.types";
+import { getResourceLimitsForGame } from "@/modules/resources/resources.utils";
 import { GeneralSection } from "@/modules/settings/components/GeneralSection";
 import { HoyolabGameSection } from "@/modules/settings/components/HoyolabGameSection";
 import { HoyolabSecretsSection } from "@/modules/settings/components/HoyolabSecretsSection";
 import { KuroSecretsSection } from "@/modules/settings/components/KuroSecretsSection";
-import type { ResourceLimits } from "@/modules/settings/components/NotificationResourceRow";
-import { WuwaSection } from "@/modules/settings/components/WuwaSection";
-import type { AppConfig, HoyolabConfigKey, SecretsConfig } from "@/modules/settings/settings.types";
+import { WuwaGameSection } from "@/modules/settings/components/WuwaGameSection";
+import { settingsFormOptions } from "@/modules/settings/settings.form";
+import {
+  configQueryOptions,
+  saveSettingsMutationOptions,
+  secretsQueryOptions,
+} from "@/modules/settings/settings.query";
+import type { AppConfig, SecretsConfig } from "@/modules/settings/settings.types";
 import { Button } from "@/modules/ui/components/Button";
 import { ButtonLink } from "@/modules/ui/components/ButtonLink";
+import { ErrorBanner } from "@/modules/ui/components/ErrorBanner";
 import { Tooltip } from "@/modules/ui/components/Tooltip";
+import { cn } from "@/modules/ui/ui.styles";
+import { setViewTransitionDirection } from "@/modules/ui/ui.utils";
 import * as m from "@/paraglide/messages";
 
-/** Extract resource limits from backend resource data for a given game */
-function getResourceLimitsForGame(
-  resources: AllResources | undefined,
-  gameId: GameId,
-): Partial<Record<string, ResourceLimits>> | undefined {
-  const gameResources = resources?.games?.[gameId];
-  if (!gameResources) {
-    return undefined;
-  }
-
-  const limits: Record<string, ResourceLimits> = {};
-  for (const resource of gameResources) {
-    if (isStaminaResource(resource.data)) {
-      limits[resource.type] = {
-        maxValue: resource.data.max,
-        regenRateSeconds: resource.data.regenRateSeconds,
-      };
-    }
-  }
-  return Object.keys(limits).length > 0 ? limits : undefined;
+interface SettingsFormProps {
+  config: AppConfig;
+  secrets: SecretsConfig;
 }
 
-// =============================================================================
-// HoYoLab game configuration metadata
-// =============================================================================
+const SettingsForm: VoidComponent<SettingsFormProps> = (props) => {
+  const queryClient = useQueryClient();
+  const resourcesQuery = useQuery(() => resourcesQueryOptions());
+  const save = useMutation(() => saveSettingsMutationOptions(queryClient));
 
-const HOYOLAB_GAMES: {
-  gameId: GameId;
-  configKey: HoyolabConfigKey;
-  title: () => string;
-  description: () => string;
-  resourceTypes: readonly string[];
-}[] = [
-  {
-    gameId: GameId.GenshinImpact,
-    configKey: "genshin_impact",
-    title: m.game_genshin_name,
-    description: m.settings_game_configure_genshin,
-    resourceTypes: [
-      GenshinResource.Resin,
-      GenshinResource.ParametricTransformer,
-      GenshinResource.RealmCurrency,
-      GenshinResource.Expeditions,
-    ],
-  },
-  {
-    gameId: GameId.HonkaiStarRail,
-    configKey: "honkai_star_rail",
-    title: m.game_hsr_name,
-    description: m.settings_game_configure_hsr,
-    resourceTypes: [HsrResource.TrailblazePower],
-  },
-  {
-    gameId: GameId.ZenlessZoneZero,
-    configKey: "zenless_zone_zero",
-    title: m.game_zzz_name,
-    description: m.settings_game_configure_zzz,
-    resourceTypes: [ZzzResource.Battery],
-  },
-];
-
-// =============================================================================
-// Settings Page Component
-// =============================================================================
-
-const SettingsPage: React.FC = () => {
-  // Subscribe to form initialization effect (runs once when queries complete)
-  useAtomValue(atoms.settings.formInit);
-
-  // Query error state (for loading UI)
-  const { error: configError } = useAtomValue(atoms.settings.configQuery);
-  const { error: secretsError } = useAtomValue(atoms.settings.secretsQuery);
-
-  // Edited state atoms
-  const [config, setConfig] = useAtom(atoms.settings.editedConfig);
-  const [secrets, setSecrets] = useAtom(atoms.settings.editedSecrets);
-  const isDirty = useAtomValue(atoms.settings.isDirty);
-
-  // Save / reset actions and state
-  const saveSettings = useSetAtom(atoms.settings.save);
-  const resetSettings = useSetAtom(atoms.settings.reset);
-  const saveError = useAtomValue(atoms.settings.saveError);
-  const isSaving = useAtomValue(atoms.settings.isSaving);
-
-  // Resource data for computing input limits
-  const { data: resources } = useAtomValue(atoms.core.resourcesQuery);
-  const resourceLimits = useMemo(
-    () => ({
-      GENSHIN_IMPACT: getResourceLimitsForGame(resources, GameId.GenshinImpact),
-      HONKAI_STAR_RAIL: getResourceLimitsForGame(resources, GameId.HonkaiStarRail),
-      ZENLESS_ZONE_ZERO: getResourceLimitsForGame(resources, GameId.ZenlessZoneZero),
-      WUTHERING_WAVES: getResourceLimitsForGame(resources, GameId.WutheringWaves),
-    }),
-    [resources],
-  );
-
-  // Helper to update nested config values
-  const updateConfig = useCallback(
-    <K extends keyof AppConfig>(section: K, value: AppConfig[K]) => {
-      setConfig((prev) => (prev ? { ...prev, [section]: value } : prev));
+  const form = createForm(() => ({
+    ...settingsFormOptions({ config: props.config, secrets: props.secrets }),
+    onSubmit: async ({ value, formApi }) => {
+      try {
+        await save.mutateAsync(value);
+        formApi.reset(value);
+      } catch {
+        // Surfaced reactively via save.error.
+      }
     },
-    [setConfig],
-  );
+  }));
 
-  const updateSecrets = useCallback(
-    <K extends keyof SecretsConfig>(section: K, value: SecretsConfig[K]) => {
-      setSecrets((prev) => (prev ? { ...prev, [section]: value } : prev));
-    },
-    [setSecrets],
-  );
+  const isDefaultValue = form.useStore((state) => state.isDefaultValue);
 
-  // Loading state
-  const loadError = configError || secretsError;
-  if (!config || !secrets) {
-    return (
-      <div className="flex min-h-screen items-center justify-center p-4">
-        {loadError ? (
-          <p className="text-red-500">{m.settings_failed_to_load({ error: String(loadError) })}</p>
-        ) : (
-          <p className="text-zinc-500 dark:text-zinc-400">{m.settings_loading()}</p>
-        )}
-      </div>
-    );
-  }
+  const saveError = () =>
+    save.error ? m.settings_failed_to_save({ error: String(save.error) }) : null;
+
+  const resourceLimits = createMemo(() => {
+    const limits = new Map<GameId, Partial<Record<ResourceType, ResourceLimits>>>();
+    for (const game of GAMES) {
+      limits.set(game.gameId, getResourceLimitsForGame(resourcesQuery.data, game.gameId));
+    }
+    return limits;
+  });
 
   return (
-    <div className="min-h-screen p-4 pb-20">
-      {/* Header */}
-      <header className="mb-6 flex items-center">
-        <div className="flex items-center gap-3">
+    <div class="min-h-screen p-4 pb-20">
+      <header class="mb-6 flex items-center">
+        <div class="flex items-center gap-3">
           <ButtonLink
             to="/"
             variant="plain"
             aria-label={m.settings_back()}
-            onClick={() => {
-              document.documentElement.dataset.viewTransitionDirection = "back";
-            }}
+            onClick={() => setViewTransitionDirection("back")}
           >
-            <ArrowLeftIcon aria-hidden="true" className="size-5" />
+            <ArrowLeft aria-hidden="true" class="size-5" />
           </ButtonLink>
-          <h1 className="text-xl font-bold text-zinc-950 dark:text-white">{m.settings_title()}</h1>
+          <h1 class="text-xl font-bold text-zinc-950 dark:text-white">{m.settings_title()}</h1>
         </div>
       </header>
 
-      {/* Error display */}
-      {saveError && (
-        <div className="mb-4 rounded-lg bg-red-500/15 p-3 text-red-700 ring-1 ring-red-500/20 dark:text-red-400">
-          {saveError}
-        </div>
-      )}
+      <Show when={saveError()}>{(error) => <ErrorBanner class="mb-4">{error()}</ErrorBanner>}</Show>
 
-      {/* Settings sections */}
-      <div className="space-y-6">
-        <GeneralSection
-          config={config.general}
-          onChange={(general) => updateConfig("general", general)}
-        />
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          void form.handleSubmit();
+        }}
+      >
+        {/* Disabled while a save is in flight so edits can't land between submit
+            and the post-save formApi.reset(value), which would revert them. */}
+        <fieldset class="min-w-0 space-y-6" disabled={save.isPending}>
+          <form.Field name="config.general">
+            {(field) => (
+              <GeneralSection
+                config={field().state.value}
+                onChange={(general) => field().handleChange(general)}
+              />
+            )}
+          </form.Field>
 
-        {HOYOLAB_GAMES.map((game) => (
-          <HoyolabGameSection
-            key={game.gameId}
-            title={game.title()}
-            description={game.description()}
-            gameId={game.gameId}
-            resourceTypes={game.resourceTypes}
-            config={config.games[game.configKey]}
-            resourceLimits={resourceLimits[game.gameId]}
-            onChange={(value) =>
-              updateConfig("games", {
-                ...config.games,
-                [game.configKey]: value,
-              })
+          {/* Two form.Field branches rather than one over the union: the field's
+              value type follows configKey, so a single field would widen it past
+              what either section component accepts. */}
+          <For each={GAMES}>
+            {(game) =>
+              game.provider === "hoyolab" ? (
+                <form.Field name={`config.games.${game.configKey}`}>
+                  {(field) => (
+                    <HoyolabGameSection
+                      title={game.name()}
+                      description={game.description()}
+                      gameId={game.gameId}
+                      resourceTypes={game.resourceTypes}
+                      config={field().state.value}
+                      resourceLimits={resourceLimits().get(game.gameId)}
+                      onChange={(value) => field().handleChange(value)}
+                    />
+                  )}
+                </form.Field>
+              ) : (
+                <form.Field name={`config.games.${game.configKey}`}>
+                  {(field) => (
+                    <WuwaGameSection
+                      title={game.name()}
+                      description={game.description()}
+                      gameId={game.gameId}
+                      resourceTypes={game.resourceTypes}
+                      config={field().state.value}
+                      resourceLimits={resourceLimits().get(game.gameId)}
+                      onChange={(wuwa) => field().handleChange(wuwa)}
+                    />
+                  )}
+                </form.Field>
+              )
             }
-          />
-        ))}
+          </For>
 
-        <WuwaSection
-          config={config.games.wuthering_waves}
-          resourceLimits={resourceLimits.WUTHERING_WAVES}
-          onChange={(wuwa) =>
-            updateConfig("games", {
-              ...config.games,
-              wuthering_waves: wuwa,
-            })
-          }
-        />
+          <form.Field name="secrets.hoyolab">
+            {(field) => (
+              <HoyolabSecretsSection
+                secrets={field().state.value}
+                onChange={(hoyolab) => field().handleChange(hoyolab)}
+              />
+            )}
+          </form.Field>
 
-        <HoyolabSecretsSection
-          secrets={secrets.hoyolab}
-          onChange={(hoyolab) => updateSecrets("hoyolab", hoyolab)}
-        />
+          <form.Field name="secrets.kuro">
+            {(field) => (
+              <KuroSecretsSection
+                secrets={field().state.value}
+                onChange={(kuro) => field().handleChange(kuro)}
+              />
+            )}
+          </form.Field>
+        </fieldset>
 
-        <KuroSecretsSection
-          secrets={secrets.kuro}
-          onChange={(kuro) => updateSecrets("kuro", kuro)}
-        />
-      </div>
+        <div
+          class={cn(
+            "fixed bottom-0 left-0 right-0 z-50 border-t border-zinc-950/10 bg-white/80 px-4 py-3 backdrop-blur-lg dark:border-white/10 dark:bg-zinc-900/80",
+            "transition-transform duration-300 ease-out motion-reduce:transition-none",
+            isDefaultValue() ? "translate-y-full" : "translate-y-0",
+          )}
+        >
+          <div class="flex items-center gap-3">
+            <Tooltip content={m.settings_unsaved_changes()} triggerClass="flex items-center">
+              <CircleAlert
+                aria-hidden="true"
+                class="size-5 animate-pulse text-amber-500 motion-reduce:animate-none"
+              />
+              <span class="sr-only">{m.settings_unsaved_changes()}</span>
+            </Tooltip>
 
-      {/* Floating action bar */}
-      <AnimatePresence>
-        {isDirty && (
-          <motion.div
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="fixed bottom-0 left-0 right-0 z-50 border-t border-zinc-950/10 bg-white/80 px-4 py-3 backdrop-blur-lg dark:border-white/10 dark:bg-zinc-900/80"
-          >
-            <div className="flex items-center gap-3">
-              <TooltipTrigger delay={300}>
-                <AriaButton className="flex items-center">
-                  <motion.div
-                    animate={{ scale: [1, 1.1, 1] }}
-                    transition={{
-                      duration: 2,
-                      repeat: Number.POSITIVE_INFINITY,
-                      ease: "easeInOut",
-                    }}
-                  >
-                    <ExclamationCircleIcon aria-hidden="true" className="size-5 text-amber-500" />
-                  </motion.div>
-                </AriaButton>
-                <Tooltip placement="top">{m.settings_unsaved_changes()}</Tooltip>
-              </TooltipTrigger>
+            <div class="flex-1" />
 
-              <div className="flex-1" />
-
-              <Button onPress={() => resetSettings()} isDisabled={isSaving}>
-                {m.settings_undo()}
-              </Button>
-              <Button
-                onPress={() => void saveSettings()}
-                isDisabled={isSaving}
-                isPending={isSaving}
-                color="blue"
-              >
-                {m.settings_save()}
-              </Button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <Button onClick={() => form.reset()} disabled={save.isPending}>
+              {m.settings_undo()}
+            </Button>
+            <Button type="submit" disabled={save.isPending} isPending={save.isPending} color="blue">
+              {m.settings_save()}
+            </Button>
+          </div>
+        </div>
+      </form>
     </div>
+  );
+};
+
+const SettingsPage: VoidComponent = () => {
+  const configQuery = useQuery(() => configQueryOptions());
+  const secretsQuery = useQuery(() => secretsQueryOptions());
+
+  const loaded = () => {
+    const config = configQuery.data;
+    const secrets = secretsQuery.data;
+    return config && secrets ? { config, secrets } : undefined;
+  };
+
+  const loadError = () => configQuery.error ?? secretsQuery.error;
+
+  return (
+    <Show
+      when={loaded()}
+      fallback={
+        <div class="flex min-h-screen items-center justify-center p-4">
+          <Show
+            when={loadError()}
+            fallback={<p class="text-zinc-500 dark:text-zinc-400">{m.settings_loading()}</p>}
+          >
+            {(error) => (
+              <p class="text-red-500">{m.settings_failed_to_load({ error: String(error()) })}</p>
+            )}
+          </Show>
+        </div>
+      }
+    >
+      {(loaded) => <SettingsForm config={loaded().config} secrets={loaded().secrets} />}
+    </Show>
   );
 };
 

@@ -8,13 +8,14 @@ Install the following tools:
 
 | Tool | Version | Purpose |
 |------|---------|---------|
-| [Rust](https://rustup.rs/) | 1.85+ (2024 edition) | Backend compilation |
+| [Rust](https://rustup.rs/) | 1.95+ (2024 edition) | Backend compilation |
+| Rust nightly toolchain | Latest | `cargo +nightly fmt` (formatting only) |
 | [fnm](https://github.com/Schniz/fnm) | Latest | Node.js version management |
 | [pnpm](https://pnpm.io/) | See `frontend/package.json` `packageManager` | Frontend package manager |
 | [Vite+](https://viteplus.dev/) | Latest (`vp` CLI) | Frontend toolchain: dev, build, lint, format, test |
 | [just](https://github.com/casey/just) | Latest | Command runner |
 | [tauri-cli](https://v2.tauri.app/reference/cli/) | v2 | Desktop app bundling |
-| [Platform deps](https://v2.tauri.app/start/prerequisites/) | — | OS-specific build tools |
+| [Platform deps](https://v2.tauri.app/start/prerequisites/) | n/a | OS-specific build tools |
 
 ## Clone and Install
 
@@ -59,6 +60,7 @@ just fix       # Auto-fix lint issues + format (Rust)
 just lint-web  # Run format, lint + type checks (frontend, via Vite+)
 just fix-web   # Auto-fix lint + format (frontend, via Vite+)
 just test      # Run Rust tests
+just test-web  # Run frontend tests
 just bundle    # Create release build
 ```
 
@@ -66,17 +68,13 @@ See the [justfile](../../justfile) for all available commands.
 
 ## Project Structure
 
-The codebase is a Rust workspace with 9 crates plus a React frontend. See [02-directory-structure.md](../architecture/02-directory-structure.md) for the full layout and dependency graph.
-
-Key entry points:
-- **Rust**: `storekeeper-app-tauri/src/lib.rs` — Application setup and lifecycle
-- **Frontend**: `frontend/src/routes/index.tsx` — Dashboard page
+A Rust workspace of nine crates plus a SolidJS frontend. See [02-directory-structure.md](../architecture/02-directory-structure.md) for the layout and dependency graph, and [01-overview.md](../architecture/01-overview.md) for how the layers fit together.
 
 ## Coding Standards
 
 Before submitting code, familiarise yourself with the project standards:
-- [Rust standards](../standards/rust/) — Linting, error handling, testing, performance
-- [Frontend standards](../standards/frontend/) — Components, state management, styling
+- [Rust rules](../../.claude/skills/rust-rules/) for linting, error handling, testing, performance
+- [SolidJS rules](../../.claude/skills/solidjs-rules/) for components, state architecture, data fetching, i18n
 
 **Always run linters before committing**:
 

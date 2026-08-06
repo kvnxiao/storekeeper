@@ -141,7 +141,7 @@ mod tests {
     fn test_format_duration_hours_and_minutes() {
         ensure_init();
         let result = format_duration(75);
-        // ICU4X short style — exact format may vary but should contain hours and
+        // ICU4X short style - exact format may vary but should contain hours and
         // minutes
         assert!(!result.is_empty());
     }

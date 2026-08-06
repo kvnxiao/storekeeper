@@ -1,6 +1,9 @@
 {
   "app_title": "Storekeeper",
 
+  "error_title": "出错了",
+  "error_reload": "重新加载",
+
   "dashboard_refresh_resources": "刷新资源",
   "dashboard_settings": "设置",
   "dashboard_no_games": "未配置游戏",
@@ -43,6 +46,7 @@
   "settings_title": "设置",
   "settings_back": "返回",
   "settings_failed_to_load": "加载设置失败：{error}",
+  "settings_failed_to_save": "保存设置失败：{error}",
   "settings_loading": "正在加载设置…",
   "settings_unsaved_changes": "您有未保存的更改。",
   "settings_undo": "撤销更改",
@@ -104,6 +108,7 @@
   "daily_claimed": "已签到",
   "daily_unclaimed": "未签到",
   "daily_claiming": "签到中...",
+  "daily_claim_action": "领取{game}每日签到奖励",
 
   "textfield_hide_password": "隐藏密码",
   "textfield_show_password": "显示密码"

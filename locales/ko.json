@@ -1,6 +1,9 @@
 {
   "app_title": "Storekeeper",
 
+  "error_title": "문제가 발생했습니다",
+  "error_reload": "다시 로드",
+
   "dashboard_refresh_resources": "리소스 새로고침",
   "dashboard_settings": "설정",
   "dashboard_no_games": "구성된 게임 없음",
@@ -43,6 +46,7 @@
   "settings_title": "설정",
   "settings_back": "뒤로",
   "settings_failed_to_load": "설정 로드 실패: {error}",
+  "settings_failed_to_save": "설정 저장 실패: {error}",
   "settings_loading": "설정 로드 중…",
   "settings_unsaved_changes": "저장하지 않은 변경 사항이 있습니다.",
   "settings_undo": "변경 취소",
@@ -104,6 +108,7 @@
   "daily_claimed": "출석 완료",
   "daily_unclaimed": "미출석",
   "daily_claiming": "출석 중...",
+  "daily_claim_action": "{game} 일일 출석 보상 받기",
 
   "textfield_hide_password": "비밀번호 숨기기",
   "textfield_show_password": "비밀번호 표시"

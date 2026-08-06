@@ -40,7 +40,7 @@ impl NotificationTracker {
     /// expired or no prior notification exists.
     ///
     /// When `cooldown_minutes` is 0, only one notification fires per window
-    /// entry — no recurring reminders until the resource leaves and re-enters.
+    /// entry - no recurring reminders until the resource leaves and re-enters.
     pub fn should_notify(
         &mut self,
         game_id: GameId,
@@ -81,13 +81,13 @@ impl NotificationTracker {
 
         let key = (game_id, resource_type.to_string());
 
-        // Not in notification window yet — reset cooldown tracking
+        // Not in notification window yet - reset cooldown tracking
         if !in_window {
             self.cooldowns.remove(&key);
             return NotifyAction::Skip;
         }
 
-        // In window or already full — check cooldown
+        // In window or already full - check cooldown
         if let Some(last_notified) = self.cooldowns.get(&key).copied() {
             // cooldown_minutes == 0 means "notify once, don't repeat"
             if config.cooldown_minutes == 0 {
@@ -172,7 +172,7 @@ mod tests {
                 .is_notify()
         );
 
-        // Internal state was cleared — next in-window check should return true
+        // Internal state was cleared - next in-window check should return true
         let in_window_info = stub_info(now + SignedDuration::from_mins(30), false);
         assert!(
             tracker
@@ -257,14 +257,14 @@ mod tests {
         tracker.record(key(game, "waveplates"), now);
 
         let info = stub_info(now + SignedDuration::from_mins(30), false);
-        // Within cooldown — should be false
+        // Within cooldown - should be false
         assert!(
             !tracker
                 .should_notify(game, "waveplates", &config, &info, now)
                 .is_notify()
         );
 
-        // Manually clear — next check should return true
+        // Manually clear - next check should return true
         tracker.cooldowns.remove(&key(game, "waveplates"));
         assert!(
             tracker
@@ -282,7 +282,7 @@ mod tests {
 
         let info = stub_info(now + SignedDuration::from_mins(30), false);
 
-        // First check — no prior notification, should fire
+        // First check - no prior notification, should fire
         assert!(
             tracker
                 .should_notify(game, "resin", &config, &info, now)
@@ -290,7 +290,7 @@ mod tests {
         );
         tracker.record(key(game, "resin"), now);
 
-        // Subsequent checks — never re-notifies regardless of time elapsed
+        // Subsequent checks - never re-notifies regardless of time elapsed
         let much_later = now + SignedDuration::from_hours(24);
         assert!(
             !tracker
@@ -306,7 +306,7 @@ mod tests {
         let game = GameId::GenshinImpact;
         let config = stub_config(60, 0);
 
-        // In window — notifies
+        // In window - notifies
         let in_window = stub_info(now + SignedDuration::from_mins(30), false);
         assert!(
             tracker
@@ -315,7 +315,7 @@ mod tests {
         );
         tracker.record(key(game, "resin"), now);
 
-        // Leaves window (resource consumed) — clears state
+        // Leaves window (resource consumed) - clears state
         let out_of_window = stub_info(now + SignedDuration::from_hours(5), false);
         assert!(
             !tracker
@@ -323,7 +323,7 @@ mod tests {
                 .is_notify()
         );
 
-        // Re-enters window — should notify again (one-shot reset)
+        // Re-enters window - should notify again (one-shot reset)
         assert!(
             tracker
                 .should_notify(game, "resin", &config, &in_window, now)
@@ -403,7 +403,7 @@ mod tests {
             cooldown_minutes: 10,
         };
 
-        // Exactly at boundary (160 min to full) — should notify (<=)
+        // Exactly at boundary (160 min to full) - should notify (<=)
         let at_boundary = ResourceInfo {
             completion_at: now + SignedDuration::from_mins(160),
             is_complete: false,
@@ -421,7 +421,7 @@ mod tests {
             .cooldowns
             .remove(&key(GameId::GenshinImpact, "resin"));
 
-        // Just outside boundary (161 min to full) — should NOT notify
+        // Just outside boundary (161 min to full) - should NOT notify
         let outside_boundary = ResourceInfo {
             completion_at: now + SignedDuration::from_mins(161),
             is_complete: false,
@@ -453,7 +453,7 @@ mod tests {
             cooldown_minutes: 10,
         };
 
-        // No regen rate — falls back to direct comparison
+        // No regen rate - falls back to direct comparison
         let info = ResourceInfo {
             completion_at: now + SignedDuration::from_hours(1),
             is_complete: false,
@@ -507,7 +507,7 @@ mod tests {
             cooldown_minutes: 10,
         };
 
-        // Not full — should NOT notify
+        // Not full - should NOT notify
         let info = stub_info(now + SignedDuration::from_mins(5), false);
         assert!(
             !tracker
@@ -515,7 +515,7 @@ mod tests {
                 .is_notify()
         );
 
-        // Full — should notify
+        // Full - should notify
         let full_info = stub_info(now - SignedDuration::from_secs(1), true);
         assert!(
             tracker

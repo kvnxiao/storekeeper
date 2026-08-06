@@ -74,7 +74,7 @@ impl GameId {
 
     /// Returns the human-readable display name for this game.
     ///
-    /// For internal logging only — user-facing strings should use i18n
+    /// For internal logging only - user-facing strings should use i18n
     /// via `i18n::t("game.<short_id>.name")` instead.
     #[must_use]
     pub const fn display_name(&self) -> &'static str {

@@ -5,29 +5,28 @@ use crate::error::Result;
 use jiff::SignedDuration;
 use jiff::Timestamp;
 use jiff::civil::Time;
-use jiff::tz::TimeZone;
+use jiff::tz::Offset;
 
-/// UTC+8 offset used to convert between display time and stored UTC time.
-const UTC8_OFFSET: SignedDuration = SignedDuration::from_hours(8);
+/// The offset the games' daily reset runs on. UTC+8 observes no DST, so a
+/// fixed offset is exact rather than an approximation of a named zone.
+const UTC8: Offset = Offset::constant(8);
 
 /// Default claim time in UTC+8 (midnight), displayed as "00:00".
 pub const DEFAULT_AUTO_CLAIM_TIME: &str = "00:00";
 
-/// A time of day stored in UTC for daily reward claiming.
+/// A daily reward claim time of day, in UTC+8.
 ///
-/// Internally stores time in UTC. When serialized to config files,
-/// the time is displayed as UTC+8 (China Standard Time) in "HH:MM" format.
+/// The games reset at midnight UTC+8, so the time is held in that offset: the
+/// same "HH:MM" the config file stores and the UI shows. It becomes an instant
+/// only in [`next_claim_datetime_utc`], where a calendar date makes the offset
+/// meaningful.
 ///
 /// # Examples
 ///
 /// ```
 /// use storekeeper_core::ClaimTime;
 ///
-/// // Parse from UTC+8 string (08:30 UTC+8 = 00:30 UTC)
 /// let time = ClaimTime::from_utc8_str("08:30").unwrap();
-/// assert_eq!(time.as_civil_time().to_string(), "00:30:00");
-///
-/// // Convert back to UTC+8 string
 /// assert_eq!(time.to_utc8_string(), "08:30");
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -36,31 +35,33 @@ pub struct ClaimTime(Time);
 impl ClaimTime {
     /// Creates a `ClaimTime` from a UTC+8 time string in strict HH:MM format.
     ///
-    /// The time is converted to UTC for internal storage.
-    ///
     /// # Arguments
     ///
     /// * `time_str` - A time string in HH:MM format representing UTC+8 time.
     ///
     /// # Errors
     ///
-    /// Returns an error if the time string is not in valid HH:MM format.
+    /// Returns an error unless `time_str` is zero-padded HH:MM within range.
     ///
     /// # Examples
     ///
     /// ```
     /// use storekeeper_core::ClaimTime;
     ///
-    /// // 08:30 UTC+8 = 00:30 UTC
-    /// let time = ClaimTime::from_utc8_str("08:30").unwrap();
+    /// assert!(ClaimTime::from_utc8_str("08:30").is_ok());
     ///
     /// // Invalid formats return errors
     /// assert!(ClaimTime::from_utc8_str("8:30").is_err());
     /// assert!(ClaimTime::from_utc8_str("25:00").is_err());
     /// ```
     pub fn from_utc8_str(time_str: &str) -> Result<Self> {
-        // Strict validation: must be exactly 5 characters (HH:MM)
-        if time_str.len() != 5 {
+        let parsed = Time::strptime("%H:%M", time_str).map_err(|e| Error::ConfigParseFailed {
+            message: format!("Invalid claim_time '{time_str}': {e}"),
+        })?;
+
+        // strptime tolerates unpadded hours and surrounding text; requiring the
+        // parse to round-trip is what makes the accepted format exactly HH:MM.
+        if parsed.strftime("%H:%M").to_string() != time_str {
             return Err(Error::ConfigParseFailed {
                 message: format!(
                     "Invalid claim_time format: '{time_str}'. Expected HH:MM (e.g., '00:10')"
@@ -68,41 +69,18 @@ impl ClaimTime {
             });
         }
 
-        // Must have colon at position 2
-        if time_str.chars().nth(2) != Some(':') {
-            return Err(Error::ConfigParseFailed {
-                message: format!(
-                    "Invalid claim_time format: '{time_str}'. Expected HH:MM with colon separator"
-                ),
-            });
-        }
-
-        // Parse using jiff's strptime
-        let parsed_utc8_time =
-            Time::strptime("%H:%M", time_str).map_err(|e| Error::ConfigParseFailed {
-                message: format!("Invalid claim_time '{time_str}': {e}"),
-            })?;
-
-        // Convert from UTC+8 to UTC (subtract 8 hours).
-        // `civil::Time` wrapping arithmetic handles the day wrap-around correctly.
-        let converted_utc_time = parsed_utc8_time.wrapping_sub(UTC8_OFFSET);
-
-        Ok(Self(converted_utc_time))
+        Ok(Self(parsed))
     }
 
-    /// Returns midnight in UTC+8 (00:00 UTC+8 = 16:00 UTC previous day).
-    ///
-    /// This is the default claim time when none is specified.
+    /// Returns midnight UTC+8, the default claim time when none is specified.
     #[must_use = "this returns the default claim time, it doesn't modify anything"]
     pub fn default_utc8_midnight() -> Self {
-        // 00:00 UTC+8 = 16:00 UTC (previous day). Const-constructed, infallible.
-        const UTC_16_00: Time = jiff::civil::time(16, 0, 0, 0);
-        Self(UTC_16_00)
+        Self(Time::midnight())
     }
 
-    /// Returns the inner civil time (in UTC).
+    /// Returns the time of day, in UTC+8.
     #[must_use = "this returns the time value, it doesn't modify anything"]
-    pub fn as_civil_time(&self) -> Time {
+    pub fn as_utc8_time(&self) -> Time {
         self.0
     }
 
@@ -111,23 +89,20 @@ impl ClaimTime {
     /// This is the inverse of `from_utc8_str`.
     #[must_use = "this returns the formatted string, it doesn't modify anything"]
     pub fn to_utc8_string(&self) -> String {
-        // Convert from UTC to UTC+8 (add 8 hours)
-        let utc8_time = self.0.wrapping_add(UTC8_OFFSET);
-        utc8_time.strftime("%H:%M").to_string()
+        self.0.strftime("%H:%M").to_string()
     }
 }
 
 impl std::fmt::Display for ClaimTime {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // Display as UTC+8 for human readability
         write!(f, "{}", self.to_utc8_string())
     }
 }
 
 /// Calculates the next claim datetime in UTC for a given claim time.
 ///
-/// Takes a claim time (already stored in UTC internally), and determines
-/// whether the next occurrence is today or tomorrow.
+/// Determines whether the next occurrence of the claim time is today or
+/// tomorrow.
 ///
 /// # Arguments
 ///
@@ -146,23 +121,19 @@ pub fn next_claim_datetime_utc(claim_time: Option<ClaimTime>) -> Result<Timestam
 /// Split out from [`next_claim_datetime_utc`] so the today-vs-tomorrow logic
 /// can be tested deterministically with an injected instant.
 fn next_claim_datetime_from(claim_time: Option<ClaimTime>, now: Timestamp) -> Result<Timestamp> {
-    // Use provided time or default to midnight UTC+8 (which is 16:00 UTC)
-    let time = claim_time.unwrap_or_else(ClaimTime::default_utc8_midnight);
-    let utc_time = time.as_civil_time();
+    let time = claim_time
+        .unwrap_or_else(ClaimTime::default_utc8_midnight)
+        .as_utc8_time();
 
-    // Today's date in UTC.
-    let today = now.to_zoned(TimeZone::UTC).date();
-
-    // Today's claim time as a UTC instant.
-    let today_claim = today
-        .at(utc_time.hour(), utc_time.minute(), 0, 0)
-        .to_zoned(TimeZone::UTC)
+    let today_utc8 = UTC8.to_datetime(now).date();
+    let today_claim = UTC8
+        .to_timestamp(time.to_datetime(today_utc8))
         .map_err(|e| Error::ConfigParseFailed {
             message: format!("Failed to construct claim datetime: {e}"),
-        })?
-        .timestamp();
+        })?;
 
-    // If today's claim time has passed, use tomorrow (24h later on a UTC instant).
+    // Occurrences of a fixed time of day at a fixed offset are exactly 24h
+    // apart, so one step forward is the next one.
     if now >= today_claim {
         today_claim
             .checked_add(SignedDuration::from_hours(24))
@@ -174,10 +145,8 @@ fn next_claim_datetime_from(claim_time: Option<ClaimTime>, now: Timestamp) -> Re
     }
 }
 
-/// Serde module for serializing/deserializing `Option<ClaimTime>`.
-///
-/// - **Deserialize:** Parses "HH:MM" as UTC+8, converts to UTC for storage.
-/// - **Serialize:** Converts UTC to UTC+8, formats as "HH:MM".
+/// Serde module for serializing/deserializing `Option<ClaimTime>` as a UTC+8
+/// "HH:MM" string.
 pub(crate) mod claim_time_serde {
     use super::ClaimTime;
     use serde::Deserialize;
@@ -253,40 +222,10 @@ mod tests {
     }
 
     #[test]
-    fn test_claim_time_utc_conversion() {
-        // 08:30 UTC+8 = 00:30 UTC (subtract 8 hours)
+    fn test_claim_time_parses_as_utc8_time_of_day() {
         let time = ClaimTime::from_utc8_str("08:30").expect("08:30 should be valid");
-        assert_eq!(time.as_civil_time().hour(), 0);
-        assert_eq!(time.as_civil_time().minute(), 30);
-
-        // 16:00 UTC+8 = 08:00 UTC
-        let time = ClaimTime::from_utc8_str("16:00").expect("16:00 should be valid");
-        assert_eq!(time.as_civil_time().hour(), 8);
-        assert_eq!(time.as_civil_time().minute(), 0);
-
-        // 23:59 UTC+8 = 15:59 UTC
-        let time = ClaimTime::from_utc8_str("23:59").expect("23:59 should be valid");
-        assert_eq!(time.as_civil_time().hour(), 15);
-        assert_eq!(time.as_civil_time().minute(), 59);
-    }
-
-    #[test]
-    fn test_claim_time_midnight_utc8_conversion() {
-        // 00:00 UTC+8 = 16:00 UTC (previous day, wraps around)
-        let time = ClaimTime::from_utc8_str("00:00").expect("00:00 should be valid");
-        assert_eq!(time.as_civil_time().hour(), 16);
-        assert_eq!(time.as_civil_time().minute(), 0);
-
-        // 07:59 UTC+8 = 23:59 UTC (previous day)
-        let time = ClaimTime::from_utc8_str("07:59").expect("07:59 should be valid");
-        assert_eq!(time.as_civil_time().hour(), 23);
-        assert_eq!(time.as_civil_time().minute(), 59);
-
-        // Explicit wrap-around boundary: 08:00 UTC+8 = 00:00 UTC (no wrap),
-        // while anything before 08:00 UTC+8 wraps to the previous UTC day.
-        let boundary = ClaimTime::from_utc8_str("08:00").expect("08:00 should be valid");
-        assert_eq!(boundary.as_civil_time().hour(), 0);
-        assert_eq!(boundary.as_civil_time().minute(), 0);
+        assert_eq!(time.as_utc8_time().hour(), 8);
+        assert_eq!(time.as_utc8_time().minute(), 30);
     }
 
     #[test]
@@ -314,10 +253,6 @@ mod tests {
     #[test]
     fn test_claim_time_default_utc8_midnight() {
         let default = ClaimTime::default_utc8_midnight();
-        // 00:00 UTC+8 = 16:00 UTC
-        assert_eq!(default.as_civil_time().hour(), 16);
-        assert_eq!(default.as_civil_time().minute(), 0);
-        // Should display as midnight UTC+8
         assert_eq!(default.to_utc8_string(), "00:00");
     }
 
@@ -538,6 +473,22 @@ mod tests {
 
         // Expect tomorrow 00:30 UTC (2024-06-16T00:30:00Z).
         let expected = "2024-06-16T00:30:00Z"
+            .parse::<Timestamp>()
+            .expect("valid instant");
+        assert_eq!(next_claim, expected);
+    }
+
+    #[test]
+    fn test_next_claim_default_midnight_utc8_lands_on_1600z() {
+        // Midnight UTC+8 is 16:00 UTC on the previous UTC day, so the default
+        // claim time crosses the UTC date boundary.
+        let now = "2024-06-15T12:00:00Z"
+            .parse::<Timestamp>()
+            .expect("valid instant");
+
+        let next_claim = next_claim_datetime_from(None, now).expect("should compute");
+
+        let expected = "2024-06-15T16:00:00Z"
             .parse::<Timestamp>()
             .expect("valid instant");
         assert_eq!(next_claim, expected);

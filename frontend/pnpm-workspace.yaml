@@ -2,17 +2,27 @@
 # 10080 = 7 days. Mirrors the Dependabot `cooldown` so the pnpm/Vite+ side
 # (incl. the catalog packages below) also waits out fresh releases.
 minimumReleaseAge: 10080
+# The Vite+ toolchain is exempt: `vp migrate` pins these to the exact versions
+# bundled with the CLI release, so the cooldown would block the pinned set and
+# force a mismatched pairing instead.
+minimumReleaseAgeExclude:
+  - vite-plus
+  - "@voidzero-dev/*"
+  - oxlint
+  - "@oxlint/*"
+  - oxlint-tsgolint
+  - "@oxlint-tsgolint/*"
+  - oxfmt
+  - "@oxfmt/*"
+  - vitest
+  - "@vitest/*"
 catalog:
-  vite: npm:@voidzero-dev/vite-plus-core@latest
-  vitest: npm:@voidzero-dev/vite-plus-test@latest
-  vite-plus: ^0.2.1
+  vite: npm:@voidzero-dev/vite-plus-core@0.2.8
+  vite-plus: 0.2.8
 overrides:
   vite: "catalog:"
-  vitest: "catalog:"
 peerDependencyRules:
   allowAny:
     - vite
-    - vitest
   allowedVersions:
     vite: "*"
-    vitest: "*"

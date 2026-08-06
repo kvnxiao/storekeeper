@@ -1,4 +1,4 @@
-import { cn, tv } from "tailwind-variants";
+import { cn } from "tailwind-variants";
 
 /**
  * Utility for merging Tailwind class names with conflict resolution.
@@ -6,17 +6,10 @@ import { cn, tv } from "tailwind-variants";
  */
 export { cn };
 
-/**
- * Focus ring styles for react-aria-components.
- * Uses the tailwindcss-react-aria-components plugin variants.
- */
-export const focusRingStyle = tv({
-  base: "outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-});
+// Shared form-field anatomy (TextField, NumberField, Select)
 
-/**
- * Disabled state styles for components.
- */
-export const disabledStyle = tv({
-  base: "disabled:pointer-events-none disabled:opacity-50",
-});
+export const fieldStyle = "group flex flex-col gap-1 font-sans";
+
+export const labelStyle = "text-sm font-medium text-zinc-950 dark:text-white";
+
+export const descriptionStyle = "text-sm text-zinc-500 dark:text-zinc-400";

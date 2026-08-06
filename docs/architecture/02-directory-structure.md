@@ -4,28 +4,24 @@
 
 ```
 storekeeper/
-├── storekeeper-core/              # Foundation: traits, types, config
+├── storekeeper-core/              # Foundation: traits, shared types, config
 ├── storekeeper-client-core/       # HTTP infrastructure with retry
 ├── storekeeper-client-hoyolab/    # HoYoLab API client (Genshin, HSR, ZZZ)
 ├── storekeeper-client-kuro/       # Kuro Games API client (Wuthering Waves)
-├── storekeeper-game-genshin/      # Genshin Impact GameClient implementation
-├── storekeeper-game-hsr/          # Honkai: Star Rail GameClient implementation
-├── storekeeper-game-zzz/          # Zenless Zone Zero GameClient implementation
-├── storekeeper-game-wuwa/         # Wuthering Waves GameClient implementation
+├── storekeeper-game-genshin/      # Per-game GameClient implementations
+├── storekeeper-game-hsr/
+├── storekeeper-game-zzz/
+├── storekeeper-game-wuwa/
 ├── storekeeper-app-tauri/         # Tauri application orchestrator
-├── frontend/                      # React frontend
-├── locales/                       # Backend i18n locale strings (ICU MessageFormat)
-├── docs/                          # Documentation
-│   ├── architecture/              # Architecture docs
-│   ├── onboarding/                # Getting started guides
-│   └── standards/                 # Coding standards
+├── frontend/                      # SolidJS frontend
+├── locales/                       # Shared i18n catalog (backend + frontend)
+├── docs/                          # Architecture and onboarding docs
+├── .claude/skills/                # Coding standards (rust-rules, solidjs-rules, ...)
 ├── Cargo.toml                     # Workspace manifest
-├── justfile                       # Command runner recipes
-├── DEVELOPMENT.md                 # Development guide
-└── README.md                      # Project overview
+└── justfile                       # Command runner recipes
 ```
 
-**Convention**: Crates are placed at the root level (not in a `crates/` subdirectory) for simpler navigation.
+Crates live at the root rather than under a `crates/` directory, for simpler navigation.
 
 ## Crate Dependency Graph
 
@@ -59,194 +55,53 @@ graph TD
     ClientCore --> Core
 ```
 
-**Dependency rules**:
-- Application layer → Game layer → Client layer → Infrastructure → Core
-- No circular dependencies
-- Core has zero dependencies on other workspace crates
+**Dependency rules**: application to game to client to infrastructure to core. No cycles, and the core crate depends on no other workspace crate.
 
-## Foundation Layer: `storekeeper-core/`
+## What Each Layer Owns
 
-Defines contracts and shared types used across all crates.
+| Crate | Owns |
+|---|---|
+| `storekeeper-core` | Game and daily reward traits, resource and identifier types, config and secrets types with their TOML handling |
+| `storekeeper-client-core` | HTTP client construction, retry and backoff policy, shared API response handling |
+| `storekeeper-client-hoyolab`, `storekeeper-client-kuro` | Provider authentication and request signing, provider-specific errors |
+| `storekeeper-game-*` | One game's API responses, its mapping into shared resource types, its resource enum |
+| `storekeeper-app-tauri` | Registries, application state, background tasks (polling, scheduled claims, notifications), IPC commands and events, tray, backend i18n |
 
-```
-storekeeper-core/src/
-├── lib.rs              # Public exports
-├── game.rs             # GameClient trait, DynGameClient (type erasure)
-├── daily_reward.rs     # DailyRewardClient trait, DynDailyRewardClient
-├── resource.rs         # StaminaResource, CooldownResource, ExpeditionResource
-├── game_id.rs          # GameId enum, ApiProvider enum
-├── region.rs           # Region enum for game servers
-├── config.rs           # AppConfig, SecretsConfig, ResourceNotificationConfig, TOML parsing
-├── error.rs            # Core error types
-├── macros.rs           # Utility macros
-└── serde_utils.rs      # Custom serde deserializers
-```
+Game crates share an identical shape (client, resource enum, errors), which is what makes adding a game mechanical.
 
-## Infrastructure Layer: `storekeeper-client-core/`
+## Shared Locales
 
-HTTP client infrastructure with retry logic and middleware.
+`locales/` holds one catalog per supported locale. The Rust backend embeds them at compile time for tray labels and OS notifications; Paraglide compiles the same files into frontend message functions. Keys are flat snake_case in a single namespace, with a prefix naming the area (notifications, tray, dashboard, settings, and shared game and resource names). Values use ICU MessageFormat syntax.
 
-```
-storekeeper-client-core/src/
-├── lib.rs              # Public exports
-├── client.rs           # HttpClientBuilder with builder pattern
-├── response.rs         # ApiResponse trait, HoyolabApiResponse
-├── retry.rs            # RetryConfig, exponential backoff
-└── error.rs            # ClientError types
-```
+Frontend message output is generated and gitignored. Never edit it by hand.
 
-## API Client Layer
+## Frontend Module Structure
 
-### `storekeeper-client-hoyolab/`
-
-HoYoLab API client for miHoYo/HoYoverse games. Handles cookie-based authentication and dynamic secret (DS) generation for request signing.
-
-```
-storekeeper-client-hoyolab/src/
-├── lib.rs              # Public exports
-├── client.rs           # HoyolabClient (GET/POST with auth)
-├── ds.rs               # Dynamic secret generation (MD5-based)
-└── error.rs            # HoYoLab-specific errors
-```
-
-### `storekeeper-client-kuro/`
-
-Kuro Games API client for Wuthering Waves. Auto-loads credentials from the launcher cache file.
-
-```
-storekeeper-client-kuro/src/
-├── lib.rs              # Public exports
-├── client.rs           # KuroClient
-├── cache.rs            # Load credentials from KRSDKUserLauncherCache.json
-└── error.rs            # Kuro-specific errors
-```
-
-## Game Implementation Layer
-
-Each game crate follows the same structure:
-
-```
-storekeeper-game-{name}/src/
-├── lib.rs              # Public exports
-├── client.rs           # {Game}Client implementing GameClient trait
-├── resource.rs         # Game-specific resource enum (tagged union)
-└── error.rs            # Game-specific error types
-```
-
-Resource enums use `#[serde(tag = "type", content = "data")]` to produce discriminated unions in JSON, enabling type-safe consumption in the frontend.
-
-## Application Layer: `storekeeper-app-tauri/`
-
-Orchestrates all components and manages the application lifecycle.
-
-```
-storekeeper-app-tauri/src/
-├── lib.rs                      # Entry point, Tauri setup, shutdown handling
-├── main.rs                     # Binary entry point
-├── commands.rs                 # Tauri command handlers (IPC surface)
-├── state.rs                    # AppState with Arc<RwLock<StateData>>
-├── registry.rs                 # GameClientRegistry (dynamic client collection)
-├── daily_reward_registry.rs    # DailyRewardRegistry
-├── clients.rs                  # Client factory functions (config → clients)
-├── polling.rs                  # Background polling loop with cancellation
-├── scheduled_claim.rs          # Scheduled daily reward claiming with retry
-├── notification.rs             # Background notification checker with cooldown tracking
-├── i18n.rs                     # Backend i18n: ICU MessageFormat with ICU4X plural rules
-├── tray.rs                     # System tray menu (Refresh, Config, Quit)
-└── events.rs                   # Event type definitions for frontend IPC
-```
-
-## Backend Locales: `locales/`
-
-Locale strings for the Rust backend (OS notifications, system tray). Uses ICU MessageFormat syntax with plural support.
-
-```
-locales/
-└── en.json             # English locale strings
-```
-
-Keys use dot-separated namespaces: `notification.*`, `tray.*`, `game.{short_id}.*`, `resource.*`.
-
-## Frontend: `frontend/`
-
-Feature-based module organization with React 19, TanStack Start, and Jotai.
-
-```
-frontend/
-├── messages/                      # Frontend i18n source messages (inlang)
-│   └── en.json                   # English UI strings
-├── project.inlang/               # inlang project configuration
-│   └── settings.json             # Locale config, plugin settings
-├── src/
-│   ├── modules/                  # Feature modules
-│   │   ├── atoms.ts             # Global atom container (AtomsContainer class)
-│   │   ├── core/                # Cross-cutting concerns
-│   │   │   ├── core.atoms.ts   # Tick system, resources query, event listeners
-│   │   │   ├── core.config.ts  # Config query atom
-│   │   │   └── core.queryClient.ts # TanStack Query client setup
-│   │   ├── games/               # Per-game UI
-│   │   │   ├── games.constants.ts
-│   │   │   ├── games.types.ts
-│   │   │   ├── genshin/         # Genshin components + atoms
-│   │   │   ├── hsr/             # HSR components + atoms
-│   │   │   ├── zzz/             # ZZZ components + atoms
-│   │   │   └── wuwa/            # Wuwa components + atoms
-│   │   ├── resources/           # Shared resource display
-│   │   │   ├── components/      # StaminaCard, CooldownCard, etc.
-│   │   │   ├── resources.hooks.ts
-│   │   │   ├── resources.query.ts # Tauri command wrappers
-│   │   │   ├── resources.types.ts # TypeScript interfaces
-│   │   │   └── resources.utils.ts
-│   │   ├── settings/            # Settings page
-│   │   │   ├── components/      # Form sections, NotificationSection, NotificationResourceRow
-│   │   │   ├── settings.atoms.ts
-│   │   │   ├── settings.query.ts
-│   │   │   └── settings.types.ts
-│   │   └── ui/                  # Shared UI components
-│   │       ├── components/      # Button, Card, GameSection, etc.
-│   │       ├── ui.animations.ts
-│   │       └── ui.styles.ts     # tailwind-variants utilities
-│   ├── paraglide/               # Auto-generated compiled i18n (do not edit)
-│   │   ├── messages.js          # Re-exports all message functions
-│   │   ├── messages/            # Per-locale compiled messages
-│   │   │   └── en.js
-│   │   ├── runtime.js           # Locale detection and switching runtime
-│   │   ├── registry.js          # Message registry for tooling
-│   │   └── server.js            # SSR support (unused in Tauri)
-│   ├── routes/                  # TanStack Router file-based routes
-│   │   ├── __root.tsx          # Root layout (providers)
-│   │   ├── index.tsx           # Dashboard page
-│   │   └── settings.tsx        # Settings page
-│   ├── router.tsx               # Router configuration
-│   └── routeTree.gen.ts        # Auto-generated route tree
-└── package.json                 # Dependencies, pnpm scripts
-```
-
-### Module Structure Convention
-
-Each feature module follows this pattern:
+`frontend/src/` holds `routes/` for file-based routes and `modules/` for feature modules. Each feature module owns its components and its non-view logic:
 
 ```
 {feature}/
-├── components/               # UI components
-├── {feature}.atoms.ts       # Jotai atoms
-├── {feature}.query.ts       # TanStack Query options
-├── {feature}.types.ts       # TypeScript types
-├── {feature}.hooks.ts       # Custom React hooks (optional)
-└── {feature}.utils.ts       # Utility functions (optional)
+├── components/               # UI components (PascalCase .tsx, no suffix)
+└── {feature}.{type}.ts       # One file per role, see the suffix table
 ```
 
-See [frontend-components.md](../standards/frontend/frontend-components.md) for naming conventions.
+TypeScript files use `<module>.<type>.ts` naming: the `<module>` prefix matches the parent directory and `<type>` indicates the file's single role.
+
+| Suffix | Purpose |
+|---|---|
+| `.state.ts` | SolidJS state modules (`createRoot` singletons with accessors and actions) |
+| `.primitives.ts` | SolidJS primitives (component-scoped `create*` composables) |
+| `.query.ts` | TanStack Query options and mutations |
+| `.form.ts` | TanStack Form options |
+| `.types.ts` | TypeScript type and interface definitions |
+| `.utils.ts` | Helper functions |
+| `.constants.ts` | Static constant values |
+| `.styles.ts` | Style definitions (Tailwind helpers) |
+
+One file per role. Generated files are exempt. `core.queryClient.ts` also stands outside the table: `config` in this app means the user's app config, so the query client singleton is named for what it holds.
+
+The `core` module is the only one that registers backend event listeners and owns the app-wide tick, locale, and formatters. Other modules depend on it, not the reverse.
 
 ## Adding a New Game
 
-1. **Create game crate**: `storekeeper-game-{name}/`
-2. **Add to workspace**: Update root `Cargo.toml` members and workspace dependencies
-3. **Register in app**: Update `storekeeper-app-tauri/src/clients.rs` factory functions
-4. **Add frontend**: Create `frontend/src/modules/games/{name}/` with section component and atoms
-5. **Update dashboard**: Add section to `frontend/src/routes/index.tsx`
-6. **Add locale strings**: Add game/resource names to both `locales/en.json` (backend) and `frontend/messages/en.json` (frontend)
-
-No changes required to registry logic, polling system, or state management — they work with `DynGameClient` trait objects.
-
-See [DEVELOPMENT.md](../../DEVELOPMENT.md#adding-a-new-game) for full details.
+See [02-first-contribution.md](../onboarding/02-first-contribution.md).

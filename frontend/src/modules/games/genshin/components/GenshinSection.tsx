@@ -1,55 +1,50 @@
-import { useAtomValue } from "jotai";
-import { atoms } from "@/modules/atoms";
-import { GenshinResource, getResourceDisplayName } from "@/modules/games/games.constants";
+import type { VoidComponent } from "solid-js";
+import { DailyClaimBadge } from "@/modules/daily-rewards/components/DailyClaimBadge";
+import {
+  GenshinResource,
+  getResourceDisplayName,
+  getResourceIconPath,
+} from "@/modules/games/games.constants";
 import { GameId } from "@/modules/games/games.types";
-import { ExpeditionsCard } from "@/modules/games/genshin/components/ExpeditionsCard";
+import { createGenshinResources } from "@/modules/games/genshin/genshin.primitives";
 import { CooldownCard } from "@/modules/resources/components/CooldownCard";
 import { StaminaCard } from "@/modules/resources/components/StaminaCard";
 import { GameSection } from "@/modules/ui/components/GameSection";
 import * as m from "@/paraglide/messages";
 
-export const GenshinSection: React.FC = () => {
-  const isRefreshing = useAtomValue(atoms.core.isRefreshing);
-  const claimStatusMap = useAtomValue(atoms.core.dailyClaimStatus);
-  const claimStatus = claimStatusMap.get(GameId.GenshinImpact) ?? null;
-
-  const resinData = useAtomValue(atoms.games.genshin.resin);
-  const resinTime = useAtomValue(atoms.games.genshin.resinTime);
-
-  const ptData = useAtomValue(atoms.games.genshin.parametricTransformer);
-  const ptTime = useAtomValue(atoms.games.genshin.parametricTransformerTime);
-
-  const realmData = useAtomValue(atoms.games.genshin.realmCurrency);
-  const realmTime = useAtomValue(atoms.games.genshin.realmCurrencyTime);
+export const GenshinSection: VoidComponent = () => {
+  const genshin = createGenshinResources();
 
   return (
     <GameSection
+      sectionId={GameId.GenshinImpact}
       title={m.game_genshin_name()}
-      gameId={GameId.GenshinImpact}
-      claimStatus={claimStatus}
+      badge={<DailyClaimBadge gameId={GameId.GenshinImpact} gameName={m.game_genshin_name()} />}
     >
       <StaminaCard
-        iconPath="/icons/game/genshin/Item_Original_Resin.webp"
+        iconPath={getResourceIconPath(GenshinResource.Resin)}
         name={getResourceDisplayName(GenshinResource.Resin)}
-        data={resinData ?? undefined}
-        formattedTime={resinTime}
-        isRefreshing={isRefreshing}
+        data={genshin.resin()}
+        formattedTime={genshin.resinTime()}
       />
       <CooldownCard
-        iconPath="/icons/game/genshin/Item_Parametric_Transformer.webp"
+        iconPath={getResourceIconPath(GenshinResource.ParametricTransformer)}
         name={getResourceDisplayName(GenshinResource.ParametricTransformer)}
-        data={ptData ?? undefined}
-        formattedTime={ptTime}
-        isRefreshing={isRefreshing}
+        data={genshin.parametricTransformer()}
+        formattedTime={genshin.parametricTransformerTime()}
       />
       <StaminaCard
-        iconPath="/icons/game/genshin/Item_Realm_Currency.webp"
+        iconPath={getResourceIconPath(GenshinResource.RealmCurrency)}
         name={getResourceDisplayName(GenshinResource.RealmCurrency)}
-        data={realmData ?? undefined}
-        formattedTime={realmTime}
-        isRefreshing={isRefreshing}
+        data={genshin.realmCurrency()}
+        formattedTime={genshin.realmCurrencyTime()}
       />
-      <ExpeditionsCard />
+      <CooldownCard
+        iconPath={getResourceIconPath(GenshinResource.Expeditions)}
+        name={getResourceDisplayName(GenshinResource.Expeditions)}
+        data={genshin.expeditionsCooldown()}
+        formattedTime={genshin.expeditionsTime()}
+      />
     </GameSection>
   );
 };

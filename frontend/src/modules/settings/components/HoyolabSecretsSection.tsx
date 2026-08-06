@@ -1,26 +1,24 @@
-import { Section } from "@/modules/settings/components/Section";
+import type { VoidComponent } from "solid-js";
+import { SettingsCard } from "@/modules/settings/components/SettingsCard";
 import type { HoyolabSecrets } from "@/modules/settings/settings.types";
 import { TextField } from "@/modules/ui/components/TextField";
 import * as m from "@/paraglide/messages";
 
-interface HoyolabSecretsSectionProps {
+export interface HoyolabSecretsSectionProps {
   secrets: HoyolabSecrets;
   onChange: (secrets: HoyolabSecrets) => void;
 }
 
-export const HoyolabSecretsSection: React.FC<HoyolabSecretsSectionProps> = ({
-  secrets,
-  onChange,
-}) => {
+export const HoyolabSecretsSection: VoidComponent<HoyolabSecretsSectionProps> = (props) => {
   return (
-    <Section title={m.settings_hoyolab_title()} description={m.settings_hoyolab_description()}>
+    <SettingsCard title={m.settings_hoyolab_title()} description={m.settings_hoyolab_description()}>
       <TextField
         label="ltuid_v2"
         type="password"
-        value={secrets.ltuid_v2}
+        value={props.secrets.ltuid_v2}
         onChange={(value) =>
-          onChange({
-            ...secrets,
+          props.onChange({
+            ...props.secrets,
             ltuid_v2: value,
           })
         }
@@ -29,10 +27,10 @@ export const HoyolabSecretsSection: React.FC<HoyolabSecretsSectionProps> = ({
       <TextField
         label="ltoken_v2"
         type="password"
-        value={secrets.ltoken_v2}
+        value={props.secrets.ltoken_v2}
         onChange={(value) =>
-          onChange({
-            ...secrets,
+          props.onChange({
+            ...props.secrets,
             ltoken_v2: value,
           })
         }
@@ -41,15 +39,15 @@ export const HoyolabSecretsSection: React.FC<HoyolabSecretsSectionProps> = ({
       <TextField
         label="ltmid_v2"
         type="password"
-        value={secrets.ltmid_v2}
+        value={props.secrets.ltmid_v2}
         onChange={(value) =>
-          onChange({
-            ...secrets,
+          props.onChange({
+            ...props.secrets,
             ltmid_v2: value,
           })
         }
         placeholder={m.settings_hoyolab_ltmid_placeholder()}
       />
-    </Section>
+    </SettingsCard>
   );
 };

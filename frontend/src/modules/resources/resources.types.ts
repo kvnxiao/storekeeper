@@ -1,3 +1,4 @@
+import type { ResourceType } from "@/modules/games/games.constants";
 import type { GameId } from "@/modules/games/games.types";
 
 /** Stamina resource data (camelCase from Rust) */
@@ -23,7 +24,7 @@ export interface ExpeditionResource {
 
 /** Game resource with tagged type and data */
 export interface GameResource {
-  type: string;
+  type: ResourceType;
   data: StaminaResource | CooldownResource | ExpeditionResource;
 }
 
@@ -56,4 +57,12 @@ export function isExpeditionResource(data: unknown): data is ExpeditionResource 
 export interface FormattedTime {
   relativeTime: string;
   absoluteTime: string | null;
+}
+
+/** Stamina input constraints derived from backend resource data */
+export interface ResourceLimits {
+  /** Maximum resource value (e.g., 160 for resin, 240 for trailblaze power) */
+  maxValue: number;
+  /** Seconds to regenerate one unit */
+  regenRateSeconds: number;
 }

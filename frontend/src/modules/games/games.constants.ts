@@ -1,9 +1,5 @@
 import * as m from "@/paraglide/messages";
 
-// =============================================================================
-// Resource type constants per game
-// =============================================================================
-
 export const GenshinResource = {
   Resin: "resin",
   ParametricTransformer: "parametric_transformer",
@@ -29,8 +25,14 @@ export type HsrResourceType = (typeof HsrResource)[keyof typeof HsrResource];
 export type ZzzResourceType = (typeof ZzzResource)[keyof typeof ZzzResource];
 export type WuwaResourceType = (typeof WuwaResource)[keyof typeof WuwaResource];
 
+export type ResourceType =
+  | GenshinResourceType
+  | HsrResourceType
+  | ZzzResourceType
+  | WuwaResourceType;
+
 /** Resource types that are stamina-based (support value-threshold notifications) */
-export const STAMINA_RESOURCE_TYPES: ReadonlySet<string> = new Set([
+export const STAMINA_RESOURCE_TYPES: ReadonlySet<ResourceType> = new Set([
   GenshinResource.Resin,
   GenshinResource.RealmCurrency,
   HsrResource.TrailblazePower,
@@ -38,19 +40,32 @@ export const STAMINA_RESOURCE_TYPES: ReadonlySet<string> = new Set([
   WuwaResource.Waveplates,
 ]);
 
+const RESOURCE_ICON_PATHS: Record<ResourceType, string> = {
+  [GenshinResource.Resin]: "/icons/game/genshin/Item_Original_Resin.webp",
+  [GenshinResource.ParametricTransformer]: "/icons/game/genshin/Item_Parametric_Transformer.webp",
+  [GenshinResource.RealmCurrency]: "/icons/game/genshin/Item_Realm_Currency.webp",
+  [GenshinResource.Expeditions]: "/icons/game/genshin/Expeditions.webp",
+  [HsrResource.TrailblazePower]: "/icons/game/hsr/Item_Trailblaze_Power.webp",
+  [ZzzResource.Battery]: "/icons/game/zzz/Item_Battery_Charge.webp",
+  [WuwaResource.Waveplates]: "/icons/game/wuwa/Item_Waveplate.webp",
+};
+
+/** Returns the icon asset path for a resource type. */
+export function getResourceIconPath(type: ResourceType): string {
+  return RESOURCE_ICON_PATHS[type];
+}
+
+const RESOURCE_DISPLAY_NAMES: Record<ResourceType, () => string> = {
+  [GenshinResource.Resin]: m.resource_resin,
+  [GenshinResource.ParametricTransformer]: m.resource_parametric_transformer,
+  [GenshinResource.RealmCurrency]: m.resource_realm_currency,
+  [GenshinResource.Expeditions]: m.resource_expeditions,
+  [HsrResource.TrailblazePower]: m.resource_trailblaze_power,
+  [ZzzResource.Battery]: m.resource_battery,
+  [WuwaResource.Waveplates]: m.resource_waveplates,
+};
+
 /** Returns the localized display name for a resource type, evaluated at call time */
-export function getResourceDisplayName(type: string): string {
-  const names: Record<string, () => string> = {
-    [GenshinResource.Resin]: m.resource_resin,
-    [GenshinResource.ParametricTransformer]: m.resource_parametric_transformer,
-    [GenshinResource.RealmCurrency]: m.resource_realm_currency,
-    [GenshinResource.Expeditions]: m.resource_expeditions,
-    [HsrResource.TrailblazePower]: m.resource_trailblaze_power,
-    [ZzzResource.Battery]: m.resource_battery,
-    [WuwaResource.Waveplates]: m.resource_waveplates,
-  };
-  // names[type] is undefined at runtime for unknown resource types (Record
-  // index access is not modelled by the type), so this guard is intentional.
-  // oxlint-disable-next-line typescript/no-unnecessary-condition
-  return names[type]?.() ?? type;
+export function getResourceDisplayName(type: ResourceType): string {
+  return RESOURCE_DISPLAY_NAMES[type]();
 }

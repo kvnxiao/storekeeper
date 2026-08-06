@@ -1,26 +1,22 @@
 # Documentation
 
-> For a quick-start reference (prerequisites, commands, configuration), see [DEVELOPMENT.md](../DEVELOPMENT.md). This `docs/` directory is the comprehensive source of truth for architecture, standards, and onboarding.
+> For prerequisites, commands, and configuration paths, see [DEVELOPMENT.md](../DEVELOPMENT.md). This directory covers architecture and onboarding at a high level; the code is the reference for specifics.
 
 ## Architecture
 
-System design, component relationships, and data flow:
-
-- **[01-overview.md](architecture/01-overview.md)** — Layered architecture, design decisions, technology stack
-- **[02-directory-structure.md](architecture/02-directory-structure.md)** — Crate layout, dependency graph, frontend module structure
-- **[03-core-components.md](architecture/03-core-components.md)** — Traits, registries, state management, notifications, i18n, design patterns
-- **[04-data-flow.md](architecture/04-data-flow.md)** — API to UI data flow, polling, events, notifications, locale switching
+- **[01-overview.md](architecture/01-overview.md)** for the layered design, principles, and the reasoning behind the main technology choices
+- **[02-directory-structure.md](architecture/02-directory-structure.md)** for crate layout, the dependency graph, and frontend module conventions
+- **[03-core-components.md](architecture/03-core-components.md)** for the concepts whose behaviour is not obvious from one file: registries, state, background tasks, notifications, i18n
+- **[04-data-flow.md](architecture/04-data-flow.md)** for how data moves from the game APIs to the UI, and the conventions at each boundary
 
 ## Standards
 
-Actionable patterns and conventions for both humans and AI agents:
+Conventions for both humans and AI agents, kept as Claude Code skills with reference docs under `references/`:
 
-- **[Frontend Standards](standards/frontend/)** — React, TypeScript, Tailwind, React Aria conventions
-- **[Rust Standards](standards/rust/)** — Linting, error handling, testing, workspace conventions
+- **[SolidJS rules](../.claude/skills/solidjs-rules/)** for reactivity, components, state architecture, data fetching, forms, i18n, testing
+- **[Rust rules](../.claude/skills/rust-rules/)** for API design, error handling, testing, lints, workspace conventions
 
 ## Onboarding
 
-Getting started guides:
-
-- **[01-setup.md](onboarding/01-setup.md)** — Development environment setup
-- **[02-first-contribution.md](onboarding/02-first-contribution.md)** — Adding a new game, contribution checklist
+- **[01-setup.md](onboarding/01-setup.md)** for development environment setup
+- **[02-first-contribution.md](onboarding/02-first-contribution.md)** for adding a game or resource, and the pre-submit checklist

@@ -37,5 +37,4 @@ pub use response::ApiResponse;
 pub use response::HoyolabApiResponse;
 pub use response::KuroApiResponse;
 pub use retry::RetryConfig;
-pub use retry::is_transient_reqwest_error;
 pub use retry::retry_with_backoff;

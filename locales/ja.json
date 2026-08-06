@@ -1,6 +1,9 @@
 {
   "app_title": "Storekeeper",
 
+  "error_title": "エラーが発生しました",
+  "error_reload": "再読み込み",
+
   "dashboard_refresh_resources": "リソースを更新",
   "dashboard_settings": "設定",
   "dashboard_no_games": "ゲーム未設定",
@@ -43,6 +46,7 @@
   "settings_title": "設定",
   "settings_back": "戻る",
   "settings_failed_to_load": "設定の読み込みに失敗しました：{error}",
+  "settings_failed_to_save": "設定の保存に失敗しました：{error}",
   "settings_loading": "設定を読み込み中…",
   "settings_unsaved_changes": "未保存の変更があります。",
   "settings_undo": "変更を取り消す",
@@ -104,6 +108,7 @@
   "daily_claimed": "受取済み",
   "daily_unclaimed": "未受取",
   "daily_claiming": "受取中...",
+  "daily_claim_action": "{game}のデイリー報酬を受け取る",
 
   "textfield_hide_password": "パスワードを隠す",
   "textfield_show_password": "パスワードを表示"

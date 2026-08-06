@@ -1,98 +1,48 @@
-import { ArrowPathIcon, Cog6ToothIcon } from "@heroicons/react/24/outline";
-import { createFileRoute } from "@tanstack/react-router";
-import { useAtomValue } from "jotai";
-import { AnimatePresence, motion } from "motion/react";
-import { atoms } from "@/modules/atoms";
-import { GameId } from "@/modules/games/games.types";
-import { GenshinSection } from "@/modules/games/genshin/components/GenshinSection";
-import { HsrSection } from "@/modules/games/hsr/components/HsrSection";
-import { WuwaSection } from "@/modules/games/wuwa/components/WuwaSection";
-import { ZzzSection } from "@/modules/games/zzz/components/ZzzSection";
+import { useMutation } from "@tanstack/solid-query";
+import { createFileRoute } from "@tanstack/solid-router";
+import RefreshClockwise from "lucide-solid/icons/refresh-cw";
+import Settings from "lucide-solid/icons/settings";
+import type { VoidComponent } from "solid-js";
+import { DashboardContent } from "@/modules/dashboard/components/DashboardContent";
+import { refreshResourcesMutationOptions } from "@/modules/resources/resources.query";
+import { resourcesState } from "@/modules/resources/resources.state";
 import { Button } from "@/modules/ui/components/Button";
 import { ButtonLink } from "@/modules/ui/components/ButtonLink";
 import { cn } from "@/modules/ui/ui.styles";
+import { setViewTransitionDirection } from "@/modules/ui/ui.utils";
 import * as m from "@/paraglide/messages";
 
-const DashboardPage: React.FC = () => {
-  const { error } = useAtomValue(atoms.core.resourcesQuery);
-  const { isPending, mutate: refresh } = useAtomValue(atoms.core.refreshResources);
-  const isConfigLoading = useAtomValue(atoms.core.isConfigLoading);
-  const enabledGames = useAtomValue(atoms.core.enabledGames);
-
-  // Subscribe to backend resource updates
-  useAtomValue(atoms.core.resourcesEventListener);
-  // Subscribe to daily reward claim status
-  useAtomValue(atoms.core.dailyClaimStatus);
-  // Sync Paraglide locale from backend config on startup
-  useAtomValue(atoms.core.localeSync);
-
-  const hasAnyGames = enabledGames.size > 0;
+const DashboardPage: VoidComponent = () => {
+  const refresh = useMutation(() => refreshResourcesMutationOptions());
 
   return (
-    <div className="mx-auto min-h-screen max-w-sm p-3">
-      <header className="mb-3 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-zinc-950 dark:text-white">{m.app_title()}</h1>
-        <div className="flex items-center gap-1">
+    <div class="mx-auto min-h-screen max-w-sm p-3">
+      <header class="mb-3 flex items-center justify-between">
+        <h1 class="text-lg font-bold text-zinc-950 dark:text-white">{m.app_title()}</h1>
+        <div class="flex items-center gap-1">
           <Button
             variant="plain"
             aria-label={m.dashboard_refresh_resources()}
-            isDisabled={isPending}
-            onPress={() => refresh()}
+            disabled={resourcesState.isRefreshing()}
+            onClick={() => refresh.mutate()}
           >
-            <ArrowPathIcon
+            <RefreshClockwise
               aria-hidden="true"
-              className={cn("size-5", isPending && "animate-spin")}
+              class={cn("size-5", resourcesState.isRefreshing() && "animate-spin")}
             />
           </Button>
           <ButtonLink
             to="/settings"
             variant="plain"
             aria-label={m.dashboard_settings()}
-            onClick={() => {
-              document.documentElement.dataset.viewTransitionDirection = "forward";
-            }}
+            onClick={() => setViewTransitionDirection("forward")}
           >
-            <Cog6ToothIcon aria-hidden="true" className="size-5" />
+            <Settings aria-hidden="true" class="size-5" />
           </ButtonLink>
         </div>
       </header>
 
-      {error && (
-        <div className="mb-3 rounded-lg bg-red-500/15 p-3 text-red-700 ring-1 ring-red-500/20 dark:text-red-400">
-          {String(error)}
-        </div>
-      )}
-
-      <main className="space-y-2">
-        <AnimatePresence>
-          {!isConfigLoading &&
-            (hasAnyGames ? (
-              <motion.div
-                key="sections"
-                className="space-y-2"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.2 }}
-              >
-                {enabledGames.has(GameId.GenshinImpact) && <GenshinSection />}
-                {enabledGames.has(GameId.HonkaiStarRail) && <HsrSection />}
-                {enabledGames.has(GameId.ZenlessZoneZero) && <ZzzSection />}
-                {enabledGames.has(GameId.WutheringWaves) && <WuwaSection />}
-              </motion.div>
-            ) : (
-              <motion.div
-                key="empty"
-                className="py-8 text-center text-zinc-500 dark:text-zinc-400"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.2 }}
-              >
-                <p className="mb-2">{m.dashboard_no_games()}</p>
-                <p className="text-sm">{m.dashboard_no_games_hint()}</p>
-              </motion.div>
-            ))}
-        </AnimatePresence>
-      </main>
+      <DashboardContent />
     </div>
   );
 };

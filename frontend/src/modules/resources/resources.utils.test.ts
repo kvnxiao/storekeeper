@@ -1,12 +1,18 @@
-import "@formatjs/intl-durationformat/polyfill.js";
 import { describe, expect, it, vi } from "vite-plus/test";
-import { formatTimeRemaining } from "./resources.utils";
+import { GameId } from "@/modules/games/games.types";
+import type { AllResources } from "@/modules/resources/resources.types";
+import {
+  formatAbsoluteDateTime,
+  formatTimeRemaining,
+  getResourceLimitsForGame,
+  isPastDateTime,
+} from "@/modules/resources/resources.utils";
 
 vi.mock("@/paraglide/messages", () => ({
   time_remaining_full: () => "Full",
 }));
 
-/** Mirrors the style logic in core.atoms.ts durationFormatter. */
+/** Mirrors the style logic in core.state.ts durationFormatter. */
 function makeDurationFmt(locale: string): Intl.DurationFormat {
   return new Intl.DurationFormat(locale, {
     style: locale.startsWith("en") ? "narrow" : "short",
@@ -20,11 +26,7 @@ function futureIso(now: number, deltaMs: number): string {
 
 const MS = { s: 1_000, m: 60_000, h: 3_600_000, d: 86_400_000 };
 
-// ---------------------------------------------------------------------------
-// "Full" early-return cases — locale-independent
-// ---------------------------------------------------------------------------
-
-describe("formatTimeRemaining — early returns", () => {
+describe("formatTimeRemaining - early returns", () => {
   const now = Date.now();
   const fmt = makeDurationFmt("en");
 
@@ -40,10 +42,6 @@ describe("formatTimeRemaining — early returns", () => {
     expect(formatTimeRemaining(datetime, now, fmt)).toBe("Full");
   });
 });
-
-// ---------------------------------------------------------------------------
-// Duration formatting — parametrized per locale
-// ---------------------------------------------------------------------------
 
 const LOCALE_CONFIGS = [
   {
@@ -64,6 +62,7 @@ const LOCALE_CONFIGS = [
       "1d": "1d",
       "1d 5h 30m": "1d 5h 30m",
       "1d 0h 30m": "1d 30m",
+      "1d 0h 0m 45s": "1d",
       "7d 12h": "7d 12h",
     },
   },
@@ -85,6 +84,7 @@ const LOCALE_CONFIGS = [
       "1d": "1 日",
       "1d 5h 30m": "1 日 5 時間 30 分",
       "1d 0h 30m": "1 日 30 分",
+      "1d 0h 0m 45s": "1 日",
       "7d 12h": "7 日 12 時間",
     },
   },
@@ -106,6 +106,7 @@ const LOCALE_CONFIGS = [
       "1d": "1일",
       "1d 5h 30m": "1일 5시간 30분",
       "1d 0h 30m": "1일 30분",
+      "1d 0h 0m 45s": "1일",
       "7d 12h": "7일 12시간",
     },
   },
@@ -127,6 +128,7 @@ const LOCALE_CONFIGS = [
       "1d": "1天",
       "1d 5h 30m": "1天5小时30分钟",
       "1d 0h 30m": "1天30分钟",
+      "1d 0h 0m 45s": "1天",
       "7d 12h": "7天12小时",
     },
   },
@@ -149,15 +151,105 @@ const DURATION_DELTAS: Record<string, number> = {
   "1d": MS.d,
   "1d 5h 30m": MS.d + 5 * MS.h + 30 * MS.m,
   "1d 0h 30m": MS.d + 30 * MS.m,
+  "1d 0h 0m 45s": MS.d + 45 * MS.s,
   "7d 12h": 7 * MS.d + 12 * MS.h,
 };
 
-describe.each(LOCALE_CONFIGS)("formatTimeRemaining — $locale", ({ locale, expected }) => {
+describe.each(LOCALE_CONFIGS)("formatTimeRemaining - $locale", ({ locale, expected }) => {
   const now = Date.now();
   const fmt = makeDurationFmt(locale);
 
   it.each(Object.entries(expected))("%s → %s", (label, output) => {
     const dt = futureIso(now, DURATION_DELTAS[label]);
     expect(formatTimeRemaining(dt, now, fmt)).toBe(output);
+  });
+});
+
+describe("isPastDateTime", () => {
+  const now = Date.now();
+
+  it.each([
+    ["null", null],
+    ["undefined", undefined],
+    ["empty string", ""],
+    ["invalid date string", "not-a-date"],
+  ])("counts %s as past, matching what the countdown renders", (_label, datetime) => {
+    expect(isPastDateTime(datetime, now)).toBe(true);
+  });
+
+  it("counts the exact current instant as past", () => {
+    expect(isPastDateTime(new Date(now).toISOString(), now)).toBe(true);
+  });
+
+  it("is false while the datetime is still ahead", () => {
+    expect(isPastDateTime(futureIso(now, MS.m), now)).toBe(false);
+  });
+});
+
+// Resource types are spelled out rather than imported from games.constants,
+// which builds its display-name table from the message module this file mocks.
+describe("getResourceLimitsForGame", () => {
+  const resources: AllResources = {
+    games: {
+      [GameId.GenshinImpact]: [
+        {
+          type: "resin",
+          data: { current: 100, max: 200, fullAt: "", regenRateSeconds: 480 },
+        },
+        {
+          type: "parametric_transformer",
+          data: { isReady: false, readyAt: "" },
+        },
+      ],
+    },
+  };
+
+  it("reports max and regen rate for stamina resources", () => {
+    expect(getResourceLimitsForGame(resources, GameId.GenshinImpact)).toEqual({
+      resin: { maxValue: 200, regenRateSeconds: 480 },
+    });
+  });
+
+  it("skips resources that carry no value ceiling", () => {
+    const limits = getResourceLimitsForGame(resources, GameId.GenshinImpact);
+    expect(limits.parametric_transformer).toBeUndefined();
+  });
+
+  it("is empty for a game with no snapshot yet", () => {
+    expect(getResourceLimitsForGame(undefined, GameId.GenshinImpact)).toEqual({});
+    expect(getResourceLimitsForGame(resources, GameId.HonkaiStarRail)).toEqual({});
+  });
+});
+
+describe("formatAbsoluteDateTime", () => {
+  const now = Date.now();
+  const timeOnlyFmt = new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit" });
+  const weekdayTimeFmt = new Intl.DateTimeFormat("en", {
+    weekday: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+  it.each([
+    ["null", null],
+    ["undefined", undefined],
+    ["empty string", ""],
+    ["invalid date string", "not-a-date"],
+  ])("returns null for %s instead of throwing", (_label, datetime) => {
+    expect(formatAbsoluteDateTime(datetime, now, timeOnlyFmt, weekdayTimeFmt)).toBeNull();
+  });
+
+  it("formats same-day targets as time only", () => {
+    const target = new Date(now);
+    expect(formatAbsoluteDateTime(target.toISOString(), now, timeOnlyFmt, weekdayTimeFmt)).toBe(
+      timeOnlyFmt.format(target),
+    );
+  });
+
+  it("formats other-day targets with the weekday", () => {
+    const target = new Date(now + 3 * MS.d);
+    expect(formatAbsoluteDateTime(target.toISOString(), now, timeOnlyFmt, weekdayTimeFmt)).toBe(
+      weekdayTimeFmt.format(target),
+    );
   });
 });

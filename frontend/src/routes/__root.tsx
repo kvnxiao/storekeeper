@@ -1,56 +1,77 @@
-import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createRootRouteWithContext, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
-import { Provider as JotaiProvider, useAtomValue } from "jotai";
-import { useHydrateAtoms } from "jotai/utils";
-import { queryClientAtom } from "jotai-tanstack-query";
-import { atoms } from "@/modules/atoms";
+import { type QueryClient, QueryClientProvider } from "@tanstack/solid-query";
+import {
+  createRootRouteWithContext,
+  type ErrorComponentProps,
+  HeadContent,
+  Outlet,
+  Scripts,
+} from "@tanstack/solid-router";
+import { type Component, createEffect, onMount, type ParentComponent, Show } from "solid-js";
+import { HydrationScript } from "solid-js/web";
 import { queryClient } from "@/modules/core/core.queryClient";
+import { core } from "@/modules/core/core.state";
+import { Button } from "@/modules/ui/components/Button";
+import { ErrorBanner } from "@/modules/ui/components/ErrorBanner";
+import * as m from "@/paraglide/messages";
 import appCss from "@/styles.css?url";
 
 interface RouterContext {
   queryClient: QueryClient;
 }
 
-/** Hydrates the shared QueryClient into jotai-tanstack-query synchronously */
-const HydrateQueryClient: React.FC<React.PropsWithChildren> = ({ children }) => {
-  useHydrateAtoms([[queryClientAtom, queryClient]]);
-  return <>{children}</>;
-};
+const RootDocument: ParentComponent = (props) => (
+  <html lang="en">
+    <head>
+      <HydrationScript />
+    </head>
+    <body class="min-h-screen overflow-y-scroll bg-background font-sans text-foreground antialiased">
+      <HeadContent />
+      {props.children}
+      <Scripts />
+    </body>
+  </html>
+);
 
-/** Keys the outlet on locale so the entire route tree remounts on locale change */
-const LocaleAwareOutlet: React.FC = () => {
-  const locale = useAtomValue(atoms.core.locale);
-  return <Outlet key={locale} />;
-};
+const RootComponent: Component = () => {
+  onMount(() => core.init());
 
-const RootComponent: React.FC = () => {
+  // The shell's static lang="en" never re-renders; keep it on the real locale.
+  createEffect(() => {
+    document.documentElement.lang = core.locale();
+  });
+
   return (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body className="min-h-screen overflow-y-scroll bg-background font-sans text-foreground antialiased">
-        <QueryClientProvider client={queryClient}>
-          <JotaiProvider>
-            <HydrateQueryClient>
-              <LocaleAwareOutlet />
-            </HydrateQueryClient>
-          </JotaiProvider>
-        </QueryClientProvider>
-        <Scripts />
-      </body>
-    </html>
+    <QueryClientProvider client={queryClient}>
+      {/* Nothing renders until the backend-resolved locale is in, so the first
+          paint is never in the wrong language. Keyed on locale so a later
+          change remounts the tree, since messages are not reactive. */}
+      <Show when={core.localeReady() && core.locale()} keyed>
+        <Outlet />
+      </Show>
+    </QueryClientProvider>
   );
 };
+
+const RootErrorPage: Component<ErrorComponentProps> = (props) => (
+  <div class="flex min-h-screen flex-col items-center justify-center gap-4 p-4">
+    <h1 class="text-lg font-bold text-zinc-950 dark:text-white">{m.error_title()}</h1>
+    <ErrorBanner class="max-w-sm break-all font-mono text-sm">{String(props.error)}</ErrorBanner>
+    <Button color="blue" onClick={() => window.location.reload()}>
+      {m.error_reload()}
+    </Button>
+  </div>
+);
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   head: () => ({
     meta: [
-      { charSet: "utf-8" },
+      { charset: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Storekeeper" },
     ],
     links: [{ rel: "stylesheet", href: appCss }],
   }),
+  shellComponent: RootDocument,
   component: RootComponent,
+  errorComponent: RootErrorPage,
 });

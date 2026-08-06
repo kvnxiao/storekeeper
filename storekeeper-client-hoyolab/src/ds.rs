@@ -13,7 +13,7 @@ const SALT_OVERSEAS: &str = "6s25p5ox5y14umn1p61aqyyvbvvl3lrt";
 
 /// Salt for Chinese HoYoLab API (miyoushe).
 ///
-/// Currently unused — reserved for future Chinese server (miyoushe) support.
+/// Currently unused - reserved for future Chinese server (miyoushe) support.
 const SALT_CHINESE: &str = "xV8v4Qu54lUKrEYFZkJhB8cuOh9Asafs";
 
 /// Generates a DS header for overseas (global) HoYoLab API.
@@ -38,7 +38,7 @@ pub fn generate_dynamic_secret_overseas() -> String {
 /// - random: Random integer between 100001 and 200000
 /// - hash: MD5("salt={salt}&t={t}&r={r}&b={body}&q={query}")
 ///
-/// Currently unused — reserved for future Chinese server (miyoushe) support.
+/// Currently unused - reserved for future Chinese server (miyoushe) support.
 #[must_use]
 pub fn generate_dynamic_secret_chinese(body: &str, query: &str) -> String {
     let timestamp = jiff::Timestamp::now().as_second();

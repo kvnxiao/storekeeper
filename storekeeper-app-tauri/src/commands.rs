@@ -14,7 +14,6 @@ use crate::events::AppEvent;
 use crate::i18n;
 use crate::notification;
 use crate::polling;
-use crate::retry_helpers::retry_with_backoff;
 use crate::state::AllDailyRewardStatus;
 use crate::state::AllResources;
 use crate::state::AppState;
@@ -67,7 +66,7 @@ pub struct SaveResult {
 ///
 /// Combines write + diff + selective apply into a single IPC call:
 /// 1. Writes config.toml and secrets.toml to disk
-/// 2. Diffs old (from state) vs new (from params) in-memory — no re-read
+/// 2. Diffs old (from state) vs new (from params) in-memory - no re-read
 /// 3. Selectively applies changes based on the diff
 /// 4. Returns the effective locale for frontend sync
 #[tauri::command]
@@ -226,7 +225,7 @@ pub async fn refresh_daily_reward_status(
     Ok(status)
 }
 
-/// Claims daily reward for a specific game with retry on network failures.
+/// Claims daily reward for a specific game.
 #[tauri::command]
 pub async fn claim_daily_reward_for_game(
     game_id: GameId,
@@ -234,7 +233,7 @@ pub async fn claim_daily_reward_for_game(
     state: State<'_, AppState>,
 ) -> Result<serde_json::Value, CommandError> {
     tracing::info!(game_id = ?game_id, "Manual daily reward claim requested for specific game");
-    let result = retry_with_backoff(|| state.claim_daily_reward_for_game(game_id)).await?;
+    let result = state.claim_daily_reward_for_game(game_id).await?;
 
     // Refresh status for this game after claiming
     if let Ok(game_status) = state.get_daily_reward_status_for_game(game_id).await {

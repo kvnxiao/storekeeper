@@ -1,7 +1,11 @@
 @import "tailwindcss";
-@plugin "tailwindcss-react-aria-components";
 @import "@fontsource-variable/inter";
 @import "@fontsource-variable/geist-mono";
+
+/* Tests assert on class names, and a utility written out in an assertion would
+   otherwise be generated into the shipped stylesheet. Every class the app really
+   uses comes from a component source, which is still scanned. */
+@source not "./**/*.test.{ts,tsx}";
 
 /* Semantic color tokens (light mode) - zinc scale */
 :root {
@@ -90,8 +94,6 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-
-  --scrollbar-width: 8px;
 }
 
 /* Touch target utility - expands hit area to 44x44px on touch devices */
@@ -224,6 +226,7 @@ body {
   }
 }
 
+/* Also referenced by Select's `animate-[fade-in_100ms_ease-out]`. */
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -249,5 +252,28 @@ body {
   }
   to {
     mask-position: 0 0;
+  }
+}
+
+/* =============================================================================
+   Component Animations
+   ============================================================================= */
+
+/* Kobalte collapsible expand/collapse */
+@keyframes collapsible-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--kb-collapsible-content-height);
+  }
+}
+
+@keyframes collapsible-up {
+  from {
+    height: var(--kb-collapsible-content-height);
+  }
+  to {
+    height: 0;
   }
 }

@@ -48,6 +48,12 @@ impl GameClientRegistry {
         !self.clients.is_empty()
     }
 
+    /// Returns the games that currently have a registered client.
+    #[must_use]
+    pub fn game_ids(&self) -> HashSet<GameId> {
+        self.clients.keys().copied().collect()
+    }
+
     /// Fetches resources from all registered clients with rate limit awareness.
     ///
     /// Games are grouped by API provider:

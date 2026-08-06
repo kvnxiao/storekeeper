@@ -112,14 +112,6 @@ where
     }
 }
 
-/// Returns `true` if the reqwest error is transient and worth retrying.
-///
-/// Covers timeouts, connection failures, and request-level errors.
-#[must_use]
-pub fn is_transient_reqwest_error(err: &reqwest::Error) -> bool {
-    err.is_timeout() || err.is_connect() || err.is_request()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
