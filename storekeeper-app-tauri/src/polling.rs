@@ -110,6 +110,12 @@ async fn do_refresh(app_handle: &AppHandle) -> AllResources {
         tracing::warn!(error = %e, "Failed to emit ResourcesUpdated event");
     }
 
+    if state.refill_missing_daily_reward_status().await
+        && let Err(e) = app_handle.emit(AppEvent::DailyRewardStatusUpdated.as_str(), ())
+    {
+        tracing::warn!(error = %e, "Failed to emit DailyRewardStatusUpdated event");
+    }
+
     notification::check_and_notify(app_handle).await;
 
     resources

@@ -139,6 +139,26 @@ describe("resource refresh", () => {
     await showsText(container, `${RESPONSE_RESIN}/200`);
   });
 
+  it("unmasks a game's cards on its own event, without waiting for the refresh to end", async () => {
+    const { container } = await mount();
+    const masked = () => container.querySelectorAll(".mask-shimmer").length;
+    // The snapshot carries two of Genshin's four resources, so the other two
+    // cards stay masked for want of data whatever the refresh is doing.
+    const withoutData = masked();
+
+    emit("refresh-started");
+    await vi.waitFor(() => expect(masked()).toBe(4), { timeout: WAIT_TIMEOUT_MS });
+
+    emit("game-resource-updated", {
+      gameId: GameId.GenshinImpact,
+      data: snapshot(140).games?.[GameId.GenshinImpact],
+    });
+    await vi.waitFor(() => expect(masked()).toBe(withoutData), { timeout: WAIT_TIMEOUT_MS });
+
+    emit("resources-updated", snapshot(140));
+    await showsText(container, "140/200");
+  });
+
   // A snapshot's cooldown deadline is `fetch time + 5d`, so a clock older than
   // the fetch renders the full 5d instead of the 4d 23h 59m left. The gap
   // between the fetch and the render is the whole signal, so this file has to

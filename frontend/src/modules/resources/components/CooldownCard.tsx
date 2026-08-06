@@ -1,4 +1,5 @@
 import { Show, type VoidComponent } from "solid-js";
+import type { GameId } from "@/modules/games/games.types";
 import { ResourceCard } from "@/modules/resources/components/ResourceCard";
 import { TimeRemaining } from "@/modules/resources/components/TimeRemaining";
 import type { CooldownResource, FormattedTime } from "@/modules/resources/resources.types";
@@ -7,6 +8,7 @@ import { Skeleton } from "@/modules/ui/components/Skeleton";
 import * as m from "@/paraglide/messages";
 
 export interface CooldownCardProps {
+  gameId: GameId;
   iconPath: string;
   name: string;
   data?: CooldownResource | null;
@@ -16,6 +18,7 @@ export interface CooldownCardProps {
 export const CooldownCard: VoidComponent<CooldownCardProps> = (props) => {
   return (
     <ResourceCard
+      gameId={props.gameId}
       iconPath={props.iconPath}
       name={props.name}
       hasData={Boolean(props.data)}

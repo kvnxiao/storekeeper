@@ -58,6 +58,12 @@ impl DailyRewardRegistry {
         self.clients.contains_key(&game_id)
     }
 
+    /// Returns the games that currently have a registered client.
+    #[must_use]
+    pub fn game_ids(&self) -> HashSet<GameId> {
+        self.clients.keys().copied().collect()
+    }
+
     /// Gets the reward status for a specific game.
     ///
     /// # Errors
@@ -216,6 +222,22 @@ mod tests {
         assert!(!r.is_empty());
         assert!(r.has_game(GameId::GenshinImpact));
         assert!(!r.has_game(GameId::HonkaiStarRail));
+    }
+
+    #[test]
+    fn game_ids_lists_every_registered_game() {
+        let mut r = DailyRewardRegistry::new();
+        r.register(Box::new(MockDailyRewardClient::success(
+            GameId::GenshinImpact,
+        )));
+        r.register(Box::new(MockDailyRewardClient::success(
+            GameId::HonkaiStarRail,
+        )));
+
+        assert_eq!(
+            r.game_ids(),
+            HashSet::from([GameId::GenshinImpact, GameId::HonkaiStarRail])
+        );
     }
 
     #[test]

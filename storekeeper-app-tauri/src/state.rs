@@ -10,6 +10,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::collections::hash_map::Entry;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
@@ -254,6 +255,53 @@ impl AppState {
             games,
             last_checked: Some(Timestamp::now()),
         }
+    }
+
+    /// Re-fetches the games that have a daily-reward client but no cached
+    /// status, and merges what comes back into the cache.
+    ///
+    /// A game drops out of the cache when its fetch fails, and the fetch of
+    /// every game only runs at startup, at the daily reset, and after a claim.
+    /// Without this, one failed request hides that game's claim badge until the
+    /// next of those. Returns whether the cache changed.
+    pub async fn refill_missing_daily_reward_status(&self) -> bool {
+        let (daily_reward_registry, missing) = {
+            let state = self.inner.read().await;
+            let missing: HashSet<GameId> = state
+                .daily_reward_registry
+                .game_ids()
+                .into_iter()
+                .filter(|game_id| !state.daily_reward_status.games.contains_key(game_id))
+                .collect();
+            (Arc::clone(&state.daily_reward_registry), missing)
+        };
+
+        if missing.is_empty() {
+            return false;
+        }
+
+        tracing::debug!(games = ?missing, "Re-fetching daily reward status missing from cache");
+        let fetched = daily_reward_registry.get_status_for_games(&missing).await;
+        if fetched.is_empty() {
+            return false;
+        }
+
+        let mut state = self.inner.write().await;
+        let cached = &mut state.daily_reward_status.games;
+        // A claim can land while the fetch is in flight, so fill only the holes
+        // that are still holes rather than overwriting a fresher status.
+        let mut filled = false;
+        for (game_id, status) in fetched {
+            if let Entry::Vacant(slot) = cached.entry(game_id) {
+                slot.insert(status);
+                filled = true;
+            }
+        }
+
+        if filled {
+            state.daily_reward_status.last_checked = Some(Timestamp::now());
+        }
+        filled
     }
 
     /// Claims daily reward for a specific game.
@@ -530,5 +578,128 @@ mod tests {
         let v = serde_json::to_value(&s).expect("serialize");
         assert!(v.get("lastChecked").is_some(), "should be camelCase");
         assert!(v.get("last_checked").is_none(), "should NOT be snake_case");
+    }
+
+    // =========================================================================
+    // refill_missing_daily_reward_status tests
+    // =========================================================================
+
+    struct StubDailyRewardClient {
+        game_id: GameId,
+        fails: bool,
+    }
+
+    impl storekeeper_core::DynDailyRewardClient for StubDailyRewardClient {
+        fn game_id(&self) -> GameId {
+            self.game_id
+        }
+
+        fn get_reward_status_json(
+            &self,
+        ) -> std::pin::Pin<
+            Box<
+                dyn Future<
+                        Output = Result<
+                            serde_json::Value,
+                            Box<dyn std::error::Error + Send + Sync>,
+                        >,
+                    > + Send
+                    + '_,
+            >,
+        > {
+            let fails = self.fails;
+            Box::pin(async move {
+                if fails {
+                    Err("stub fetch failure".into())
+                } else {
+                    Ok(serde_json::json!({"info": {"is_signed": true}}))
+                }
+            })
+        }
+
+        fn claim_daily_reward_json(
+            &self,
+        ) -> std::pin::Pin<
+            Box<
+                dyn Future<
+                        Output = Result<
+                            serde_json::Value,
+                            Box<dyn std::error::Error + Send + Sync>,
+                        >,
+                    > + Send
+                    + '_,
+            >,
+        > {
+            Box::pin(async { Ok(serde_json::json!({"success": true})) })
+        }
+    }
+
+    async fn state_with_daily_reward_clients(clients: &[(GameId, bool)]) -> AppState {
+        let mut registry = DailyRewardRegistry::new();
+        for &(game_id, fails) in clients {
+            registry.register(Box::new(StubDailyRewardClient { game_id, fails }));
+        }
+
+        let state = AppState::new();
+        state.inner.write().await.daily_reward_registry = Arc::new(registry);
+        state
+    }
+
+    #[tokio::test]
+    async fn refill_fetches_a_game_whose_status_is_absent() {
+        let state = state_with_daily_reward_clients(&[
+            (GameId::GenshinImpact, false),
+            (GameId::HonkaiStarRail, false),
+        ])
+        .await;
+        state
+            .set_daily_reward_status(AllDailyRewardStatus {
+                games: HashMap::from([(
+                    GameId::HonkaiStarRail,
+                    serde_json::json!({"info": {"is_signed": true}}),
+                )]),
+                last_checked: Some(Timestamp::now()),
+            })
+            .await;
+
+        assert!(state.refill_missing_daily_reward_status().await);
+
+        let status = state.get_daily_reward_status().await;
+        assert!(
+            status.games.contains_key(&GameId::GenshinImpact),
+            "the game missing from the cache should be fetched back in"
+        );
+        assert!(status.games.contains_key(&GameId::HonkaiStarRail));
+    }
+
+    #[tokio::test]
+    async fn refill_reports_no_change_when_every_game_is_cached() {
+        let state = state_with_daily_reward_clients(&[(GameId::GenshinImpact, false)]).await;
+        state
+            .set_daily_reward_status(AllDailyRewardStatus {
+                games: HashMap::from([(
+                    GameId::GenshinImpact,
+                    serde_json::json!({"info": {"is_signed": false}}),
+                )]),
+                last_checked: Some(Timestamp::now()),
+            })
+            .await;
+
+        assert!(!state.refill_missing_daily_reward_status().await);
+
+        let status = state.get_daily_reward_status().await;
+        assert_eq!(
+            status.games.get(&GameId::GenshinImpact),
+            Some(&serde_json::json!({"info": {"is_signed": false}})),
+            "a cached status must not be overwritten by the refill"
+        );
+    }
+
+    #[tokio::test]
+    async fn refill_reports_no_change_when_the_fetch_fails_again() {
+        let state = state_with_daily_reward_clients(&[(GameId::GenshinImpact, true)]).await;
+
+        assert!(!state.refill_missing_daily_reward_status().await);
+        assert!(state.get_daily_reward_status().await.games.is_empty());
     }
 }

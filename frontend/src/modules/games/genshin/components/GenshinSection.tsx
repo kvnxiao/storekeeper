@@ -22,24 +22,28 @@ export const GenshinSection: VoidComponent = () => {
       badge={<DailyClaimBadge gameId={GameId.GenshinImpact} gameName={m.game_genshin_name()} />}
     >
       <StaminaCard
+        gameId={GameId.GenshinImpact}
         iconPath={getResourceIconPath(GenshinResource.Resin)}
         name={getResourceDisplayName(GenshinResource.Resin)}
         data={genshin.resin()}
         formattedTime={genshin.resinTime()}
       />
       <CooldownCard
+        gameId={GameId.GenshinImpact}
         iconPath={getResourceIconPath(GenshinResource.ParametricTransformer)}
         name={getResourceDisplayName(GenshinResource.ParametricTransformer)}
         data={genshin.parametricTransformer()}
         formattedTime={genshin.parametricTransformerTime()}
       />
       <StaminaCard
+        gameId={GameId.GenshinImpact}
         iconPath={getResourceIconPath(GenshinResource.RealmCurrency)}
         name={getResourceDisplayName(GenshinResource.RealmCurrency)}
         data={genshin.realmCurrency()}
         formattedTime={genshin.realmCurrencyTime()}
       />
       <CooldownCard
+        gameId={GameId.GenshinImpact}
         iconPath={getResourceIconPath(GenshinResource.Expeditions)}
         name={getResourceDisplayName(GenshinResource.Expeditions)}
         data={genshin.expeditionsCooldown()}

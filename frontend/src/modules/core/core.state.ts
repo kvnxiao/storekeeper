@@ -106,6 +106,7 @@ function createCore() {
 
     void listen<GameResourcePayload>(AppEvent.GameResourceUpdated, (event) => {
       const { gameId, data } = event.payload;
+      resourcesState.gameSettled(gameId);
       queryClient.setQueryData(
         resourcesQueryOptions().queryKey,
         (old: AllResources | undefined) => ({
@@ -117,6 +118,10 @@ function createCore() {
     });
 
     void listen(AppEvent.DailyRewardClaimed, () => {
+      invalidateDailyRewardStatus().catch(console.error);
+    });
+
+    void listen(AppEvent.DailyRewardStatusUpdated, () => {
       invalidateDailyRewardStatus().catch(console.error);
     });
 

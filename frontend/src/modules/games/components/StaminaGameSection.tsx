@@ -40,6 +40,7 @@ export const StaminaGameSection: VoidComponent<StaminaGameSectionProps> = (props
       }
     >
       <StaminaCard
+        gameId={props.gameId}
         iconPath={getResourceIconPath(props.resourceType)}
         name={getResourceDisplayName(props.resourceType)}
         data={stamina()}
