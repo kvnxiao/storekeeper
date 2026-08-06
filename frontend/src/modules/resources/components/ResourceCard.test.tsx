@@ -1,10 +1,12 @@
 import { render } from "@solidjs/testing-library";
 import { describe, expect, it } from "vite-plus/test";
+import { GameId } from "@/modules/games/games.types";
 import { ResourceCard } from "@/modules/resources/components/ResourceCard";
 
 function renderCard(hasData: boolean): HTMLElement {
   const { container } = render(() => (
     <ResourceCard
+      gameId={GameId.GenshinImpact}
       iconPath="/icons/game/genshin/Item_Original_Resin.webp"
       name="Original Resin"
       hasData={hasData}

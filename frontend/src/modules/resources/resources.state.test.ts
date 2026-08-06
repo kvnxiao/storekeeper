@@ -1,6 +1,7 @@
 import { createRoot } from "solid-js";
 import { describe, expect, it, vi } from "vite-plus/test";
 import { queryClient } from "@/modules/core/core.queryClient";
+import { GameId } from "@/modules/games/games.types";
 import { REFRESH_RESOURCES_MUTATION_KEY } from "@/modules/resources/resources.query";
 import { createResourcesState } from "@/modules/resources/resources.state";
 
@@ -25,6 +26,29 @@ describe("resources state", () => {
       expect(state.isRefreshing()).toBe(true);
       state.refreshSettled();
       expect(state.isRefreshing()).toBe(false);
+    });
+  });
+
+  it("stops masking a game as soon as its own resources land", () => {
+    withState((state) => {
+      state.refreshStarted();
+      state.gameSettled(GameId.GenshinImpact);
+
+      expect(state.isGameRefreshing(GameId.GenshinImpact)).toBe(false);
+      expect(state.isGameRefreshing(GameId.HonkaiStarRail)).toBe(true);
+      expect(state.isRefreshing()).toBe(true);
+    });
+  });
+
+  it("masks a settled game again only once the next refresh starts", () => {
+    withState((state) => {
+      state.refreshStarted();
+      state.gameSettled(GameId.GenshinImpact);
+      state.refreshSettled();
+      expect(state.isGameRefreshing(GameId.GenshinImpact)).toBe(false);
+
+      state.refreshStarted();
+      expect(state.isGameRefreshing(GameId.GenshinImpact)).toBe(true);
     });
   });
 

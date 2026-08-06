@@ -1,9 +1,12 @@
 import type { JSX, ParentComponent } from "solid-js";
+import type { GameId } from "@/modules/games/games.types";
 import { ResourceIcon } from "@/modules/resources/components/ResourceIcon";
 import { resourcesState } from "@/modules/resources/resources.state";
 import { cn } from "@/modules/ui/ui.styles";
 
 export interface ResourceCardProps {
+  /** The game this card belongs to, so it masks only on that game's fetch. */
+  gameId: GameId;
   iconPath: string;
   name: string;
   hasData: boolean;
@@ -23,7 +26,7 @@ export const ResourceCard: ParentComponent<ResourceCardProps> = (props) => {
     <div
       class={cn(
         "rounded-lg bg-zinc-50 p-2 transition-transform hover:translate-x-0.5 dark:bg-zinc-700",
-        (resourcesState.isRefreshing() || !props.hasData) && "mask-shimmer",
+        (resourcesState.isGameRefreshing(props.gameId) || !props.hasData) && "mask-shimmer",
       )}
     >
       <div class="flex items-center gap-2">
