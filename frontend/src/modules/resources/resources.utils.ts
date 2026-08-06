@@ -1,18 +1,16 @@
+import type { ResourceType } from "@/modules/games/games.constants";
 import type { GameId } from "@/modules/games/games.types";
-import * as m from "@/paraglide/messages";
 import {
   type AllResources,
   isStaminaResource,
   type ResourceLimits,
 } from "@/modules/resources/resources.types";
+import * as m from "@/paraglide/messages";
 
 /**
- * Formats a datetime string to human-readable duration remaining.
- *
- * @param datetime - ISO 8601 datetime string for the target time
- * @param nowMs - Current time in milliseconds (from the tick signal)
- * @param durationFmt - Intl.DurationFormat instance for the current locale
- * @returns Formatted duration string like "2h 13m" or "Full"
+ * Formats the time left until an ISO 8601 `datetime` as a duration ("2h 13m"),
+ * or "Full" once it has passed. `nowMs` comes from the tick signal so every
+ * countdown on screen measures against the same instant.
  */
 export function formatTimeRemaining(
   datetime: string | null | undefined,
@@ -38,11 +36,8 @@ export function formatTimeRemaining(
 }
 
 /**
- * Checks if a datetime is in the past. Missing or unparseable datetimes count
- * as past.
- *
- * @param datetime - ISO 8601 datetime string
- * @param nowMs - Current time in milliseconds (from the tick signal)
+ * Checks whether an ISO 8601 `datetime` is in the past. Missing or unparseable
+ * datetimes count as past, matching what the countdown renders for them.
  */
 export function isPastDateTime(datetime: string | null | undefined, nowMs: number): boolean {
   const targetMs = datetime ? new Date(datetime).getTime() : Number.NaN;
@@ -50,14 +45,9 @@ export function isPastDateTime(datetime: string | null | undefined, nowMs: numbe
 }
 
 /**
- * Formats a datetime string to absolute date/time.
- * Shows weekday when the target date is not today.
- *
- * @param datetime - ISO 8601 datetime string
- * @param nowMs - Current time in milliseconds (from the tick signal)
- * @param timeOnlyFmt - Intl.DateTimeFormat for time-only display
- * @param weekdayTimeFmt - Intl.DateTimeFormat for weekday + time display
- * @returns Formatted datetime like "3:17 PM" (today) or "Mon 3:17 PM" (other days), or null
+ * Formats an ISO 8601 `datetime` as a clock time ("3:17 PM"), prefixed with the
+ * weekday when it does not fall on the same calendar day as `nowMs`. Returns
+ * null when there is nothing parseable to format.
  */
 export function formatAbsoluteDateTime(
   datetime: string | null | undefined,
@@ -84,8 +74,8 @@ export function formatAbsoluteDateTime(
 export function getResourceLimitsForGame(
   resources: AllResources | undefined,
   gameId: GameId,
-): Partial<Record<string, ResourceLimits>> {
-  const limits: Record<string, ResourceLimits> = {};
+): Partial<Record<ResourceType, ResourceLimits>> {
+  const limits: Partial<Record<ResourceType, ResourceLimits>> = {};
   for (const resource of resources?.games?.[gameId] ?? []) {
     if (isStaminaResource(resource.data)) {
       limits[resource.type] = {

@@ -22,7 +22,7 @@ export function secretsQueryOptions() {
   });
 }
 
-// A type alias (not an interface) so it satisfies Tauri's InvokeArgs via an
+// A type alias, not an interface, so it satisfies Tauri's InvokeArgs via an
 // implicit index signature.
 export type SettingsDraft = {
   config: AppConfig;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { GenshinResource } from "@/modules/games/games.constants";
+import { GenshinResource, type ResourceType } from "@/modules/games/games.constants";
 import { GameId } from "@/modules/games/games.types";
 import {
   fillStaminaWhenDue,
@@ -26,7 +26,7 @@ function cooldown(overrides: Partial<CooldownResource> = {}): CooldownResource {
   return { isReady: false, readyAt: FUTURE, ...overrides };
 }
 
-function resources(type: string, data: StaminaResource | CooldownResource): AllResources {
+function resources(type: ResourceType, data: StaminaResource | CooldownResource): AllResources {
   return { games: { [GameId.GenshinImpact]: [{ type, data }] } };
 }
 

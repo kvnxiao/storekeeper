@@ -10,7 +10,9 @@ const groupStyle = [
   "shadow-sm",
   "ring-1 ring-zinc-950/10 dark:ring-white/10",
   "focus-within:ring-2 focus-within:ring-blue-500",
-  "data-[disabled]:bg-zinc-100 data-[disabled]:ring-zinc-950/5 dark:data-[disabled]:bg-zinc-900",
+  // Native `:disabled` on the input, not Kobalte's data-disabled, so a disabled
+  // <fieldset> ancestor greys the whole field and not only its text.
+  "has-[:disabled]:bg-zinc-100 has-[:disabled]:ring-zinc-950/5 dark:has-[:disabled]:bg-zinc-900",
 ].join(" ");
 
 const inputStyle = [

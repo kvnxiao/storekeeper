@@ -1,3 +1,4 @@
+import type { ResourceType } from "@/modules/games/games.constants";
 import type { GameId } from "@/modules/games/games.types";
 
 /** Stamina resource data (camelCase from Rust) */
@@ -23,7 +24,7 @@ export interface ExpeditionResource {
 
 /** Game resource with tagged type and data */
 export interface GameResource {
-  type: string;
+  type: ResourceType;
   data: StaminaResource | CooldownResource | ExpeditionResource;
 }
 

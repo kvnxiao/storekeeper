@@ -108,6 +108,7 @@
   "daily_claimed": "출석 완료",
   "daily_unclaimed": "미출석",
   "daily_claiming": "출석 중...",
+  "daily_claim_action": "{game} 일일 출석 보상 받기",
 
   "textfield_hide_password": "비밀번호 숨기기",
   "textfield_show_password": "비밀번호 표시"

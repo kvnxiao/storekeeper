@@ -108,6 +108,7 @@
   "daily_claimed": "受取済み",
   "daily_unclaimed": "未受取",
   "daily_claiming": "受取中...",
+  "daily_claim_action": "{game}のデイリー報酬を受け取る",
 
   "textfield_hide_password": "パスワードを隠す",
   "textfield_show_password": "パスワードを表示"

@@ -19,7 +19,7 @@ export const GenshinSection: VoidComponent = () => {
     <GameSection
       sectionId={GameId.GenshinImpact}
       title={m.game_genshin_name()}
-      badge={<DailyClaimBadge gameId={GameId.GenshinImpact} />}
+      badge={<DailyClaimBadge gameId={GameId.GenshinImpact} gameName={m.game_genshin_name()} />}
     >
       <StaminaCard
         iconPath={getResourceIconPath(GenshinResource.Resin)}

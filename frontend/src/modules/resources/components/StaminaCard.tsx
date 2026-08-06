@@ -3,6 +3,7 @@ import { ResourceCard } from "@/modules/resources/components/ResourceCard";
 import { TimeRemaining } from "@/modules/resources/components/TimeRemaining";
 import type { FormattedTime, StaminaResource } from "@/modules/resources/resources.types";
 import { ProgressBar } from "@/modules/ui/components/ProgressBar";
+import { Skeleton } from "@/modules/ui/components/Skeleton";
 import * as m from "@/paraglide/messages";
 
 export interface StaminaCardProps {
@@ -20,11 +21,7 @@ export const StaminaCard: VoidComponent<StaminaCardProps> = (props) => {
       hasData={Boolean(props.data)}
       align="baseline"
       trailing={
-        <Show
-          when={props.data}
-          // h-5 matches text-sm line-height (1.25rem = 20px)
-          fallback={<div class="h-5 w-12 rounded bg-zinc-200 dark:bg-zinc-600" />}
-        >
+        <Show when={props.data} fallback={<Skeleton class="h-5 w-12" />}>
           {(data) => (
             <span class="shrink-0 text-sm tabular-nums text-zinc-950 dark:text-white">
               <span class="font-semibold">{data().current}</span>
@@ -38,9 +35,8 @@ export const StaminaCard: VoidComponent<StaminaCardProps> = (props) => {
         when={props.data}
         fallback={
           <>
-            <div class="mt-1.5 h-1 w-full rounded bg-zinc-200 dark:bg-zinc-600" />
-            {/* h-4 matches text-xs line-height (1rem = 16px) */}
-            <div class="mt-1 h-4 w-24 rounded bg-zinc-200 dark:bg-zinc-600" />
+            <Skeleton class="mt-1.5 h-1 w-full" />
+            <Skeleton class="mt-1 h-4 w-24" />
           </>
         }
       >

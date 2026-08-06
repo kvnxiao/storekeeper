@@ -3,6 +3,7 @@ import { ResourceCard } from "@/modules/resources/components/ResourceCard";
 import { TimeRemaining } from "@/modules/resources/components/TimeRemaining";
 import type { CooldownResource, FormattedTime } from "@/modules/resources/resources.types";
 import { Badge } from "@/modules/ui/components/Badge";
+import { Skeleton } from "@/modules/ui/components/Skeleton";
 import * as m from "@/paraglide/messages";
 
 export interface CooldownCardProps {
@@ -19,10 +20,7 @@ export const CooldownCard: VoidComponent<CooldownCardProps> = (props) => {
       name={props.name}
       hasData={Boolean(props.data)}
       trailing={
-        <Show
-          when={props.data}
-          fallback={<div class="h-5 w-14 rounded-full bg-zinc-200 dark:bg-zinc-600" />}
-        >
+        <Show when={props.data} fallback={<Skeleton class="h-5 w-14 rounded-full" />}>
           {(data) => (
             <Show
               when={!data().isReady}
@@ -40,11 +38,7 @@ export const CooldownCard: VoidComponent<CooldownCardProps> = (props) => {
         </Show>
       }
     >
-      <Show
-        when={props.data}
-        // h-4 matches text-xs line-height (1rem = 16px)
-        fallback={<div class="mt-1 h-4 w-24 rounded bg-zinc-200 dark:bg-zinc-600" />}
-      >
+      <Show when={props.data} fallback={<Skeleton class="mt-1 h-4 w-24" />}>
         {(data) => (
           <div class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
             <Show when={!data().isReady} fallback={m.cooldown_ready()}>

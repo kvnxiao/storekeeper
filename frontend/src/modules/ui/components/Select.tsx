@@ -1,7 +1,7 @@
 import * as SelectPrimitive from "@kobalte/core/select";
 import Check from "lucide-solid/icons/check";
 import ChevronDown from "lucide-solid/icons/chevron-down";
-import { Show, type VoidComponent } from "solid-js";
+import { type JSX, Show } from "solid-js";
 import { fieldStyle, labelStyle } from "@/modules/ui/ui.styles";
 
 // Select trigger button
@@ -34,21 +34,23 @@ const selectItemStyle = [
   "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
 ].join(" ");
 
-export interface SelectOption {
-  id: string;
+export interface SelectOption<T extends string> {
+  id: T;
   label: string;
 }
 
-export interface SelectProps {
+export interface SelectProps<T extends string> {
   label?: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: SelectOption[];
+  value: T;
+  onChange: (value: T) => void;
+  options: SelectOption<T>[];
 }
 
-export const Select: VoidComponent<SelectProps> = (props) => {
+// Generic in the option id so config enums (log level, locale) survive the
+// round trip; a `VoidComponent<Props>` annotation cannot carry a type parameter.
+export const Select = <T extends string>(props: SelectProps<T>): JSX.Element => {
   return (
-    <SelectPrimitive.Root<SelectOption>
+    <SelectPrimitive.Root<SelectOption<T>>
       options={props.options}
       optionValue="id"
       optionTextValue="label"
@@ -77,7 +79,7 @@ export const Select: VoidComponent<SelectProps> = (props) => {
         <SelectPrimitive.Label class={labelStyle}>{props.label}</SelectPrimitive.Label>
       </Show>
       <SelectPrimitive.Trigger class={selectTriggerStyle}>
-        <SelectPrimitive.Value<SelectOption> class="flex-1 truncate text-left">
+        <SelectPrimitive.Value<SelectOption<T>> class="flex-1 truncate text-left">
           {(state) => state.selectedOption().label}
         </SelectPrimitive.Value>
         <SelectPrimitive.Icon>

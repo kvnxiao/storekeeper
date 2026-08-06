@@ -1,5 +1,5 @@
-import { cleanup, render } from "@solidjs/testing-library";
-import { afterEach, describe, expect, it } from "vite-plus/test";
+import { render } from "@solidjs/testing-library";
+import { describe, expect, it } from "vite-plus/test";
 import { ResourceCard } from "@/modules/resources/components/ResourceCard";
 
 function renderCard(hasData: boolean): HTMLElement {
@@ -19,8 +19,6 @@ function renderCard(hasData: boolean): HTMLElement {
 }
 
 describe("ResourceCard", () => {
-  afterEach(cleanup);
-
   it("masks the card while it has no values to show", () => {
     expect(renderCard(false).classList.contains("mask-shimmer")).toBe(true);
   });

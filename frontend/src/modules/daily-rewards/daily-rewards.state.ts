@@ -1,4 +1,12 @@
-import { type Accessor, createEffect, createRoot, getOwner, on, runWithOwner } from "solid-js";
+import {
+  type Accessor,
+  createEffect,
+  createRoot,
+  getOwner,
+  on,
+  onCleanup,
+  runWithOwner,
+} from "solid-js";
 import { refreshDailyRewardStatus } from "@/modules/daily-rewards/daily-rewards.query";
 import { utc8DateString } from "@/modules/daily-rewards/daily-rewards.utils";
 
@@ -9,6 +17,11 @@ export function createDailyRewardsState() {
   const owner = getOwner();
 
   let lastUtc8Date = utc8DateString(Date.now());
+  let pendingRefresh: ReturnType<typeof setTimeout> | undefined;
+
+  // Owned by the module root, not the tick effect: an effect-scoped cleanup
+  // would cancel the pending refresh on the very next tick.
+  onCleanup(() => clearTimeout(pendingRefresh));
 
   function checkReset(): void {
     const currentDate = utc8DateString(Date.now());
@@ -16,7 +29,7 @@ export function createDailyRewardsState() {
       return;
     }
     lastUtc8Date = currentDate;
-    setTimeout(() => {
+    pendingRefresh = setTimeout(() => {
       refreshDailyRewardStatus().catch(console.error);
     }, RESET_PROPAGATION_MS);
   }

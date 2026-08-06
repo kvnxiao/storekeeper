@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from "vite-plus/test";
-import { formatAbsoluteDateTime, formatTimeRemaining } from "@/modules/resources/resources.utils";
+import { GameId } from "@/modules/games/games.types";
+import type { AllResources } from "@/modules/resources/resources.types";
+import {
+  formatAbsoluteDateTime,
+  formatTimeRemaining,
+  getResourceLimitsForGame,
+  isPastDateTime,
+} from "@/modules/resources/resources.utils";
 
 vi.mock("@/paraglide/messages", () => ({
   time_remaining_full: () => "Full",
@@ -19,10 +26,6 @@ function futureIso(now: number, deltaMs: number): string {
 
 const MS = { s: 1_000, m: 60_000, h: 3_600_000, d: 86_400_000 };
 
-// ---------------------------------------------------------------------------
-// "Full" early-return cases - locale-independent
-// ---------------------------------------------------------------------------
-
 describe("formatTimeRemaining - early returns", () => {
   const now = Date.now();
   const fmt = makeDurationFmt("en");
@@ -39,10 +42,6 @@ describe("formatTimeRemaining - early returns", () => {
     expect(formatTimeRemaining(datetime, now, fmt)).toBe("Full");
   });
 });
-
-// ---------------------------------------------------------------------------
-// Duration formatting - parametrized per locale
-// ---------------------------------------------------------------------------
 
 const LOCALE_CONFIGS = [
   {
@@ -166,9 +165,61 @@ describe.each(LOCALE_CONFIGS)("formatTimeRemaining - $locale", ({ locale, expect
   });
 });
 
-// ---------------------------------------------------------------------------
-// formatAbsoluteDateTime
-// ---------------------------------------------------------------------------
+describe("isPastDateTime", () => {
+  const now = Date.now();
+
+  it.each([
+    ["null", null],
+    ["undefined", undefined],
+    ["empty string", ""],
+    ["invalid date string", "not-a-date"],
+  ])("counts %s as past, matching what the countdown renders", (_label, datetime) => {
+    expect(isPastDateTime(datetime, now)).toBe(true);
+  });
+
+  it("counts the exact current instant as past", () => {
+    expect(isPastDateTime(new Date(now).toISOString(), now)).toBe(true);
+  });
+
+  it("is false while the datetime is still ahead", () => {
+    expect(isPastDateTime(futureIso(now, MS.m), now)).toBe(false);
+  });
+});
+
+// Resource types are spelled out rather than imported from games.constants,
+// which builds its display-name table from the message module this file mocks.
+describe("getResourceLimitsForGame", () => {
+  const resources: AllResources = {
+    games: {
+      [GameId.GenshinImpact]: [
+        {
+          type: "resin",
+          data: { current: 100, max: 200, fullAt: "", regenRateSeconds: 480 },
+        },
+        {
+          type: "parametric_transformer",
+          data: { isReady: false, readyAt: "" },
+        },
+      ],
+    },
+  };
+
+  it("reports max and regen rate for stamina resources", () => {
+    expect(getResourceLimitsForGame(resources, GameId.GenshinImpact)).toEqual({
+      resin: { maxValue: 200, regenRateSeconds: 480 },
+    });
+  });
+
+  it("skips resources that carry no value ceiling", () => {
+    const limits = getResourceLimitsForGame(resources, GameId.GenshinImpact);
+    expect(limits.parametric_transformer).toBeUndefined();
+  });
+
+  it("is empty for a game with no snapshot yet", () => {
+    expect(getResourceLimitsForGame(undefined, GameId.GenshinImpact)).toEqual({});
+    expect(getResourceLimitsForGame(resources, GameId.HonkaiStarRail)).toEqual({});
+  });
+});
 
 describe("formatAbsoluteDateTime", () => {
   const now = Date.now();

@@ -1,9 +1,5 @@
 import * as m from "@/paraglide/messages";
 
-// =============================================================================
-// Resource type constants per game
-// =============================================================================
-
 export const GenshinResource = {
   Resin: "resin",
   ParametricTransformer: "parametric_transformer",

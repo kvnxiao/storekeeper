@@ -2,6 +2,11 @@
 @import "@fontsource-variable/inter";
 @import "@fontsource-variable/geist-mono";
 
+/* Tests assert on class names, and a utility written out in an assertion would
+   otherwise be generated into the shipped stylesheet. Every class the app really
+   uses comes from a component source, which is still scanned. */
+@source not "./**/*.test.{ts,tsx}";
+
 /* Semantic color tokens (light mode) - zinc scale */
 :root {
   --background: oklch(1 0 0); /* white */

@@ -3,7 +3,7 @@ import type { ResourceType } from "@/modules/games/games.constants";
 import type { GameId } from "@/modules/games/games.types";
 import type { ResourceLimits } from "@/modules/resources/resources.types";
 import { NotificationSection } from "@/modules/settings/components/NotificationSection";
-import { Section } from "@/modules/settings/components/Section";
+import { SettingsCard } from "@/modules/settings/components/SettingsCard";
 import type { HoyolabGameConfig } from "@/modules/settings/settings.types";
 import { Switch } from "@/modules/ui/components/Switch";
 import { TextField } from "@/modules/ui/components/TextField";
@@ -15,7 +15,7 @@ export interface HoyolabGameSectionProps {
   gameId: GameId;
   resourceTypes: readonly ResourceType[];
   config: HoyolabGameConfig | undefined;
-  resourceLimits?: Partial<Record<string, ResourceLimits>>;
+  resourceLimits?: Partial<Record<ResourceType, ResourceLimits>>;
   onChange: (config: HoyolabGameConfig) => void;
 }
 
@@ -30,7 +30,7 @@ export const HoyolabGameSection: VoidComponent<HoyolabGameSectionProps> = (props
   });
 
   return (
-    <Section title={props.title} description={props.description}>
+    <SettingsCard title={props.title} description={props.description}>
       <Switch
         checked={current().enabled}
         onChange={(checked) => props.onChange({ ...current(), enabled: checked })}
@@ -60,6 +60,6 @@ export const HoyolabGameSection: VoidComponent<HoyolabGameSectionProps> = (props
           onChange={(notifications) => props.onChange({ ...current(), notifications })}
         />
       </Show>
-    </Section>
+    </SettingsCard>
   );
 };

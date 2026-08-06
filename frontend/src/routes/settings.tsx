@@ -3,15 +3,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/solid-query";
 import { createFileRoute } from "@tanstack/solid-router";
 import ArrowLeft from "lucide-solid/icons/arrow-left";
 import CircleAlert from "lucide-solid/icons/circle-alert";
-import { For, Show, type VoidComponent } from "solid-js";
-import {
-  GenshinResource,
-  HsrResource,
-  type ResourceType,
-  ZzzResource,
-} from "@/modules/games/games.constants";
-import { GameId } from "@/modules/games/games.types";
+import { createMemo, For, Show, type VoidComponent } from "solid-js";
+import type { ResourceType } from "@/modules/games/games.constants";
+import { GAMES } from "@/modules/games/games.registry";
+import type { GameId } from "@/modules/games/games.types";
 import { resourcesQueryOptions } from "@/modules/resources/resources.query";
+import type { ResourceLimits } from "@/modules/resources/resources.types";
 import { getResourceLimitsForGame } from "@/modules/resources/resources.utils";
 import { GeneralSection } from "@/modules/settings/components/GeneralSection";
 import { HoyolabGameSection } from "@/modules/settings/components/HoyolabGameSection";
@@ -24,7 +21,7 @@ import {
   saveSettingsMutationOptions,
   secretsQueryOptions,
 } from "@/modules/settings/settings.query";
-import type { AppConfig, HoyolabConfigKey, SecretsConfig } from "@/modules/settings/settings.types";
+import type { AppConfig, SecretsConfig } from "@/modules/settings/settings.types";
 import { Button } from "@/modules/ui/components/Button";
 import { ButtonLink } from "@/modules/ui/components/ButtonLink";
 import { ErrorBanner } from "@/modules/ui/components/ErrorBanner";
@@ -32,44 +29,6 @@ import { Tooltip } from "@/modules/ui/components/Tooltip";
 import { cn } from "@/modules/ui/ui.styles";
 import { setViewTransitionDirection } from "@/modules/ui/ui.utils";
 import * as m from "@/paraglide/messages";
-
-// =============================================================================
-// HoYoLab game configuration metadata
-// =============================================================================
-
-const HOYOLAB_GAMES: {
-  gameId: GameId;
-  configKey: HoyolabConfigKey;
-  title: () => string;
-  description: () => string;
-  resourceTypes: readonly ResourceType[];
-}[] = [
-  {
-    gameId: GameId.GenshinImpact,
-    configKey: "genshin_impact",
-    title: m.game_genshin_name,
-    description: m.settings_game_configure_genshin,
-    resourceTypes: Object.values(GenshinResource),
-  },
-  {
-    gameId: GameId.HonkaiStarRail,
-    configKey: "honkai_star_rail",
-    title: m.game_hsr_name,
-    description: m.settings_game_configure_hsr,
-    resourceTypes: Object.values(HsrResource),
-  },
-  {
-    gameId: GameId.ZenlessZoneZero,
-    configKey: "zenless_zone_zero",
-    title: m.game_zzz_name,
-    description: m.settings_game_configure_zzz,
-    resourceTypes: Object.values(ZzzResource),
-  },
-];
-
-// =============================================================================
-// Settings Form
-// =============================================================================
 
 interface SettingsFormProps {
   config: AppConfig;
@@ -98,11 +57,16 @@ const SettingsForm: VoidComponent<SettingsFormProps> = (props) => {
   const saveError = () =>
     save.error ? m.settings_failed_to_save({ error: String(save.error) }) : null;
 
-  const resourceLimits = (gameId: GameId) => getResourceLimitsForGame(resourcesQuery.data, gameId);
+  const resourceLimits = createMemo(() => {
+    const limits = new Map<GameId, Partial<Record<ResourceType, ResourceLimits>>>();
+    for (const game of GAMES) {
+      limits.set(game.gameId, getResourceLimitsForGame(resourcesQuery.data, game.gameId));
+    }
+    return limits;
+  });
 
   return (
     <div class="min-h-screen p-4 pb-20">
-      {/* Header */}
       <header class="mb-6 flex items-center">
         <div class="flex items-center gap-3">
           <ButtonLink
@@ -117,7 +81,6 @@ const SettingsForm: VoidComponent<SettingsFormProps> = (props) => {
         </div>
       </header>
 
-      {/* Error display */}
       <Show when={saveError()}>{(error) => <ErrorBanner class="mb-4">{error()}</ErrorBanner>}</Show>
 
       <form
@@ -126,9 +89,8 @@ const SettingsForm: VoidComponent<SettingsFormProps> = (props) => {
           void form.handleSubmit();
         }}
       >
-        {/* Settings sections. Disabled while a save is in flight so edits can't
-            land between submit and the post-save formApi.reset(value), which
-            would silently revert them. */}
+        {/* Disabled while a save is in flight so edits can't land between submit
+            and the post-save formApi.reset(value), which would revert them. */}
         <fieldset class="min-w-0 space-y-6" disabled={save.isPending}>
           <form.Field name="config.general">
             {(field) => (
@@ -139,33 +101,42 @@ const SettingsForm: VoidComponent<SettingsFormProps> = (props) => {
             )}
           </form.Field>
 
-          <For each={HOYOLAB_GAMES}>
-            {(game) => (
-              <form.Field name={`config.games.${game.configKey}`}>
-                {(field) => (
-                  <HoyolabGameSection
-                    title={game.title()}
-                    description={game.description()}
-                    gameId={game.gameId}
-                    resourceTypes={game.resourceTypes}
-                    config={field().state.value}
-                    resourceLimits={resourceLimits(game.gameId)}
-                    onChange={(value) => field().handleChange(value)}
-                  />
-                )}
-              </form.Field>
-            )}
+          {/* Two form.Field branches rather than one over the union: the field's
+              value type follows configKey, so a single field would widen it past
+              what either section component accepts. */}
+          <For each={GAMES}>
+            {(game) =>
+              game.provider === "hoyolab" ? (
+                <form.Field name={`config.games.${game.configKey}`}>
+                  {(field) => (
+                    <HoyolabGameSection
+                      title={game.name()}
+                      description={game.description()}
+                      gameId={game.gameId}
+                      resourceTypes={game.resourceTypes}
+                      config={field().state.value}
+                      resourceLimits={resourceLimits().get(game.gameId)}
+                      onChange={(value) => field().handleChange(value)}
+                    />
+                  )}
+                </form.Field>
+              ) : (
+                <form.Field name={`config.games.${game.configKey}`}>
+                  {(field) => (
+                    <WuwaGameSection
+                      title={game.name()}
+                      description={game.description()}
+                      gameId={game.gameId}
+                      resourceTypes={game.resourceTypes}
+                      config={field().state.value}
+                      resourceLimits={resourceLimits().get(game.gameId)}
+                      onChange={(wuwa) => field().handleChange(wuwa)}
+                    />
+                  )}
+                </form.Field>
+              )
+            }
           </For>
-
-          <form.Field name="config.games.wuthering_waves">
-            {(field) => (
-              <WuwaGameSection
-                config={field().state.value}
-                resourceLimits={resourceLimits(GameId.WutheringWaves)}
-                onChange={(wuwa) => field().handleChange(wuwa)}
-              />
-            )}
-          </form.Field>
 
           <form.Field name="secrets.hoyolab">
             {(field) => (
@@ -186,7 +157,6 @@ const SettingsForm: VoidComponent<SettingsFormProps> = (props) => {
           </form.Field>
         </fieldset>
 
-        {/* Floating action bar */}
         <div
           class={cn(
             "fixed bottom-0 left-0 right-0 z-50 border-t border-zinc-950/10 bg-white/80 px-4 py-3 backdrop-blur-lg dark:border-white/10 dark:bg-zinc-900/80",
@@ -217,10 +187,6 @@ const SettingsForm: VoidComponent<SettingsFormProps> = (props) => {
     </div>
   );
 };
-
-// =============================================================================
-// Settings Page Component
-// =============================================================================
 
 const SettingsPage: VoidComponent = () => {
   const configQuery = useQuery(() => configQueryOptions());

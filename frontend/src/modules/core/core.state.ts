@@ -10,15 +10,13 @@ import { resourcesState } from "@/modules/resources/resources.state";
 import type { AllResources, GameResourcePayload } from "@/modules/resources/resources.types";
 import { getLocale, isLocale, setLocale } from "@/paraglide/runtime";
 
-// =============================================================================
-// Core state module
-// =============================================================================
+/**
+ * How long the first paint waits on the backend locale before giving up and
+ * rendering in whatever locale Paraglide restored.
+ */
+const LOCALE_RESOLVE_TIMEOUT_MS = 3_000;
 
 function createCore() {
-  // ---------------------------------------------------------------------------
-  // Locale + Intl formatters
-  // ---------------------------------------------------------------------------
-
   const [locale, setLocaleSignal] = createSignal<string>(getLocale());
 
   const [localeReady, setLocaleReady] = createSignal(false);
@@ -56,10 +54,6 @@ function createCore() {
     setLocaleSignal(next);
   }
 
-  // ---------------------------------------------------------------------------
-  // Tick system - updates every minute for real-time countdown display
-  // ---------------------------------------------------------------------------
-
   const [tickVersion, setTickVersion] = createSignal(0);
 
   let tickInterval: ReturnType<typeof setInterval> | undefined;
@@ -89,12 +83,9 @@ function createCore() {
     startTickInterval();
   }
 
-  // ---------------------------------------------------------------------------
-  // Initialization - backend event listeners live for the app's lifetime
-  // ---------------------------------------------------------------------------
-
   let initialized = false;
 
+  /** Starts the tick and the backend listeners, which live for the app's lifetime. */
   function init(): void {
     if (initialized) {
       return;
@@ -132,12 +123,17 @@ function createCore() {
     dailyRewardsState.init(tick);
 
     // Sync Paraglide locale from backend config on startup. Views wait on
-    // localeReady so the first render already uses the resolved locale; a
-    // failure here still releases them, on whatever locale Paraglide restored.
+    // localeReady so the first render already uses the resolved locale. The
+    // timeout is what keeps a command that never settles from leaving the
+    // window permanently blank; a rejection releases the views the same way.
+    const releaseOnTimeout = setTimeout(() => setLocaleReady(true), LOCALE_RESOLVE_TIMEOUT_MS);
     void invoke<string>("get_effective_locale")
       .then((effectiveLocale) => setAppLocale(effectiveLocale))
       .catch(console.error)
-      .finally(() => setLocaleReady(true));
+      .finally(() => {
+        clearTimeout(releaseOnTimeout);
+        setLocaleReady(true);
+      });
   }
 
   return {

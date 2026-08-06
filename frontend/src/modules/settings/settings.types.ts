@@ -1,15 +1,23 @@
-import type { WuwaResourceType } from "@/modules/games/games.constants";
+/**
+ * Hand-mirrored `AppConfig`/`SecretsConfig` from `storekeeper-core`. Field names
+ * stay snake_case end to end so Rust serializes straight into these shapes with
+ * no DTO layer (see `docs/architecture/04-data-flow.md`).
+ */
 
-// =============================================================================
-// Configuration Types (matching Rust AppConfig - snake_case)
-// =============================================================================
+import type { ResourceType } from "@/modules/games/games.constants";
+import type { Locale } from "@/modules/i18n/i18n.constants";
+
+/** Log levels the backend documents in the generated config.toml. */
+export const LOG_LEVELS = ["error", "warn", "info", "debug", "trace"] as const;
+
+export type LogLevel = (typeof LOG_LEVELS)[number];
 
 /** General application settings */
 export interface GeneralConfig {
   poll_interval_secs: number;
   start_minimized: boolean;
-  log_level: string;
-  language: string | null;
+  log_level: LogLevel;
+  language: Locale | null;
   autostart: boolean;
 }
 
@@ -29,7 +37,7 @@ export interface HoyolabGameConfig {
   tracked_resources?: string[];
   auto_claim_daily_rewards: boolean;
   auto_claim_time?: string;
-  notifications?: Partial<Record<string, ResourceNotificationConfig>>;
+  notifications?: Partial<Record<ResourceType, ResourceNotificationConfig>>;
 }
 
 /** Wuthering Waves configuration */
@@ -38,7 +46,7 @@ export interface WuwaConfig {
   uid: string;
   region?: string;
   tracked_resources?: string[];
-  notifications?: Partial<Record<WuwaResourceType, ResourceNotificationConfig>>;
+  notifications?: Partial<Record<ResourceType, ResourceNotificationConfig>>;
 }
 
 /** Per-game configuration */
@@ -58,10 +66,6 @@ export interface AppConfig {
   games: GamesConfig;
 }
 
-// =============================================================================
-// Secrets Types (matching Rust SecretsConfig - snake_case)
-// =============================================================================
-
 /** HoYoLab authentication secrets */
 export interface HoyolabSecrets {
   ltuid_v2: string;
@@ -79,10 +83,6 @@ export interface SecretsConfig {
   hoyolab: HoyolabSecrets;
   kuro: KuroSecrets;
 }
-
-// =============================================================================
-// Command Result Types
-// =============================================================================
 
 /** Result returned by the save_and_apply command */
 export interface SaveResult {

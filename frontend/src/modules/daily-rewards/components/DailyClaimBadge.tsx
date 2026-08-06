@@ -8,6 +8,8 @@ import * as m from "@/paraglide/messages";
 
 export interface DailyClaimBadgeProps {
   gameId: GameId;
+  /** Localized name, for the claim button's accessible name. */
+  gameName: string;
 }
 
 /** Daily-reward claim status for a game; unclaimed is clickable to claim. */
@@ -27,6 +29,9 @@ export const DailyClaimBadge: VoidComponent<DailyClaimBadgeProps> = (props) => {
             onClick={() => claim.mutate(props.gameId)}
           >
             <Badge variant="warning">{m.daily_unclaimed()}</Badge>
+            {/* Appended rather than set as aria-label so the accessible name
+                still contains the visible text (WCAG 2.5.3). */}
+            <span class="sr-only">{m.daily_claim_action({ game: props.gameName })}</span>
           </button>
         }
       >

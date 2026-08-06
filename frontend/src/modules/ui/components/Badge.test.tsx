@@ -3,15 +3,19 @@ import { describe, expect, it } from "vite-plus/test";
 import { Badge } from "@/modules/ui/components/Badge";
 
 describe("Badge", () => {
-  it("renders children in a styled span", () => {
+  it("renders children in a span", () => {
     render(() => <Badge variant="success">Claimed</Badge>);
-    const badge = screen.getByText("Claimed");
-    expect(badge.tagName).toBe("SPAN");
-    expect(badge.className).toContain("inline-flex");
+    expect(screen.getByText("Claimed").tagName).toBe("SPAN");
   });
 
-  it("applies the default variant when none is given", () => {
-    render(() => <Badge>Status</Badge>);
-    expect(screen.getByText("Status").className).toContain("bg-zinc-600/10");
+  it("styles variants differently from the default", () => {
+    render(() => (
+      <>
+        <Badge>Status</Badge>
+        <Badge variant="success">Claimed</Badge>
+      </>
+    ));
+
+    expect(screen.getByText("Status").className).not.toBe(screen.getByText("Claimed").className);
   });
 });

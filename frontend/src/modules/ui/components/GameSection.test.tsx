@@ -1,5 +1,5 @@
 import { cleanup, render } from "@solidjs/testing-library";
-import { afterEach, describe, expect, it } from "vite-plus/test";
+import { describe, expect, it } from "vite-plus/test";
 import { GameSection } from "@/modules/ui/components/GameSection";
 
 function renderSection(): { root: HTMLElement; trigger: HTMLElement } {
@@ -17,8 +17,6 @@ function renderSection(): { root: HTMLElement; trigger: HTMLElement } {
 }
 
 describe("GameSection", () => {
-  afterEach(cleanup);
-
   it("starts expanded", () => {
     expect(renderSection().root.dataset.expanded).toBe("");
   });

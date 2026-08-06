@@ -13,9 +13,9 @@ import * as m from "@/paraglide/messages";
 export interface NotificationSectionProps {
   gameId: GameId;
   resourceTypes: readonly ResourceType[];
-  notifications: Partial<Record<string, ResourceNotificationConfig>> | undefined;
-  resourceLimits?: Partial<Record<string, ResourceLimits>>;
-  onChange: (notifications: Partial<Record<string, ResourceNotificationConfig>>) => void;
+  notifications: Partial<Record<ResourceType, ResourceNotificationConfig>> | undefined;
+  resourceLimits?: Partial<Record<ResourceType, ResourceLimits>>;
+  onChange: (notifications: Partial<Record<ResourceType, ResourceNotificationConfig>>) => void;
 }
 
 export const NotificationSection: VoidComponent<NotificationSectionProps> = (props) => {

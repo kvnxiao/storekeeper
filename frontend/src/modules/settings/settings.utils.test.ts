@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vite-plus/test";
-import type { ResourceNotificationConfig } from "@/modules/settings/settings.types";
+import { GameId } from "@/modules/games/games.types";
+import type { AppConfig, ResourceNotificationConfig } from "@/modules/settings/settings.types";
 import {
   DEFAULT_NOTIFICATION_CONFIG,
+  enabledGamesFromConfig,
   enabledNotificationConfig,
   getNotifyMode,
   withNotifyAtValue,
@@ -15,6 +17,41 @@ const base: ResourceNotificationConfig = {
   notify_at_value: null,
   cooldown_minutes: 15,
 };
+
+function config(games: AppConfig["games"]): AppConfig {
+  return {
+    general: {
+      poll_interval_secs: 600,
+      start_minimized: false,
+      log_level: "info",
+      language: null,
+      autostart: false,
+    },
+    games,
+  };
+}
+
+describe("enabledGamesFromConfig", () => {
+  it("is empty while the config has not loaded", () => {
+    expect(enabledGamesFromConfig(undefined).size).toBe(0);
+  });
+
+  it("returns only the games whose config is enabled", () => {
+    const enabled = enabledGamesFromConfig(
+      config({
+        genshin_impact: { enabled: true, uid: "1", auto_claim_daily_rewards: false },
+        honkai_star_rail: { enabled: false, uid: "2", auto_claim_daily_rewards: false },
+        wuthering_waves: { enabled: true, uid: "3" },
+      }),
+    );
+
+    expect([...enabled]).toEqual([GameId.GenshinImpact, GameId.WutheringWaves]);
+  });
+
+  it("treats a game missing from the config as disabled", () => {
+    expect(enabledGamesFromConfig(config({})).size).toBe(0);
+  });
+});
 
 describe("getNotifyMode", () => {
   it("is value when notify_at_value is set", () => {

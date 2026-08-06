@@ -1,27 +1,13 @@
-import { GameId } from "@/modules/games/games.types";
-import type {
-  AppConfig,
-  GamesConfig,
-  ResourceNotificationConfig,
-} from "@/modules/settings/settings.types";
-
-const GAME_CONFIG_KEYS: [GameId, keyof GamesConfig][] = [
-  [GameId.GenshinImpact, "genshin_impact"],
-  [GameId.HonkaiStarRail, "honkai_star_rail"],
-  [GameId.ZenlessZoneZero, "zenless_zone_zero"],
-  [GameId.WutheringWaves, "wuthering_waves"],
-];
+import { GAMES } from "@/modules/games/games.registry";
+import type { GameId } from "@/modules/games/games.types";
+import type { AppConfig, ResourceNotificationConfig } from "@/modules/settings/settings.types";
 
 /** Returns the set of games enabled in config; empty while config is unloaded. */
 export function enabledGamesFromConfig(config: AppConfig | undefined): Set<GameId> {
-  return new Set<GameId>(
-    GAME_CONFIG_KEYS.filter(([, key]) => config?.games[key]?.enabled).map(([id]) => id),
+  return new Set(
+    GAMES.filter((game) => config?.games[game.configKey]?.enabled).map((game) => game.gameId),
   );
 }
-
-// =============================================================================
-// Resource notification contract (mirrors backend threshold semantics)
-// =============================================================================
 
 export type NotifyMode = "minutes" | "value";
 
@@ -36,15 +22,15 @@ export function getNotifyMode(config: ResourceNotificationConfig): NotifyMode {
 }
 
 /**
- * Returns the enabled config for a resource. Cooldown resources must carry
- * null threshold fields so the backend notifies on completion.
+ * Returns the enabled config for a resource, clearing both thresholds for
+ * cooldown resources so the backend notifies on completion instead.
  */
 export function enabledNotificationConfig(
   config: ResourceNotificationConfig | undefined,
   isStaminaResource: boolean,
 ): ResourceNotificationConfig {
   if (!config) {
-    return DEFAULT_NOTIFICATION_CONFIG;
+    return { ...DEFAULT_NOTIFICATION_CONFIG };
   }
   if (isStaminaResource) {
     return { ...config, enabled: true };

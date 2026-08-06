@@ -1,5 +1,5 @@
 import type { VoidComponent } from "solid-js";
-import { Section } from "@/modules/settings/components/Section";
+import { SettingsCard } from "@/modules/settings/components/SettingsCard";
 import type { HoyolabSecrets } from "@/modules/settings/settings.types";
 import { TextField } from "@/modules/ui/components/TextField";
 import * as m from "@/paraglide/messages";
@@ -11,7 +11,7 @@ export interface HoyolabSecretsSectionProps {
 
 export const HoyolabSecretsSection: VoidComponent<HoyolabSecretsSectionProps> = (props) => {
   return (
-    <Section title={m.settings_hoyolab_title()} description={m.settings_hoyolab_description()}>
+    <SettingsCard title={m.settings_hoyolab_title()} description={m.settings_hoyolab_description()}>
       <TextField
         label="ltuid_v2"
         type="password"
@@ -48,6 +48,6 @@ export const HoyolabSecretsSection: VoidComponent<HoyolabSecretsSectionProps> = 
         }
         placeholder={m.settings_hoyolab_ltmid_placeholder()}
       />
-    </Section>
+    </SettingsCard>
   );
 };

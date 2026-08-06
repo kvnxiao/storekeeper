@@ -1,26 +1,30 @@
 import type { VoidComponent } from "solid-js";
-import { LOCALE_ENDONYMS } from "@/modules/i18n/i18n.constants";
-import { Section } from "@/modules/settings/components/Section";
+import { type Locale, LOCALE_ENDONYMS } from "@/modules/i18n/i18n.constants";
+import { SettingsCard } from "@/modules/settings/components/SettingsCard";
 import { openConfigFolder } from "@/modules/settings/settings.query";
-import type { GeneralConfig } from "@/modules/settings/settings.types";
+import type { GeneralConfig, LogLevel } from "@/modules/settings/settings.types";
 import { Button } from "@/modules/ui/components/Button";
 import { NumberField } from "@/modules/ui/components/NumberField";
-import { Select } from "@/modules/ui/components/Select";
+import { Select, type SelectOption } from "@/modules/ui/components/Select";
 import { Switch } from "@/modules/ui/components/Switch";
 import * as m from "@/paraglide/messages";
+import { locales } from "@/paraglide/runtime";
 
 export interface GeneralSectionProps {
   config: GeneralConfig;
   onChange: (config: GeneralConfig) => void;
 }
 
+/** Sentinel for "follow the system locale", which persists as a null language. */
+const SYSTEM_LOCALE = "auto";
+
 // Evaluated at call time so labels follow the active locale
-const languageOptions = () => [
-  { id: "auto", label: m.settings_general_language_system_default() },
-  ...Object.entries(LOCALE_ENDONYMS).map(([code, name]) => ({ id: code, label: name })),
+const languageOptions = (): SelectOption<Locale | typeof SYSTEM_LOCALE>[] => [
+  { id: SYSTEM_LOCALE, label: m.settings_general_language_system_default() },
+  ...locales.map((code) => ({ id: code, label: LOCALE_ENDONYMS[code] })),
 ];
 
-const logLevelOptions = () => [
+const logLevelOptions = (): SelectOption<LogLevel>[] => [
   { id: "error", label: m.settings_general_log_error() },
   { id: "warn", label: m.settings_general_log_warning() },
   { id: "info", label: m.settings_general_log_info() },
@@ -30,7 +34,7 @@ const logLevelOptions = () => [
 
 export const GeneralSection: VoidComponent<GeneralSectionProps> = (props) => {
   return (
-    <Section title={m.settings_general_title()} description={m.settings_general_description()}>
+    <SettingsCard title={m.settings_general_title()} description={m.settings_general_description()}>
       <NumberField
         label={m.settings_general_poll_interval()}
         description={m.settings_general_poll_description()}
@@ -69,11 +73,11 @@ export const GeneralSection: VoidComponent<GeneralSectionProps> = (props) => {
       </Switch>
       <Select
         label={m.settings_general_language()}
-        value={props.config.language ?? "auto"}
+        value={props.config.language ?? SYSTEM_LOCALE}
         onChange={(value) =>
           props.onChange({
             ...props.config,
-            language: value === "auto" ? null : value,
+            language: value === SYSTEM_LOCALE ? null : value,
           })
         }
         options={languageOptions()}
@@ -92,6 +96,6 @@ export const GeneralSection: VoidComponent<GeneralSectionProps> = (props) => {
       <Button color="light" onClick={() => openConfigFolder()}>
         {m.settings_general_open_config()}
       </Button>
-    </Section>
+    </SettingsCard>
   );
 };
