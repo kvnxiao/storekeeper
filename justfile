@@ -37,7 +37,9 @@ upgrade-deps:
     cargo update
     cd frontend && vp update
 
+# `vp migrate` re-pins vite-plus, the vite alias, and the bundled vitest to the
+# CLI's release. Updating those packages by hand desynchronises the set.
 upgrade-vp:
     vp upgrade
-    cd frontend && vp update vite-plus @voidzero-dev/vite-plus-core @voidzero-dev/vite-plus-test
+    cd frontend && vp migrate
 
