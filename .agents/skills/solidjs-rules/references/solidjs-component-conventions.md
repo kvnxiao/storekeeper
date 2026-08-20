@@ -1,22 +1,17 @@
 ---
 paths: **/*.{tsx,jsx}
-description: "House conventions for SolidJS component files; one exported component per file, typed Component const declarations from solid-js, and <ComponentName>Props naming."
+description: "Component-file conventions for SolidJS; one exported component per file, typed Component const declarations from solid-js, and <ComponentName>Props naming."
 ---
 
 # Component Conventions
 
-House standards for component files. Framework mechanics (props reactivity, children, component types) live in the other rules; these conventions govern how components are declared and organized.
+These standards govern component files. Framework mechanics (props reactivity, children, and component types) live in the other rules.
 
-## One Exported Component Per File
+## One Exported Component Per File (Default)
 
-Each `.tsx`/`.jsx` file exports at most one component. Unexported helper subcomponents may live in the same file; the moment one is needed elsewhere, move it to its own file instead of exporting a second component.
+Default to one exported component per `.tsx` or `.jsx` file. Keep private helpers beside the exported component, and move independently reusable components to their own files. Export tightly coupled component families or compound components together when their shared contract is clearer in one module.
 
 ```tsx
-// Bad: two exported components in one file
-export const UserCard: Component<UserCardProps> = (props) => { /* … */ };
-export const UserAvatar: Component<UserAvatarProps> = (props) => { /* … */ };
-
-// Good: UserAvatar.tsx exports only UserAvatar; helpers stay private
 interface InitialsProps {
   initials: string;
 }
@@ -29,20 +24,16 @@ export interface UserAvatarProps {
   user: User;
 }
 
-export const UserAvatar: Component<UserAvatarProps> = (props) => { /* … */ };
+export const UserAvatar: Component<UserAvatarProps> = (props) => (
+  <img alt={props.user.name} src={props.user.avatarUrl} />
+);
 ```
 
-## Declare Components as Typed Consts
+## Declare Components as Typed Consts (Default)
 
-Declare components as `const PascalCase: Component<Props> = (props) => …` using the component types from `"solid-js"`, not as plain function declarations. A `const PascalCase: Component<…>` (or `ParentComponent<…>`) is immediately recognizable as a component when scanning a file, where a `function` declaration reads like any other function until you find its JSX. The annotation also states the children contract explicitly: `Component` for none expected, `ParentComponent` for optional children, `VoidComponent` to forbid them (see the TypeScript rules).
+Default to `const PascalCase: Component<Props> = (props) => …` when the Solid component type communicates the children contract. Use a function declaration when hoisting improves module structure or when TypeScript needs a generic component signature that `Component<Props>` cannot express cleanly.
 
 ```tsx
-// Bad: reads like a regular function; children contract unstated
-export function UserCard(props: UserCardProps) {
-  return <div class="card">{props.user.name}</div>;
-}
-
-// Good
 import type { Component } from "solid-js";
 
 export interface UserCardProps {
@@ -52,23 +43,27 @@ export interface UserCardProps {
 export const UserCard: Component<UserCardProps> = (props) => (
   <div class="card">{props.user.name}</div>
 );
+
+export function Select<T>(props: SelectProps<T>) {
+  return <For each={props.options}>{props.children}</For>;
+}
 ```
 
-## Name Props `<ComponentName>Props`
+## Name Props `<ComponentName>Props` (Default)
 
-The props type is the component name in PascalCase suffixed with `Props`, whether declared as an interface or a type alias. Generic names hide which component a type belongs to and collide when files merge.
+A component-owned contract defaults to `<ComponentName>Props`. When several components share a domain contract, the shared type uses the domain name instead of repeating the shape under component-specific names. Generic names such as `Props` lose context when imported or moved.
 
 ```tsx
-// Bad
-interface Props {
-  user: User;
-}
-type CardData = { user: User };
-
-// Good
 interface UserCardProps {
   user: User;
 }
 
-export const UserCard: Component<UserCardProps> = (props) => { /* … */ };
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
+export const UserCard: Component<UserCardProps> = (props) => (
+  <article>{props.user.name}</article>
+);
 ```

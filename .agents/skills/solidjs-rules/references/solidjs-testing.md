@@ -5,25 +5,27 @@ description: "SolidJS testing rules; vitest + @solidjs/testing-library stack, re
 
 # Testing
 
-## Blessed Stack
+## Recommended Stack (Default)
 
-Use `vitest` + `jsdom` + `@solidjs/testing-library` + `@testing-library/user-event` + `@testing-library/jest-dom`. `vite-plugin-solid` ≥ 2.8.2 configures vitest for Solid automatically; if `solid-js` loads twice (symptoms: "dispose is undefined", router failing to load), fix `resolve.conditions`/dep inlining rather than working around it in tests.
+Default to `vitest`, `jsdom`, `@solidjs/testing-library`, `@testing-library/user-event`, and `@testing-library/jest-dom`. Use an existing compatible test stack when migration cost outweighs consistency. `vite-plugin-solid` configures Vitest for Solid; if `solid-js` loads twice, correct `resolve.conditions` or dependency inlining.
 
-## `render` Takes a Function
+## `render` Takes a Function (Required)
 
 The thunk preserves Solid's ownership and reactive root. Cleanup is automatic per test.
 
 ```tsx
-// Bad
 render(<Counter />);
+```
 
-// Good
+Pass a render function to create the ownership root:
+
+```tsx
 const { getByRole } = render(() => <Counter />);
 ```
 
-## Test Behavior, Not Implementation
+## Test Behavior, Not Implementation (Default)
 
-Query the DOM the way assistive technology does: by role and accessible name, not test IDs or CSS classes. Drive interaction through `user-event`. Do not assert on signal internals.
+Default DOM queries to roles and accessible names, and drive interaction through `user-event`. Use a test ID when the element has no accessible semantic or stable visible text. Assert on behavior instead of signal internals.
 
 ```tsx
 const user = userEvent.setup();
@@ -34,15 +36,13 @@ await user.click(button);
 expect(screen.getByText("Count: 1")).toBeInTheDocument();
 ```
 
-## Providers via `wrapper`, Routes via a Memory Router
+## Providers via `wrapper`, Routes via a Memory Router (Default)
 
 ```tsx
 render(() => <Profile />, {
   wrapper: (props) => <AuthProvider>{props.children}</AuthProvider>,
 });
 
-// TanStack Router: render a real router over memory history; routing is
-// async, so the first query must be an async findBy*
 import { RouterProvider, createMemoryHistory, createRouter } from "@tanstack/solid-router";
 
 const router = createRouter({
@@ -56,18 +56,18 @@ await screen.findByRole("heading");
 
 The testing library's `location` render option is `@solidjs/router`-only and does not apply to this stack.
 
-## `renderHook` for Primitives
+## `renderHook` for Primitives (Default)
 
-Test custom primitives without a host component.
+Default custom primitives to `renderHook` when they do not need host DOM or provider behavior.
 
 ```tsx
 const { result, cleanup } = renderHook(useCounter, { initialProps: [5] });
 expect(result.count()).toBe(5);
 ```
 
-## `testEffect` for Reactive Assertions
+## `testEffect` for Reactive Assertions (Default)
 
-Asserting "signal change causes X" races the scheduler if done inline. `testEffect` runs assertions inside an effect and resolves when `done()` is called.
+When an assertion depends on a scheduled reactive update, use `testEffect` to run it inside an effect and resolve through `done()`.
 
 ```tsx
 await testEffect((done) =>

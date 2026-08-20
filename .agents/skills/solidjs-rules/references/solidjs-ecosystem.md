@@ -1,63 +1,64 @@
 ---
 paths: **/*.{ts,tsx,js,jsx}
-description: "Blessed SolidJS 1.x library stack; the TanStack Solid adapters, stable-line version pinning against Solid 2.0 betas, solid-ui vendored components on Kobalte + corvu, Paraglide JS i18n, and cross-cutting adapter conventions."
+description: "SolidJS 1.x ecosystem policy; compatibility boundaries, stable-first TanStack and UI preferences, adapter reactivity, Paraglide JS, and store distinctions."
 ---
 
 # Ecosystem
 
-## Target SolidJS 1.x
+## Target SolidJS 1.x (Required)
 
-`solid-js` 1.9.x is the current stable; 2.0 is beta with no RC. Target 1.x APIs everywhere and do not adopt 2.0-only patterns until this pack says otherwise. This has a concrete package consequence: use the stable TanStack adapter lines — `@tanstack/solid-query` v5, `@tanstack/solid-router` v1, `@tanstack/solid-start` 1.x — whose peer ranges pin Solid 1.x. The `solid-query` v6, `solid-router` v2, and `solid-start` v2 beta lines are Solid-2-only; never mix them into a 1.x app.
+This rule pack targets SolidJS 1.x. Do not mix Solid-2-only package lines or APIs into a 1.x application. The `@tanstack/solid-query` v6, `@tanstack/solid-router` v2, and `@tanstack/solid-start` v2 lines target Solid 2; use their preceding Solid-1-compatible lines in applications governed by this pack.
 
-## The TanStack Suite Is the Default
+## The TanStack Suite Is the Default (Default)
 
-For every concern below, reach for the TanStack Solid adapter before any alternative — including over `@solidjs/router` and SolidStart (`@solidjs/start`). Alpha/beta maturity is accepted here by policy — we work on the bleeding edge — but pin versions and read release notes when bumping.
+For projects using this rule pack, default to the TanStack Solid adapter for the concerns below. Use another stable package when an existing stack, compatibility boundary, or missing capability makes it a better fit.
 
-| Concern | Package | Entry points | Maturity |
+| Concern | Package | Entry points | Maturity tier |
 | --- | --- | --- | --- |
-| Server state, caching | `@tanstack/solid-query` | `useQuery`, `useMutation`, `queryOptions`, `mutationOptions` (see data fetching rules) | stable (v5) |
-| Routing | `@tanstack/solid-router` | `createFileRoute`, loaders, typed params/search | stable (v1) |
-| Full-stack, SSR | `@tanstack/solid-start` | `createServerFn` | RC |
-| Forms | `@tanstack/solid-form` | `createForm`, `formOptions` (see forms rules) | stable (v1) |
-| Tables, datagrids | `@tanstack/solid-table` | `createSolidTable`, `flexRender` | stable (v8) |
-| Virtualized lists | `@tanstack/solid-virtual` | `createVirtualizer`, `createWindowVirtualizer` | stable (v3) |
-| Debounce, throttle, queue | `@tanstack/solid-pacer` | `createDebouncedSignal`, `createThrottler`, async variants | beta |
-| Client-first sync, live queries | `@tanstack/solid-db` | `createCollection`, `useLiveQuery` | beta |
-| Keyboard shortcuts | `@tanstack/solid-hotkeys` | `createHotkey`, `createHotkeySequence`, `HotkeysProvider` | alpha |
-| AI chat and agents | `@tanstack/ai-solid` | `useChat` (accessor-shaped: `messages()`, `isLoading()`) | beta |
-| Devtools shell | `@tanstack/solid-devtools` | `<TanStackDevtools plugins={…} />` hosting per-library panels | alpha |
+| Server state, caching | `@tanstack/solid-query` | `useQuery`, `useMutation`, `queryOptions`, `mutationOptions` | Stable |
+| Routing | `@tanstack/solid-router` | `createFileRoute`, loaders, typed params and search | Stable |
+| Full-stack, SSR | `@tanstack/solid-start` | `createServerFn` | Release candidate |
+| Forms | `@tanstack/solid-form` | `createForm`, `formOptions` | Stable |
+| Tables, data grids | `@tanstack/solid-table` | `createSolidTable`, `flexRender` | Stable |
+| Virtualized lists | `@tanstack/solid-virtual` | `createVirtualizer`, `createWindowVirtualizer` | Stable |
+| Debounce, throttle, queue | `@tanstack/solid-pacer` | `createDebouncedSignal`, `createThrottler` | Beta |
+| Client-first sync, live queries | `@tanstack/solid-db` | `createCollection`, `useLiveQuery` | Beta |
+| Keyboard shortcuts | `@tanstack/solid-hotkeys` | `createHotkey`, `createHotkeySequence` | Alpha |
+| AI chat and agents | `@tanstack/ai-solid` | `useChat` | Beta |
+| Devtools shell | `@tanstack/solid-devtools` | `TanStackDevtools` | Alpha |
 
-`@tanstack/solid-charts` exists but is pre-alpha with an unstable API; do not adopt it without an explicit decision.
+Stable packages are the default. A prerelease dependency needs an exact version, a named owner, an update policy, and an exit condition recorded in project documentation. A pre-alpha package such as `@tanstack/solid-charts` requires an explicit architecture decision.
 
-## UI Components: solid-ui on Kobalte + corvu
+## UI Components: solid-ui on Kobalte and Corvu (Default)
 
-Application UI components come from solid-ui's copy-paste registry, vendored into the repo (conventionally `src/components/ui`) and styled with Tailwind CSS, which is the styling norm. Underneath, the behavior and accessibility layer is `@kobalte/core` — the Solid analog of Base UI or React Aria Components — with scoped `@corvu/*` packages filling gaps (drawer, resizable, OTP field, calendar). The ownership split is deliberate: Kobalte and corvu stay npm dependencies maintained upstream; the vendored styling and composition layer is project code — edit it freely, and maintain it like any other code, because upstream fixes do not arrive automatically.
+For projects using this rule pack, default to solid-ui's copy-paste registry, vendored under `src/components/ui` and styled with Tailwind CSS. Use `@kobalte/core` for behavior and accessibility, and use scoped `@corvu/*` packages for capabilities such as drawers, resizable panes, OTP fields, and calendars.
 
-- Vendored UI components are views. Keep them dumb per the state architecture rules; no business logic under `components/ui`.
-- Build new interactive components on Kobalte primitives rather than hand-rolling ARIA behavior; purely presentational pieces need no foundation.
-- Do not copy solid-ui's date picker — it is the registry's one Ark UI component and upstream is replacing it. Compose a picker from `@corvu/calendar` and a Kobalte popover instead.
-- `@ark-ui/solid` (Zag.js) is an acceptable alternative headless base when its wider widget catalog is decisive; one foundation per app, never a mix.
-- Icons: `lucide-solid`.
+- Vendored UI components remain views and contain no business logic.
+- Default new interactive components to Kobalte primitives; purely presentational components need no headless foundation.
+- `@ark-ui/solid` is an acceptable alternative when its widget catalog is decisive. Prefer one headless foundation per application unless a missing component justifies an exception.
+- Default icons to `lucide-solid` unless the project already has an icon system.
 
-## Adapter Conventions: Options In as Functions, Reactivity Out
+Vendored registry code is project code, so upstream fixes require a deliberate update.
 
-The Solid adapters share conventions that differ from their React counterparts; getting these wrong silently breaks reactivity.
+## Adapter Conventions: Options In as Functions, Reactivity Out (Required)
 
-- Reactive options are passed as accessor functions: `useQuery(() => ({ queryKey: ["todos", filter()], … }))`, `createForm(() => ({ … }))`. Signals read inside re-trigger the library.
-- Reactive data crossing into a plain options object goes through a getter: `createSolidTable({ get data() { return rows() }, columns })`. Passing `data: rows()` snapshots the signal once.
-- Returned objects are fine-grained stores or accessors: read `query.data` and `query.isPending` as properties inside tracking scopes, call `field()` and `Route.useLoaderData()()` where the adapter returns accessors, and never destructure results.
-- Read signals inside library callbacks, not before them: `useLiveQuery((q) => q.from({ todos: todoCollection }).where(({ todos }) => gt(todos.priority, minPriority())))` re-runs when `minPriority` changes; hoisting the read outside the callback freezes it.
-- Prefer the `use*` entry points in solid-query; the `create*` names are legacy aliases.
+Solid adapters must receive reactive options through accessors or property getters, and consumers must read returned stores and accessors without destructuring.
 
-## Internationalization: Paraglide JS
+- Pass reactive options as accessor functions: `useQuery(() => ({ queryKey: ["todos", filter()] }))` and `createForm(() => ({ ...options }))`.
+- Pass reactive data through getters in plain option objects: `createSolidTable({ get data() { return rows() }, columns })`.
+- Read returned stores as properties inside tracking scopes, and call accessors such as `field()` and `Route.useLoaderData()()`.
+- Read signals inside adapter callbacks; a read hoisted outside the callback freezes the value.
+- Use the `use*` entry points in solid-query; the `create*` names are legacy aliases.
 
-`@inlang/paraglide-js` (2.x) is the i18n library. It is compiler-first: messages compile to tree-shakeable, fully typed functions (`m.greeting({ name })`), so type safety comes from codegen rather than runtime lookups, and the runtime is framework-agnostic — no Solid adapter is needed beyond `paraglideVitePlugin`.
+## Internationalization: Paraglide JS (Default)
 
-- Messages are plain typed functions, callable from components and domain modules alike; there is no hook to thread through the UI layer.
-- With TanStack Start, follow the TanStack Router repo's `start-i18n-paraglide` Solid example: `paraglideMiddleware` on the server, router `rewrite` with `localizeUrl`/`deLocalizeUrl`, and a strategy array like `["url", "cookie", "preferredLanguage", "baseLocale"]`.
-- Strategy configuration, locale switching, and custom locale strategies are covered in the i18n rules.
-- Do not use solid-i18next (archived upstream). `@solid-primitives/i18n` is the fallback only when instant in-app locale switching with fine-grained reactivity outweighs generated message types; its usage patterns are in the i18n rules.
+Default to `@inlang/paraglide-js` for compiled, typed messages and framework-independent runtime behavior. Keep its v2 strategy API when the application depends on ordered locale strategies.
 
-## Do Not Confuse the Stores
+- With TanStack Start, use `paraglideMiddleware`, router rewrites with `localizeUrl` and `deLocalizeUrl`, and an ordered strategy array.
+- Call compiled message functions from components or domain modules without a UI hook.
+- Use `@solid-primitives/i18n` when instant in-app locale switching with fine-grained reactivity matters more than generated message types.
+- The archived `solid-i18next` repository is not a maintained choice.
 
-`@tanstack/solid-store` (alpha) is the state engine underneath other TanStack libraries, not our application state layer — business state uses `solid-js/store` per the state architecture rules. When a TanStack library hands you one of its Store instances, subscribe with `useSelector(store, selector)`; its `useStore` is deprecated in the Solid adapter.
+## Distinguish application and TanStack stores (Default)
+
+Use `solid-js/store` for application state. `@tanstack/solid-store` is the state engine used by TanStack libraries; when a library returns one of its stores, subscribe with `useSelector(store, selector)`. Its Solid adapter retains `useStore` only as a deprecated alias.
