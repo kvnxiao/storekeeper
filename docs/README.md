@@ -11,10 +11,11 @@
 
 ## Standards
 
-Conventions for both humans and AI agents, kept as Claude Code skills with reference docs under `references/`:
+Repository coding rules are stored as skills under `.agents/skills/` and `.claude/skills/`, with reference docs under the `references/` directory for each skill:
 
 - **[SolidJS rules](../.claude/skills/solidjs-rules/)** for reactivity, components, state architecture, data fetching, forms, i18n, testing
 - **[Rust rules](../.claude/skills/rust-rules/)** for API design, error handling, testing, lints, workspace conventions
+- **[GitHub Actions rules](../.claude/skills/github-actions-rules/)** for workflow versioning and update policy
 
 ## Onboarding
 

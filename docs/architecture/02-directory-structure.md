@@ -16,7 +16,8 @@ storekeeper/
 ├── frontend/                      # SolidJS frontend
 ├── locales/                       # Shared i18n catalog (backend + frontend)
 ├── docs/                          # Architecture and onboarding docs
-├── .claude/skills/                # Coding standards (rust-rules, solidjs-rules, ...)
+├── .agents/skills/                # Agent coding standards
+├── .claude/skills/                # Claude Code coding standards
 ├── Cargo.toml                     # Workspace manifest
 └── justfile                       # Command runner recipes
 ```
