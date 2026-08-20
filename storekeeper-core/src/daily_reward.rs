@@ -554,20 +554,29 @@ mod tests {
             GameId::GenshinImpact
         }
 
-        async fn get_reward_info(&self) -> std::result::Result<DailyRewardInfo, StubError> {
-            Err(StubError)
+        fn get_reward_info(
+            &self,
+        ) -> impl Future<Output = std::result::Result<DailyRewardInfo, StubError>> + Send {
+            std::future::ready(Err(StubError))
         }
 
-        async fn get_monthly_rewards(&self) -> std::result::Result<Vec<DailyReward>, StubError> {
-            Err(StubError)
+        fn get_monthly_rewards(
+            &self,
+        ) -> impl Future<Output = std::result::Result<Vec<DailyReward>, StubError>> + Send {
+            std::future::ready(Err(StubError))
         }
 
-        async fn get_reward_status(&self) -> std::result::Result<DailyRewardStatus, StubError> {
-            Err(StubError)
+        fn get_reward_status(
+            &self,
+        ) -> impl Future<Output = std::result::Result<DailyRewardStatus, StubError>> + Send
+        {
+            std::future::ready(Err(StubError))
         }
 
-        async fn claim_daily_reward(&self) -> std::result::Result<ClaimResult, StubError> {
-            Err(StubError)
+        fn claim_daily_reward(
+            &self,
+        ) -> impl Future<Output = std::result::Result<ClaimResult, StubError>> + Send {
+            std::future::ready(Err(StubError))
         }
     }
 
