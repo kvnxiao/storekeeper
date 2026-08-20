@@ -2,8 +2,12 @@
 default:
     @just --list
 
-lint:
+lint: lint-clippy lint-fmt
+
+lint-clippy:
     cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+lint-fmt:
     cargo +nightly fmt --all --check
 
 fix:
