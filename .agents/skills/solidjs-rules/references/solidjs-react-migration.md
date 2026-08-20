@@ -5,7 +5,7 @@ description: "React-to-Solid migration corrections; the React habits that silent
 
 # React to Solid Migration
 
-Solid's JSX looks like React, but the model is inverted: components run once and updates flow through fine-grained signals, not re-renders. These are the React habits that silently break, with the Solid correction. Most are covered in depth by the other rules in this pack.
+Solid's JSX looks like React, but its execution model differs: components run once and updates flow through fine-grained signals, not re-renders. The table maps React habits that break Solid reactivity to Solid patterns. The other rules in this pack cover the patterns in depth.
 
 ## Rendering Model
 
@@ -48,6 +48,6 @@ Solid's JSX looks like React, but the model is inverted: components run once and
 | Reading `props.children` repeatedly or inspecting it as data | Resolve once with the `children()` helper |
 | Expecting remount when a value changes | Non-keyed `<Show>` preserves the branch; use `keyed` for remount-on-identity-change |
 
-## Guardrails
+## Guardrails (Default)
 
-Enable `eslint-plugin-solid`; its `reactivity` rule statically catches untracked reads, destructured props, and misused async, and `no-destructure`, `prefer-for`, `components-return-once`, `no-react-deps`, and `no-react-specific-props` cover the rest of this table.
+Default migrations to `eslint-plugin-solid`. Its `reactivity`, `no-destructure`, `prefer-for`, `components-return-once`, `no-react-deps`, and `no-react-specific-props` rules catch the incompatible React patterns in this table. Keep an existing lint stack when it enforces equivalent checks.
