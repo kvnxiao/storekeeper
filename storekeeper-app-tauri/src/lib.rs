@@ -10,6 +10,7 @@ mod daily_reward_registry;
 mod error;
 mod events;
 mod i18n;
+mod logging;
 mod notification;
 mod polling;
 mod provider_batch;
@@ -17,6 +18,7 @@ mod registry;
 mod scheduled_claim;
 mod state;
 mod tray;
+mod window;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -24,16 +26,7 @@ use tauri::Manager;
 use tauri::RunEvent;
 use tauri_plugin_autostart::ManagerExt;
 use tokio_util::sync::CancellationToken;
-use tracing_subscriber::EnvFilter;
-
-/// Initializes the tracing subscriber for logging.
-///
-/// Uses `RUST_LOG` environment variable if set, otherwise defaults to "info".
-fn init_tracing() {
-    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-
-    tracing_subscriber::fmt().with_env_filter(filter).init();
-}
+use window::MAIN_WINDOW_LABEL;
 
 /// Runs the Storekeeper application.
 ///
@@ -45,14 +38,14 @@ fn init_tracing() {
     reason = "tauri::generate_context! expands to a process::exit path"
 )]
 pub fn run() -> Result<()> {
-    init_tracing();
+    let log_filter = logging::init();
 
     let app = tauri::Builder::default()
         // Must be registered first so it runs before any other plugin. When a
         // second instance is launched, this fires in the already-running
         // instance and the new process exits; reveal the existing window.
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
-            if let Some(window) = app.get_webview_window("main") {
+            if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
                 if let Err(e) = window.unminimize() {
                     tracing::debug!(error = %e, "Failed to unminimize window");
                 }
@@ -66,16 +59,20 @@ pub fn run() -> Result<()> {
         }))
         .plugin(tauri_plugin_autostart::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
-        .setup(|app| {
+        .setup(move |app| {
             let app_state = state::AppState::with_config();
 
-            let (language, should_autostart) = tauri::async_runtime::block_on(async {
+            let (language, log_level, should_autostart) = tauri::async_runtime::block_on(async {
                 let inner = app_state.inner.read().await;
                 (
                     inner.config.general.language.clone(),
+                    inner.config.general.log_level.clone(),
                     inner.config.general.autostart,
                 )
             });
+
+            log_filter.set_level(&log_level);
+            app.manage(log_filter);
 
             let effective_locale = i18n::resolve_locale(language.as_deref());
             if let Err(e) = i18n::init(effective_locale) {
@@ -119,6 +116,9 @@ pub fn run() -> Result<()> {
             commands::get_secrets,
             commands::save_and_apply,
             commands::open_config_folder,
+            commands::open_log_folder,
+            commands::open_logs_window,
+            commands::read_log_tail,
             commands::send_preview_notification,
             commands::get_daily_reward_status,
             commands::refresh_daily_reward_status,
@@ -128,7 +128,11 @@ pub fn run() -> Result<()> {
             commands::get_effective_locale,
         ])
         .on_window_event(|window, event| {
-            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+            // Only the main window survives its close button; a secondary
+            // window kept alive hidden would keep polling the backend.
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event
+                && window.label() == MAIN_WINDOW_LABEL
+            {
                 api.prevent_close();
                 if let Err(e) = window.hide() {
                     tracing::debug!(error = %e, "Failed to hide window");

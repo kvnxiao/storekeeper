@@ -196,8 +196,9 @@ pub trait DailyRewardClient: Send + Sync {
     /// # Errors
     ///
     /// Returns an error if the API request fails (network error, auth error,
-    /// etc.). Note: "Already claimed" is not an error - it's returned as a
-    /// failed `ClaimResult`.
+    /// etc.), and if a request the API accepted leaves the reward unrecorded.
+    /// Note: "Already claimed" is not an error - it's returned as a failed
+    /// `ClaimResult`.
     fn claim_daily_reward(
         &self,
     ) -> impl Future<Output = std::result::Result<ClaimResult, Self::Error>> + Send;

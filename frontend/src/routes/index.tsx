@@ -2,7 +2,8 @@ import { useMutation } from "@tanstack/solid-query";
 import { createFileRoute } from "@tanstack/solid-router";
 import RefreshClockwise from "lucide-solid/icons/refresh-cw";
 import Settings from "lucide-solid/icons/settings";
-import type { VoidComponent } from "solid-js";
+import { onMount, type VoidComponent } from "solid-js";
+import { core } from "@/modules/core/core.state";
 import { DashboardContent } from "@/modules/dashboard/components/DashboardContent";
 import { refreshResourcesMutationOptions } from "@/modules/resources/resources.query";
 import { resourcesState } from "@/modules/resources/resources.state";
@@ -13,6 +14,8 @@ import { setViewTransitionDirection } from "@/modules/ui/ui.utils";
 import * as m from "@/paraglide/messages";
 
 const DashboardPage: VoidComponent = () => {
+  onMount(() => core.initDashboard());
+
   const refresh = useMutation(() => refreshResourcesMutationOptions());
 
   return (

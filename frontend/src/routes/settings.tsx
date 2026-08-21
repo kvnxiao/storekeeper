@@ -3,7 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/solid-query";
 import { createFileRoute } from "@tanstack/solid-router";
 import ArrowLeft from "lucide-solid/icons/arrow-left";
 import CircleAlert from "lucide-solid/icons/circle-alert";
-import { createMemo, For, Show, type VoidComponent } from "solid-js";
+import { createMemo, For, onMount, Show, type VoidComponent } from "solid-js";
+import { core } from "@/modules/core/core.state";
 import type { ResourceType } from "@/modules/games/games.constants";
 import { GAMES } from "@/modules/games/games.registry";
 import type { GameId } from "@/modules/games/games.types";
@@ -194,6 +195,8 @@ const SettingsForm: VoidComponent<SettingsFormProps> = (props) => {
 };
 
 export const SettingsPage: VoidComponent = () => {
+  onMount(() => core.initDashboard());
+
   const configQuery = useQuery(() => configQueryOptions());
   const secretsQuery = useQuery(() => secretsQueryOptions());
 

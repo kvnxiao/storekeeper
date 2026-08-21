@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use std::ops::ControlFlow;
 use std::sync::Arc;
 use std::time::Duration;
+use storekeeper_core::ClaimResult;
 use storekeeper_core::ClaimTime;
 use storekeeper_core::DailyRewardStatus;
 use storekeeper_core::GameId;
@@ -43,6 +44,29 @@ enum PostWake {
     Rerun,
     /// Resume the loop normally (timer expired).
     Resume,
+}
+
+/// What a scheduled claim attempt resolved to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ClaimOutcome {
+    /// This attempt registered the reward.
+    Claimed,
+    /// The reward was already signed before this attempt.
+    AlreadyClaimed,
+}
+
+/// Confirms a claim response recorded the reward.
+///
+/// `success` is not the test: a claim whose reward name is absent still
+/// registered, while a response reading unsigned means HoYoLab accepted the
+/// sign without recording it.
+fn ensure_claim_registered(result: &ClaimResult) -> anyhow::Result<()> {
+    anyhow::ensure!(
+        result.info.is_signed,
+        "claim did not register: {}",
+        result.message.as_deref().unwrap_or("no message")
+    );
+    Ok(())
 }
 
 /// Pure mapping from a wake reason to the loop's next control-flow step.
@@ -179,13 +203,13 @@ async fn claim_games_and_emit(state: &AppState, app_handle: &AppHandle, game_ids
         tracing::info!(game_id = ?game_id, "Auto-claiming daily reward");
 
         match claim_with_status_check(state, game_id).await {
-            Ok(true) => {
+            Ok(ClaimOutcome::Claimed) => {
                 tracing::info!(game_id = ?game_id, "Auto-claim successful");
                 if let Ok(status) = state.get_daily_reward_status_for_game(game_id).await {
                     results.insert(game_id, status);
                 }
             }
-            Ok(false) => {
+            Ok(ClaimOutcome::AlreadyClaimed) => {
                 tracing::debug!(game_id = ?game_id, "Already claimed today (per API)");
             }
             Err(e) => {
@@ -265,21 +289,30 @@ async fn sleep_short(cancel_token: &CancellationToken, notify: &Arc<Notify>) -> 
 
 /// Checks status and claims if not already claimed today.
 ///
-/// Returns `Ok(true)` if claimed, `Ok(false)` if already claimed, `Err` on
-/// failure.
-async fn claim_with_status_check(state: &AppState, game_id: GameId) -> anyhow::Result<bool> {
+/// # Errors
+///
+/// Returns an error when the status or claim call fails, or when the claim
+/// response reports the reward still unsigned.
+async fn claim_with_status_check(
+    state: &AppState,
+    game_id: GameId,
+) -> anyhow::Result<ClaimOutcome> {
     let status = state.get_daily_reward_status_for_game(game_id).await?;
 
     let reward_status: DailyRewardStatus =
         serde_json::from_value(status).context("failed to deserialize daily reward status")?;
 
     if reward_status.info.is_signed {
-        return Ok(false);
+        return Ok(ClaimOutcome::AlreadyClaimed);
     }
 
-    state.claim_daily_reward_for_game(game_id).await?;
+    let claimed = state.claim_daily_reward_for_game(game_id).await?;
+    let result: ClaimResult =
+        serde_json::from_value(claimed).context("failed to deserialize claim result")?;
 
-    Ok(true)
+    ensure_claim_registered(&result)?;
+
+    Ok(ClaimOutcome::Claimed)
 }
 
 /// Calculates the next claim time and which games to claim.
@@ -335,6 +368,65 @@ async fn calculate_next_claim(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use storekeeper_core::DailyReward;
+    use storekeeper_core::DailyRewardInfo;
+
+    fn reward() -> DailyReward {
+        DailyReward::new("Primogems", 60, "primogem.png")
+    }
+
+    #[test]
+    fn ensure_claim_registered_accepts_a_signed_reward() {
+        let result = ClaimResult::success(reward(), DailyRewardInfo::new(true, 1));
+
+        assert!(
+            ensure_claim_registered(&result).is_ok(),
+            "a signed reward is a registered claim"
+        );
+    }
+
+    #[test]
+    fn ensure_claim_registered_accepts_a_claim_whose_reward_name_is_missing() {
+        let result = ClaimResult::error(
+            "Claim succeeded but reward details unavailable",
+            DailyRewardInfo::new(true, 1),
+        );
+
+        assert!(
+            ensure_claim_registered(&result).is_ok(),
+            "an unnamed reward must still emit and refresh, not read as a prior claim"
+        );
+    }
+
+    #[test]
+    fn ensure_claim_registered_rejects_success_over_an_unsigned_reward() {
+        let result = ClaimResult::success(reward(), DailyRewardInfo::new(false, 0));
+
+        assert!(
+            ensure_claim_registered(&result).is_err(),
+            "a success flag over an unsigned reward must not read as a claim"
+        );
+    }
+
+    #[test]
+    fn ensure_claim_registered_rejects_an_error_result() {
+        let result = ClaimResult::error("boom", DailyRewardInfo::new(false, 0));
+
+        assert!(
+            ensure_claim_registered(&result).is_err(),
+            "an error result must not read as a claim"
+        );
+    }
+
+    #[test]
+    fn ensure_claim_registered_rejects_a_prior_claim_that_reads_unsigned() {
+        let result = ClaimResult::already_claimed(Some(reward()), DailyRewardInfo::new(false, 0));
+
+        assert!(
+            ensure_claim_registered(&result).is_err(),
+            "a contradictory response must not read as a claim"
+        );
+    }
 
     #[test]
     fn handle_wake_reason_cancelled_breaks() {

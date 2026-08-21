@@ -1,8 +1,10 @@
 import type { VoidComponent } from "solid-js";
 import { type Locale, LOCALE_ENDONYMS } from "@/modules/i18n/i18n.constants";
+import { openLogFolder, openLogsWindow } from "@/modules/logs/logs.query";
+import { logLevelOptions } from "@/modules/logs/logs.utils";
 import { SettingsCard } from "@/modules/settings/components/SettingsCard";
 import { openConfigFolder } from "@/modules/settings/settings.query";
-import type { GeneralConfig, LogLevel } from "@/modules/settings/settings.types";
+import type { GeneralConfig } from "@/modules/settings/settings.types";
 import { Button } from "@/modules/ui/components/Button";
 import { NumberField } from "@/modules/ui/components/NumberField";
 import { Select, type SelectOption } from "@/modules/ui/components/Select";
@@ -22,14 +24,6 @@ const SYSTEM_LOCALE = "auto";
 const languageOptions = (): SelectOption<Locale | typeof SYSTEM_LOCALE>[] => [
   { id: SYSTEM_LOCALE, label: m.settings_general_language_system_default() },
   ...locales.map((code) => ({ id: code, label: LOCALE_ENDONYMS[code] })),
-];
-
-const logLevelOptions = (): SelectOption<LogLevel>[] => [
-  { id: "error", label: m.settings_general_log_error() },
-  { id: "warn", label: m.settings_general_log_warning() },
-  { id: "info", label: m.settings_general_log_info() },
-  { id: "debug", label: m.settings_general_log_debug() },
-  { id: "trace", label: m.settings_general_log_trace() },
 ];
 
 export const GeneralSection: VoidComponent<GeneralSectionProps> = (props) => {
@@ -93,9 +87,17 @@ export const GeneralSection: VoidComponent<GeneralSectionProps> = (props) => {
         }
         options={logLevelOptions()}
       />
-      <Button color="light" onClick={() => openConfigFolder()}>
-        {m.settings_general_open_config()}
-      </Button>
+      <div class="flex flex-wrap gap-2">
+        <Button color="light" onClick={() => openConfigFolder()}>
+          {m.settings_general_open_config()}
+        </Button>
+        <Button color="light" onClick={() => openLogsWindow()}>
+          {m.settings_general_view_logs()}
+        </Button>
+        <Button color="light" onClick={() => openLogFolder()}>
+          {m.settings_general_open_logs()}
+        </Button>
+      </div>
     </SettingsCard>
   );
 };

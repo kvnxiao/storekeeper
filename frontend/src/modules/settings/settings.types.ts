@@ -6,11 +6,7 @@
 
 import type { ResourceType } from "@/modules/games/games.constants";
 import type { Locale } from "@/modules/i18n/i18n.constants";
-
-/** Log levels the backend documents in the generated config.toml. */
-export const LOG_LEVELS = ["error", "warn", "info", "debug", "trace"] as const;
-
-export type LogLevel = (typeof LOG_LEVELS)[number];
+import type { LogLevel } from "@/modules/logs/logs.constants";
 
 /** General application settings */
 export interface GeneralConfig {

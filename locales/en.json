@@ -58,15 +58,17 @@
   "settings_general_poll_description": "How often to fetch resource data from game APIs.",
   "settings_general_start_minimized": "Start minimized to system tray",
   "settings_general_log_level": "Log Level",
-  "settings_general_log_error": "Error",
-  "settings_general_log_warning": "Warning",
-  "settings_general_log_info": "Info",
-  "settings_general_log_debug": "Debug",
-  "settings_general_log_trace": "Trace",
+  "log_level_error": "Error",
+  "log_level_warn": "Warning",
+  "log_level_info": "Info",
+  "log_level_debug": "Debug",
+  "log_level_trace": "Trace",
   "settings_general_language": "Language",
   "settings_general_language_system_default": "System Default",
   "settings_general_autostart": "Launch at system startup",
   "settings_general_open_config": "Open Config Folder",
+  "settings_general_view_logs": "View Logs",
+  "settings_general_open_logs": "Open Log Folder",
 
   "settings_game_enable_tracking": "Enable {title} tracking",
   "settings_game_uid": "UID",
@@ -111,5 +113,16 @@
   "daily_claim_action": "Claim daily reward for {game}",
 
   "textfield_hide_password": "Hide password",
-  "textfield_show_password": "Show password"
+  "textfield_show_password": "Show password",
+
+  "logs_window_title": "Storekeeper Logs",
+  "logs_level_filter": "Minimum level",
+  "logs_search": "Filter",
+  "logs_search_placeholder": "Filter by message or target",
+  "logs_follow_tail": "Follow new entries",
+  "logs_open_folder": "Open Folder",
+  "logs_empty": "No log entries yet.",
+  "logs_loading": "Reading logs...",
+  "logs_entry_count": "{count} shown",
+  "logs_load_failed": "Failed to read logs: {error}"
 }

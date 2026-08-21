@@ -49,6 +49,9 @@ vi.mock("@tauri-apps/api/core", () => ({
   }),
 }));
 
+// SettingsPage calls core.initDashboard(), which registers backend listeners.
+vi.mock("@tauri-apps/api/event", () => ({ listen: vi.fn(async () => vi.fn()) }));
+
 // The generated route tree renders the root shell's <html>, which cannot be
 // cloned into a test container, so the page mounts under a bare root instead.
 async function renderSettingsPage(): Promise<void> {

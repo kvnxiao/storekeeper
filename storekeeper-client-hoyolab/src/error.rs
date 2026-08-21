@@ -5,6 +5,7 @@ use thiserror::Error;
 
 /// Error type for HoYoLab API operations.
 #[derive(Error, Debug)]
+#[non_exhaustive]
 pub enum Error {
     /// Base client error (HTTP, deserialization, API errors).
     #[error(transparent)]
@@ -15,6 +16,14 @@ pub enum Error {
     RateLimited {
         /// Seconds to wait before retrying.
         retry_after_secs: u64,
+    },
+
+    /// The sign endpoint accepted the request but the reward is still
+    /// unclaimed.
+    #[error("Sign accepted but the reward is still unclaimed (risk_code {risk_code:?})")]
+    ClaimNotRegistered {
+        /// Risk-control code from the sign response, when it reported one.
+        risk_code: Option<i32>,
     },
 }
 

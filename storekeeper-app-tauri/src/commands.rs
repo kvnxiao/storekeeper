@@ -12,11 +12,14 @@ use crate::error::CommandError;
 use crate::error::ErrorCode;
 use crate::events::AppEvent;
 use crate::i18n;
+use crate::logging;
 use crate::notification;
 use crate::polling;
 use crate::state::AllDailyRewardStatus;
 use crate::state::AllResources;
 use crate::state::AppState;
+use crate::window;
+use camino::Utf8Path;
 use jiff::Timestamp;
 use serde::Serialize;
 use storekeeper_core::AppConfig;
@@ -95,8 +98,9 @@ pub async fn save_and_apply(
     }
 
     tracing::info!(
-        locale_changed = diff.locale_changed,
-        autostart_changed = diff.autostart_changed,
+        locale_changed = diff.general.locale_changed,
+        autostart_changed = diff.general.autostart_changed,
+        log_level_changed = diff.general.log_level_changed,
         needs_registry_rebuild = diff.needs_registry_rebuild,
         games_to_refresh = ?diff.games_to_refresh,
         games_to_reset_notifications = ?diff.games_to_reset_notifications,
@@ -110,7 +114,7 @@ pub async fn save_and_apply(
     // Wake the scheduler so it re-evaluates auto-claim config immediately
     state.wake_scheduler();
 
-    if diff.locale_changed {
+    if diff.general.locale_changed {
         let language = {
             let inner = state.inner.read().await;
             inner.config.general.language.clone()
@@ -124,7 +128,15 @@ pub async fn save_and_apply(
         }
     }
 
-    if diff.autostart_changed {
+    if diff.general.log_level_changed {
+        let level = {
+            let inner = state.inner.read().await;
+            inner.config.general.log_level.clone()
+        };
+        app_handle.state::<logging::LogFilter>().set_level(&level);
+    }
+
+    if diff.general.autostart_changed {
         let autostart_enabled = {
             let inner = state.inner.read().await;
             inner.config.general.autostart
@@ -159,37 +171,62 @@ pub async fn save_and_apply(
     })
 }
 
-/// Opens the configuration folder in the system file manager.
-#[tauri::command]
-pub fn open_config_folder() -> Result<(), CommandError> {
-    let config_dir = storekeeper_core::AppConfig::config_dir()?;
-
-    if !config_dir.exists() {
-        fs_err::create_dir_all(&config_dir)?;
+/// Creates a directory when absent, then reveals it in the OS file manager.
+fn reveal_directory(dir: &Utf8Path) -> Result<(), CommandError> {
+    if !dir.exists() {
+        fs_err::create_dir_all(dir)?;
     }
 
     #[cfg(target_os = "windows")]
     {
-        std::process::Command::new("explorer")
-            .arg(&config_dir)
-            .spawn()?;
+        std::process::Command::new("explorer").arg(dir).spawn()?;
     }
 
     #[cfg(target_os = "macos")]
     {
-        std::process::Command::new("open")
-            .arg(&config_dir)
-            .spawn()?;
+        std::process::Command::new("open").arg(dir).spawn()?;
     }
 
     #[cfg(target_os = "linux")]
     {
-        std::process::Command::new("xdg-open")
-            .arg(&config_dir)
-            .spawn()?;
+        std::process::Command::new("xdg-open").arg(dir).spawn()?;
     }
 
     Ok(())
+}
+
+/// Opens the configuration folder in the system file manager.
+#[tauri::command]
+pub fn open_config_folder() -> Result<(), CommandError> {
+    reveal_directory(&storekeeper_core::AppConfig::config_dir()?)
+}
+
+/// Opens the log folder in the system file manager.
+#[tauri::command]
+pub fn open_log_folder() -> Result<(), CommandError> {
+    reveal_directory(&logging::log_dir()?)
+}
+
+/// Opens the log viewer window, or focuses it when it is already open.
+///
+/// `WebviewWindowBuilder::build` deadlocks on Windows inside a synchronous
+/// command, so this one is async.
+#[tauri::command]
+pub async fn open_logs_window(app_handle: AppHandle) -> Result<(), CommandError> {
+    window::open_logs_window(&app_handle)?;
+    Ok(())
+}
+
+/// Returns the last `lines` entries of the current day's log file, as raw JSON.
+///
+/// The viewer polls this every couple of seconds and each read covers up to a
+/// megabyte, so the blocking file IO runs on the blocking pool.
+#[tauri::command]
+pub async fn read_log_tail(lines: usize) -> Result<Vec<String>, CommandError> {
+    tauri::async_runtime::spawn_blocking(move || logging::read_tail(lines))
+        .await
+        .map_err(|e| CommandError::internal(format!("log read task failed: {e}")))?
+        .map_err(CommandError::from)
 }
 
 /// Gets the cached daily reward status for all games.

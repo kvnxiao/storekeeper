@@ -45,6 +45,16 @@ export function createCore() {
       }),
   );
 
+  const timeWithSecondsFormatter = createMemo(
+    () =>
+      new Intl.DateTimeFormat(locale(), {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      }),
+  );
+
   /** Applies a backend-effective locale to Paraglide and the reactive locale. */
   async function setAppLocale(next: string): Promise<void> {
     if (!isLocale(next)) {
@@ -83,7 +93,8 @@ export function createCore() {
     startTickInterval();
   }
 
-  let initialized = false;
+  let shellInitialized = false;
+  let dashboardInitialized = false;
   let localeTimeout: ReturnType<typeof setTimeout> | undefined;
   const unlisteners: Promise<UnlistenFn>[] = [];
 
@@ -91,10 +102,10 @@ export function createCore() {
     unlisteners.push(listen<T>(name, handler));
   }
 
-  // Because init runs from a component's onMount scope, that scope can dispose
-  // while the factory root remains alive. Register cleanup in the factory root
-  // and keep `initialized` in its closure so component disposal does not
-  // register listeners again.
+  // Because the init functions run from a component's onMount scope, that scope
+  // can dispose while the factory root remains alive. Register cleanup in the
+  // factory root and keep the init flags in its closure so component disposal
+  // does not register listeners again.
   onCleanup(() => {
     clearInterval(tickInterval);
     clearTimeout(localeTimeout);
@@ -103,14 +114,47 @@ export function createCore() {
     }
   });
 
-  /** Starts the tick and the backend listeners, which live for the app's lifetime. */
-  function init(): void {
-    if (initialized) {
+  /**
+   * Starts what every window needs: the tick interval and the resolved locale.
+   *
+   * Every Tauri window runs its own module registry, so this runs once per
+   * window. It does not register a backend listener or reach a game API, so a
+   * secondary window boots without repeating the dashboard's work.
+   */
+  function initShell(): void {
+    if (shellInitialized) {
       return;
     }
-    initialized = true;
+    shellInitialized = true;
 
     startTickInterval();
+
+    // Sync Paraglide locale from backend config on startup. Views wait on
+    // localeReady so the first render already uses the resolved locale. The
+    // timeout is what keeps a command that never settles from leaving the
+    // window permanently blank; a rejection releases the views the same way.
+    localeTimeout = setTimeout(() => setLocaleReady(true), LOCALE_RESOLVE_TIMEOUT_MS);
+    void invoke<string>("get_effective_locale")
+      .then((effectiveLocale) => setAppLocale(effectiveLocale))
+      .catch(console.error)
+      .finally(() => {
+        clearTimeout(localeTimeout);
+        setLocaleReady(true);
+      });
+  }
+
+  /**
+   * Registers the backend listeners and seeds the daily-reward state.
+   *
+   * `app_handle.emit` broadcasts to every webview, so only the dashboard window
+   * calls this; a second registration would double-handle every event and issue
+   * a second round of live game-API requests.
+   */
+  function initDashboard(): void {
+    if (dashboardInitialized) {
+      return;
+    }
+    dashboardInitialized = true;
 
     subscribe(AppEvent.RefreshStarted, () => {
       resourcesState.refreshStarted();
@@ -144,19 +188,6 @@ export function createCore() {
     });
 
     dailyRewardsState.init(tick);
-
-    // Sync Paraglide locale from backend config on startup. Views wait on
-    // localeReady so the first render already uses the resolved locale. The
-    // timeout is what keeps a command that never settles from leaving the
-    // window permanently blank; a rejection releases the views the same way.
-    localeTimeout = setTimeout(() => setLocaleReady(true), LOCALE_RESOLVE_TIMEOUT_MS);
-    void invoke<string>("get_effective_locale")
-      .then((effectiveLocale) => setAppLocale(effectiveLocale))
-      .catch(console.error)
-      .finally(() => {
-        clearTimeout(localeTimeout);
-        setLocaleReady(true);
-      });
   }
 
   return {
@@ -165,9 +196,11 @@ export function createCore() {
     durationFormatter,
     timeOnlyFormatter,
     weekdayTimeFormatter,
+    timeWithSecondsFormatter,
     tick,
     setAppLocale,
-    init,
+    initShell,
+    initDashboard,
   };
 }
 
