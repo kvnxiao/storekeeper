@@ -104,6 +104,7 @@ export const LogsPage: VoidComponent = () => {
 
   const [scroller, setScroller] = createSignal<HTMLDivElement>();
   const [following, setFollowing] = createSignal(true);
+  const [anchored, setAnchored] = createSignal(false);
 
   const virtualizer = createVirtualizer({
     get count() {
@@ -126,10 +127,13 @@ export const LogsPage: VoidComponent = () => {
   createEffect(
     on([() => visible().length, () => virtualizer.getTotalSize()], () => {
       const element = scroller();
-      if (element === undefined || !following() || containsSelection(element)) {
+      if (element === undefined) {
         return;
       }
-      scrollToLatest();
+      if (following() && !containsSelection(element)) {
+        scrollToLatest();
+      }
+      setAnchored(true);
     }),
   );
 
@@ -194,7 +198,10 @@ export const LogsPage: VoidComponent = () => {
               <p class={cn("p-3 font-sans text-sm", MUTED_TEXT)}>{m.logs_empty()}</p>
             </Match>
             <Match when={visible().length > 0}>
-              <div class="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
+              <div
+                class={cn("relative w-full", anchored() || "opacity-0")}
+                style={{ height: `${virtualizer.getTotalSize()}px` }}
+              >
                 <For each={virtualizer.getVirtualItems()}>
                   {(item) => (
                     <Show when={visible()[item.index]}>

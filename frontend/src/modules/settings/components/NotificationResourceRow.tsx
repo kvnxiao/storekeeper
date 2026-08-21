@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/solid-query";
 import BellRing from "lucide-solid/icons/bell-ring";
+import RefreshClockwise from "lucide-solid/icons/refresh-cw";
 import { Show, type VoidComponent } from "solid-js";
 import type { ResourceType } from "@/modules/games/games.constants";
 import type { GameId } from "@/modules/games/games.types";
@@ -13,10 +14,10 @@ import {
   withNotifyMinutes,
   withNotifyMode,
 } from "@/modules/settings/settings.utils";
-import { Button } from "@/modules/ui/components/Button";
 import { NumberField } from "@/modules/ui/components/NumberField";
 import { SegmentedControl } from "@/modules/ui/components/SegmentedControl";
 import { Switch } from "@/modules/ui/components/Switch";
+import { TooltipButton } from "@/modules/ui/components/Tooltip";
 import * as m from "@/paraglide/messages";
 
 export interface NotificationResourceRowProps {
@@ -72,17 +73,21 @@ export const NotificationResourceRow: VoidComponent<NotificationResourceRowProps
         <Switch checked={enabled()} onChange={handleToggle}>
           {props.label}
         </Switch>
-        <Button
+        <TooltipButton
+          tooltip={m.settings_notification_preview({ label: props.label })}
           size="icon"
           variant="plain"
           aria-label={m.settings_notification_preview({ label: props.label })}
+          disabled={preview.isPending}
           onClick={() => preview.mutate({ gameId: props.gameId, resourceType: props.resourceType })}
-          isPending={preview.isPending}
         >
-          <Show when={!preview.isPending}>
+          <Show
+            when={!preview.isPending}
+            fallback={<RefreshClockwise aria-hidden="true" class="size-4 animate-spin" />}
+          >
             <BellRing aria-hidden="true" class="size-4" />
           </Show>
-        </Button>
+        </TooltipButton>
       </div>
       <Show when={enabled() ? props.config : undefined}>
         {(config) => (

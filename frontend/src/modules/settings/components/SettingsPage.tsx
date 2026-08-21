@@ -26,6 +26,7 @@ import type { AppConfig, SecretsConfig } from "@/modules/settings/settings.types
 import { Button } from "@/modules/ui/components/Button";
 import { ButtonLink } from "@/modules/ui/components/ButtonLink";
 import { ErrorBanner } from "@/modules/ui/components/ErrorBanner";
+import { Tooltip } from "@/modules/ui/components/Tooltip";
 import { cn } from "@/modules/ui/ui.styles";
 import { setViewTransitionDirection } from "@/modules/ui/ui.utils";
 import * as m from "@/paraglide/messages";
@@ -179,12 +180,15 @@ const SettingsForm: VoidComponent<SettingsFormProps> = (props) => {
           )}
         >
           <div class="flex items-center gap-3">
-            <output class="flex min-w-0 flex-1 items-center gap-2">
-              <CircleAlert aria-hidden="true" class="size-5 shrink-0 text-amber-500" />
-              <p class="truncate text-sm text-zinc-950 dark:text-white">
-                {m.settings_unsaved_changes()}
-              </p>
-            </output>
+            <Tooltip content={m.settings_unsaved_changes()} triggerClass="flex items-center">
+              <CircleAlert
+                aria-hidden="true"
+                class="size-5 animate-pulse text-amber-500 motion-reduce:animate-none"
+              />
+              <span class="sr-only">{m.settings_unsaved_changes()}</span>
+            </Tooltip>
+
+            <div class="flex-1" />
 
             <Button onClick={() => form.reset()} disabled={save.isPending}>
               {m.settings_undo()}
