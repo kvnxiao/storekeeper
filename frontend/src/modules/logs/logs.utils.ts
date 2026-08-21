@@ -137,6 +137,36 @@ export function fieldSummary(entry: LogEntry): string {
     .join(" ");
 }
 
+/** Slack, in pixels, between the scroll position and the bottom edge that still counts as the bottom. */
+const BOTTOM_SLACK_PX = 24;
+
+/** Metrics a scroll container exposes; an `Element` satisfies it structurally. */
+export interface ScrollMetrics {
+  scrollHeight: number;
+  scrollTop: number;
+  clientHeight: number;
+}
+
+/** Reports whether a scroll container rests at its bottom edge. */
+export function isAtBottom(metrics: ScrollMetrics): boolean {
+  return metrics.scrollHeight - metrics.scrollTop - metrics.clientHeight <= BOTTOM_SLACK_PX;
+}
+
+/**
+ * Reports whether the document's selection starts inside `element`.
+ *
+ * Scrolling a virtualized list recycles the node a selection lives in, so the
+ * viewer stops following the tail while text inside it is selected.
+ */
+export function containsSelection(element: Node): boolean {
+  const selection = document.getSelection();
+  if (selection === null || selection.isCollapsed) {
+    return false;
+  }
+  const anchor = selection.anchorNode;
+  return anchor !== null && element.contains(anchor);
+}
+
 /** Reads a rejected `invoke`'s message; a `CommandError` stringifies to `[object Object]`. */
 export function errorText(error: unknown): string {
   if (typeof error === "object" && error !== null && "message" in error) {

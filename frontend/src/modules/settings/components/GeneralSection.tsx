@@ -1,7 +1,5 @@
 import type { VoidComponent } from "solid-js";
 import { type Locale, LOCALE_ENDONYMS } from "@/modules/i18n/i18n.constants";
-import { openLogFolder, openLogsWindow } from "@/modules/logs/logs.query";
-import { logLevelOptions } from "@/modules/logs/logs.utils";
 import { SettingsCard } from "@/modules/settings/components/SettingsCard";
 import { openConfigFolder } from "@/modules/settings/settings.query";
 import type { GeneralConfig } from "@/modules/settings/settings.types";
@@ -76,28 +74,9 @@ export const GeneralSection: VoidComponent<GeneralSectionProps> = (props) => {
         }
         options={languageOptions()}
       />
-      <Select
-        label={m.settings_general_log_level()}
-        value={props.config.log_level}
-        onChange={(value) =>
-          props.onChange({
-            ...props.config,
-            log_level: value,
-          })
-        }
-        options={logLevelOptions()}
-      />
-      <div class="flex flex-wrap gap-2">
-        <Button color="light" onClick={() => openConfigFolder()}>
-          {m.settings_general_open_config()}
-        </Button>
-        <Button color="light" onClick={() => openLogsWindow()}>
-          {m.settings_general_view_logs()}
-        </Button>
-        <Button color="light" onClick={() => openLogFolder()}>
-          {m.settings_general_open_logs()}
-        </Button>
-      </div>
+      <Button color="light" class="self-start" onClick={() => openConfigFolder()}>
+        {m.settings_general_open_config()}
+      </Button>
     </SettingsCard>
   );
 };

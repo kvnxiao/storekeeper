@@ -2,9 +2,11 @@ import { describe, expect, it } from "vite-plus/test";
 import { LOG_LEVELS } from "@/modules/logs/logs.constants";
 import {
   admitsLevel,
+  containsSelection,
   errorText,
   fieldSummary,
   filterEntries,
+  isAtBottom,
   type LogEntry,
   logLevelOptions,
   parseLogLine,
@@ -175,5 +177,66 @@ describe("logLevelOptions", () => {
 
   it("labels every option", () => {
     expect(logLevelOptions().every((option) => option.label.length > 0)).toBe(true);
+  });
+});
+
+describe("isAtBottom", () => {
+  it("treats a container scrolled to its bottom edge as at the bottom", () => {
+    expect(isAtBottom({ scrollHeight: 1000, scrollTop: 700, clientHeight: 300 })).toBe(true);
+  });
+
+  it("allows a small gap so a fractional scroll position still counts", () => {
+    expect(isAtBottom({ scrollHeight: 1000, scrollTop: 690, clientHeight: 300 })).toBe(true);
+  });
+
+  it("reports a container scrolled away from the bottom", () => {
+    expect(isAtBottom({ scrollHeight: 1000, scrollTop: 200, clientHeight: 300 })).toBe(false);
+  });
+
+  it("treats a container shorter than its viewport as at the bottom", () => {
+    expect(isAtBottom({ scrollHeight: 120, scrollTop: 0, clientHeight: 300 })).toBe(true);
+  });
+});
+
+describe("containsSelection", () => {
+  it("reports no selection when nothing is selected", () => {
+    document.getSelection()?.removeAllRanges();
+    expect(containsSelection(document.body)).toBe(false);
+  });
+
+  it("reports a selection anchored inside the element", () => {
+    const host = document.createElement("div");
+    host.textContent = "claim registered";
+    document.body.append(host);
+
+    const range = document.createRange();
+    range.selectNodeContents(host);
+    const selection = document.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+
+    expect(containsSelection(host)).toBe(true);
+
+    selection?.removeAllRanges();
+    host.remove();
+  });
+
+  it("ignores a selection anchored outside the element", () => {
+    const selected = document.createElement("div");
+    selected.textContent = "claim registered";
+    const other = document.createElement("div");
+    document.body.append(selected, other);
+
+    const range = document.createRange();
+    range.selectNodeContents(selected);
+    const selection = document.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+
+    expect(containsSelection(other)).toBe(false);
+
+    selection?.removeAllRanges();
+    selected.remove();
+    other.remove();
   });
 });

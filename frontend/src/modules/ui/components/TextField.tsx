@@ -8,7 +8,7 @@ import * as m from "@/paraglide/messages";
 
 const inputStyle = tv({
   base: [
-    "w-full rounded-lg bg-white px-3 py-1.5 text-sm",
+    "h-9 w-full rounded-lg bg-white px-3 text-sm",
     "text-zinc-950 placeholder:text-zinc-500 dark:bg-zinc-800/50 dark:text-white dark:placeholder:text-zinc-400",
     "shadow-sm ring-1 ring-zinc-950/10 dark:ring-white/10",
     "outline-none focus-visible:ring-2 focus-visible:ring-ring",

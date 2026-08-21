@@ -28,6 +28,66 @@ use tauri_plugin_autostart::ManagerExt;
 use tokio_util::sync::CancellationToken;
 use window::MAIN_WINDOW_LABEL;
 
+/// Applies the loaded configuration and starts the background tasks and the
+/// tray icon.
+///
+/// # Errors
+///
+/// Returns an error if the tray icon cannot be created.
+fn setup_app(
+    app: &mut tauri::App,
+    log_filter: logging::LogFilter,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let app_state = state::AppState::with_config();
+
+    let (language, log_level, should_autostart) = tauri::async_runtime::block_on(async {
+        let inner = app_state.inner.read().await;
+        (
+            inner.config.general.language.clone(),
+            inner.config.general.log_level.clone(),
+            inner.config.general.autostart,
+        )
+    });
+
+    log_filter.set_level(&log_level);
+    app.manage(log_filter);
+
+    let effective_locale = i18n::resolve_locale(language.as_deref());
+    if let Err(e) = i18n::init(effective_locale) {
+        tracing::warn!(error = %e, "Failed to initialize i18n, falling back to defaults");
+        if let Err(e) = i18n::init("en") {
+            tracing::error!(error = %e, "Failed to initialize i18n fallback locale");
+        }
+    }
+
+    app.manage(app_state);
+
+    let autolaunch = app.autolaunch();
+    let autostart_result = if should_autostart {
+        autolaunch.enable()
+    } else {
+        autolaunch.disable()
+    };
+    if let Err(e) = autostart_result {
+        tracing::warn!(error = %e, "Failed to sync autostart state");
+    }
+
+    let cancel_token = CancellationToken::new();
+    app.manage(cancel_token.clone());
+
+    polling::start_polling(app.handle().clone(), cancel_token.clone());
+
+    scheduled_claim::start_scheduled_claims(app.handle().clone(), cancel_token.clone());
+
+    notification::start_notification_checker(app.handle().clone(), cancel_token.clone());
+
+    setup_ctrlc_handler(app.handle().clone(), cancel_token);
+
+    tray::setup_tray(app)?;
+
+    Ok(())
+}
+
 /// Runs the Storekeeper application.
 ///
 /// # Errors
@@ -39,6 +99,11 @@ use window::MAIN_WINDOW_LABEL;
 )]
 pub fn run() -> Result<()> {
     let log_filter = logging::init();
+    tracing::info!(
+        version = env!("CARGO_PKG_VERSION"),
+        log_dir = %logging::log_dir().unwrap_or_default(),
+        "Storekeeper starting"
+    );
 
     let app = tauri::Builder::default()
         // Must be registered first so it runs before any other plugin. When a
@@ -59,56 +124,7 @@ pub fn run() -> Result<()> {
         }))
         .plugin(tauri_plugin_autostart::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
-        .setup(move |app| {
-            let app_state = state::AppState::with_config();
-
-            let (language, log_level, should_autostart) = tauri::async_runtime::block_on(async {
-                let inner = app_state.inner.read().await;
-                (
-                    inner.config.general.language.clone(),
-                    inner.config.general.log_level.clone(),
-                    inner.config.general.autostart,
-                )
-            });
-
-            log_filter.set_level(&log_level);
-            app.manage(log_filter);
-
-            let effective_locale = i18n::resolve_locale(language.as_deref());
-            if let Err(e) = i18n::init(effective_locale) {
-                tracing::warn!(error = %e, "Failed to initialize i18n, falling back to defaults");
-                if let Err(e) = i18n::init("en") {
-                    tracing::error!(error = %e, "Failed to initialize i18n fallback locale");
-                }
-            }
-
-            app.manage(app_state);
-
-            let autolaunch = app.autolaunch();
-            let autostart_result = if should_autostart {
-                autolaunch.enable()
-            } else {
-                autolaunch.disable()
-            };
-            if let Err(e) = autostart_result {
-                tracing::warn!(error = %e, "Failed to sync autostart state");
-            }
-
-            let cancel_token = CancellationToken::new();
-            app.manage(cancel_token.clone());
-
-            polling::start_polling(app.handle().clone(), cancel_token.clone());
-
-            scheduled_claim::start_scheduled_claims(app.handle().clone(), cancel_token.clone());
-
-            notification::start_notification_checker(app.handle().clone(), cancel_token.clone());
-
-            setup_ctrlc_handler(app.handle().clone(), cancel_token);
-
-            tray::setup_tray(app)?;
-
-            Ok(())
-        })
+        .setup(move |app| setup_app(app, log_filter))
         .invoke_handler(tauri::generate_handler![
             commands::get_all_resources,
             commands::refresh_resources,

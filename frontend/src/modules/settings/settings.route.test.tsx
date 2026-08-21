@@ -10,7 +10,7 @@ import {
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { queryClient } from "@/modules/core/core.queryClient";
 import type { AppConfig, SecretsConfig } from "@/modules/settings/settings.types";
-import { SettingsPage } from "@/routes/settings";
+import { SettingsPage } from "@/modules/settings/components/SettingsPage";
 
 /** A distinct UID per game, so a crossed form-field path shows up as a swap. */
 const CONFIG: AppConfig = {
