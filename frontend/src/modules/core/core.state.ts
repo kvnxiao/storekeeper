@@ -69,17 +69,17 @@ export function createCore() {
   let tickInterval: ReturnType<typeof setInterval> | undefined;
 
   /**
-   * Current time for every time-derived view.
+   * Current instant for every time-derived view.
    *
    * Reading the version is what subscribes callers to the minute interval and
-   * to snapshot arrivals; the time itself comes from the real clock. Sampling
-   * it into a signal instead measures deadlines the backend computed as
-   * `now + remaining` against a clock older than the fetch, so a snapshot
+   * to snapshot arrivals; the instant itself comes from the real clock.
+   * Sampling it into a signal instead measures deadlines the backend computed
+   * as `now + remaining` against a clock older than the fetch, so a snapshot
    * landing between minute ticks shows more time than is left.
    */
-  function tick(): number {
+  function tick(): Temporal.Instant {
     tickVersion();
-    return Date.now();
+    return Temporal.Now.instant();
   }
 
   function startTickInterval(): void {

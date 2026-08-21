@@ -100,17 +100,6 @@ export function filterEntries(
 }
 
 /**
- * Read an entry's timestamp as a `Date`.
- *
- * Convert the backend's UTC timestamp for local display. Return `null` for an
- * invalid value so the caller can render the original text.
- */
-export function parseLogTimestamp(timestamp: string): Date | null {
-  const parsed = new Date(timestamp);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
-/**
  * Build localized log-level choices in descending severity order.
  *
  * Evaluated at call time so labels follow the active locale.

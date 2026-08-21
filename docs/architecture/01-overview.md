@@ -110,6 +110,7 @@ The app's primary mode is minimized to tray, where in-app alerts are invisible. 
 | UI primitives | Kobalte |
 | Styling | Tailwind CSS with tailwind-variants |
 | Frontend i18n | Paraglide JS (inlang) |
+| Frontend date and time | Temporal, with temporal-polyfill for older webviews |
 | Frontend toolchain | Vite+ (`vp`) |
 
 ## Further Reading

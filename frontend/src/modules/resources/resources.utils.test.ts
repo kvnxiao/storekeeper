@@ -19,15 +19,14 @@ function makeDurationFmt(locale: string): Intl.DurationFormat {
   });
 }
 
-/** Returns ISO string `deltaMs` in the future from `now`. */
-function futureIso(now: number, deltaMs: number): string {
-  return new Date(now + deltaMs).toISOString();
+function futureIso(now: Temporal.Instant, deltaMs: number): string {
+  return now.add({ milliseconds: deltaMs }).toString();
 }
 
 const MS = { s: 1_000, m: 60_000, h: 3_600_000, d: 86_400_000 };
 
 describe("formatTimeRemaining - early returns", () => {
-  const now = Date.now();
+  const now = Temporal.Now.instant();
   const fmt = makeDurationFmt("en");
 
   it.each([
@@ -35,8 +34,8 @@ describe("formatTimeRemaining - early returns", () => {
     ["undefined", undefined],
     ["empty string", ""],
     ["invalid date string", "not-a-date"],
-    ["past datetime", new Date(now - MS.m).toISOString()],
-    ["exact now (diffMs = 0)", new Date(now).toISOString()],
+    ["past datetime", now.subtract({ milliseconds: MS.m }).toString()],
+    ["exact now (zero remaining)", now.toString()],
     ["sub-second remaining", futureIso(now, 500)],
   ])("returns Full for %s", (_label, datetime) => {
     expect(formatTimeRemaining(datetime, now, fmt)).toBe("Full");
@@ -156,7 +155,7 @@ const DURATION_DELTAS: Record<string, number> = {
 };
 
 describe.each(LOCALE_CONFIGS)("formatTimeRemaining - $locale", ({ locale, expected }) => {
-  const now = Date.now();
+  const now = Temporal.Now.instant();
   const fmt = makeDurationFmt(locale);
 
   it.each(Object.entries(expected))("%s → %s", (label, output) => {
@@ -166,7 +165,7 @@ describe.each(LOCALE_CONFIGS)("formatTimeRemaining - $locale", ({ locale, expect
 });
 
 describe("isPastDateTime", () => {
-  const now = Date.now();
+  const now = Temporal.Now.instant();
 
   it.each([
     ["null", null],
@@ -178,7 +177,7 @@ describe("isPastDateTime", () => {
   });
 
   it("counts the exact current instant as past", () => {
-    expect(isPastDateTime(new Date(now).toISOString(), now)).toBe(true);
+    expect(isPastDateTime(now.toString(), now)).toBe(true);
   });
 
   it("is false while the datetime is still ahead", () => {
@@ -222,7 +221,7 @@ describe("getResourceLimitsForGame", () => {
 });
 
 describe("formatAbsoluteDateTime", () => {
-  const now = Date.now();
+  const now = Temporal.Now.instant();
   const timeOnlyFmt = new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit" });
   const weekdayTimeFmt = new Intl.DateTimeFormat("en", {
     weekday: "short",
@@ -240,15 +239,14 @@ describe("formatAbsoluteDateTime", () => {
   });
 
   it("formats same-day targets as time only", () => {
-    const target = new Date(now);
-    expect(formatAbsoluteDateTime(target.toISOString(), now, timeOnlyFmt, weekdayTimeFmt)).toBe(
-      timeOnlyFmt.format(target),
+    expect(formatAbsoluteDateTime(now.toString(), now, timeOnlyFmt, weekdayTimeFmt)).toBe(
+      timeOnlyFmt.format(now),
     );
   });
 
   it("formats other-day targets with the weekday", () => {
-    const target = new Date(now + 3 * MS.d);
-    expect(formatAbsoluteDateTime(target.toISOString(), now, timeOnlyFmt, weekdayTimeFmt)).toBe(
+    const target = now.add({ milliseconds: 3 * MS.d });
+    expect(formatAbsoluteDateTime(target.toString(), now, timeOnlyFmt, weekdayTimeFmt)).toBe(
       weekdayTimeFmt.format(target),
     );
   });

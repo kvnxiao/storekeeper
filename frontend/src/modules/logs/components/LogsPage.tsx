@@ -15,6 +15,7 @@ import {
   type VoidComponent,
 } from "solid-js";
 import { core } from "@/modules/core/core.state";
+import { parseInstant } from "@/modules/core/core.utils";
 import type { LogLevel } from "@/modules/logs/logs.constants";
 import { logTailQueryOptions, openLogFolder } from "@/modules/logs/logs.query";
 import {
@@ -26,7 +27,6 @@ import {
   type LogEntry,
   logLevelOptions,
   parseLogLines,
-  parseLogTimestamp,
 } from "@/modules/logs/logs.utils";
 import { Button } from "@/modules/ui/components/Button";
 import { ErrorBanner } from "@/modules/ui/components/ErrorBanner";
@@ -56,7 +56,7 @@ const MUTED_TEXT = "text-zinc-500 dark:text-zinc-400";
 
 /** Format a valid timestamp in the viewer's locale; render invalid text unchanged. */
 function entryTime(entry: LogEntry): string {
-  const stamped = parseLogTimestamp(entry.timestamp);
+  const stamped = parseInstant(entry.timestamp);
   return stamped ? core.timeWithSecondsFormatter().format(stamped) : entry.timestamp;
 }
 

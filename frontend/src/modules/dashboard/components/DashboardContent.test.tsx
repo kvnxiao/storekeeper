@@ -12,7 +12,7 @@ vi.mock("@tauri-apps/api/core", () => ({
       case "get_config":
         throw new Error(CONFIG_ERROR);
       case "get_all_resources":
-        return { games: {}, lastUpdated: new Date(0).toISOString() };
+        return { games: {}, lastUpdated: Temporal.Instant.fromEpochMilliseconds(0).toString() };
       default:
         return {};
     }

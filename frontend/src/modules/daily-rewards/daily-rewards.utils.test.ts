@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { extractClaimStatus, utc8DateString } from "@/modules/daily-rewards/daily-rewards.utils";
+import { extractClaimStatus, utc8Date } from "@/modules/daily-rewards/daily-rewards.utils";
 import { GameId } from "@/modules/games/games.types";
 
 describe("extractClaimStatus", () => {
@@ -30,12 +30,12 @@ describe("extractClaimStatus", () => {
   });
 });
 
-describe("utc8DateString", () => {
+describe("utc8Date", () => {
   it("is still the previous date just before midnight UTC+8", () => {
-    expect(utc8DateString(Date.UTC(2026, 7, 5, 15, 59, 0))).toBe("2026-08-05");
+    expect(utc8Date(Temporal.Instant.from("2026-08-05T15:59:00Z")).toString()).toBe("2026-08-05");
   });
 
   it("rolls over at midnight UTC+8, which is 16:00 UTC", () => {
-    expect(utc8DateString(Date.UTC(2026, 7, 5, 16, 0, 0))).toBe("2026-08-06");
+    expect(utc8Date(Temporal.Instant.from("2026-08-05T16:00:00Z")).toString()).toBe("2026-08-06");
   });
 });

@@ -11,7 +11,6 @@ import {
   logLevelOptions,
   parseLogLine,
   parseLogLines,
-  parseLogTimestamp,
 } from "@/modules/logs/logs.utils";
 
 const WELL_FORMED = JSON.stringify({
@@ -120,22 +119,6 @@ describe("filterEntries", () => {
 
   it("ignores surrounding whitespace in the search", () => {
     expect(filterEntries(entries, "trace", "   ")).toHaveLength(3);
-  });
-});
-
-describe("parseLogTimestamp", () => {
-  it("reads the backend's UTC stamp as the instant it names", () => {
-    expect(parseLogTimestamp("2026-08-21T04:15:09.123456Z")?.toISOString()).toBe(
-      "2026-08-21T04:15:09.123Z",
-    );
-  });
-
-  it("returns null for a value that is not a date", () => {
-    expect(parseLogTimestamp("unknown")).toBeNull();
-  });
-
-  it("returns null for an absent timestamp", () => {
-    expect(parseLogTimestamp("")).toBeNull();
   });
 });
 
