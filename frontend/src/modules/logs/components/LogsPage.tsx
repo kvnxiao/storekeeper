@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/solid-query";
-import { createVirtualizer } from "@tanstack/solid-virtual";
+import { createVirtualizer, type VirtualItem } from "@tanstack/solid-virtual";
 import ArrowDown from "lucide-solid/icons/arrow-down";
 import FolderOpen from "lucide-solid/icons/folder-open";
 import {
@@ -115,7 +115,14 @@ export const LogsPage: VoidComponent = () => {
     overscan: ROW_OVERSCAN,
   });
 
-  const rows = createMemo(() => virtualizer.getVirtualItems().slice());
+  // The adapter reconciles its items into a store keyed by index, which leaves
+  // the array sparse while it shrinks. Dropping the holes keeps `For` from
+  // handing the row callback an undefined item, and the surviving proxies keep
+  // their identity so a row's DOM outlives a poll.
+  const rows = createMemo(() => {
+    const items: (VirtualItem | undefined)[] = virtualizer.getVirtualItems();
+    return items.filter((item): item is VirtualItem => item !== undefined);
+  });
 
   const scrollToLatest = (): void => {
     const count = visible().length;
