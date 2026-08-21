@@ -48,7 +48,7 @@
   "settings_failed_to_load": "加载设置失败：{error}",
   "settings_failed_to_save": "保存设置失败：{error}",
   "settings_loading": "正在加载设置…",
-  "settings_unsaved_changes": "您有未保存的更改。",
+  "settings_unsaved_changes": "未保存的更改",
   "settings_undo": "撤销更改",
   "settings_save": "保存更改",
 

@@ -25,6 +25,7 @@ use anyhow::Result;
 use tauri::Manager;
 use tauri::RunEvent;
 use tauri_plugin_autostart::ManagerExt;
+use tauri_plugin_window_state::StateFlags;
 use tokio_util::sync::CancellationToken;
 use window::MAIN_WINDOW_LABEL;
 
@@ -124,6 +125,14 @@ pub fn run() -> Result<()> {
         }))
         .plugin(tauri_plugin_autostart::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
+        // The main window is centred by its config and minimizes to the tray,
+        // so only secondary windows keep a remembered size and position.
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED)
+                .with_denylist(&[MAIN_WINDOW_LABEL])
+                .build(),
+        )
         .setup(move |app| setup_app(app, log_filter))
         .invoke_handler(tauri::generate_handler![
             commands::get_all_resources,

@@ -1,3 +1,5 @@
+import ExternalLink from "lucide-solid/icons/external-link";
+import FolderOpen from "lucide-solid/icons/folder-open";
 import type { VoidComponent } from "solid-js";
 import { openLogFolder, openLogsWindow } from "@/modules/logs/logs.query";
 import { logLevelOptions } from "@/modules/logs/logs.utils";
@@ -28,9 +30,11 @@ export const LogsSection: VoidComponent<LogsSectionProps> = (props) => {
       />
       <div class="flex flex-wrap gap-2">
         <Button color="light" onClick={() => openLogsWindow()}>
+          <ExternalLink aria-hidden="true" class="size-4" />
           {m.settings_logs_view()}
         </Button>
         <Button color="light" onClick={() => openLogFolder()}>
+          <FolderOpen aria-hidden="true" class="size-4" />
           {m.settings_logs_open_folder()}
         </Button>
       </div>

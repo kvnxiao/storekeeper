@@ -1,3 +1,4 @@
+import FolderOpen from "lucide-solid/icons/folder-open";
 import type { VoidComponent } from "solid-js";
 import { type Locale, LOCALE_ENDONYMS } from "@/modules/i18n/i18n.constants";
 import { SettingsCard } from "@/modules/settings/components/SettingsCard";
@@ -75,6 +76,7 @@ export const GeneralSection: VoidComponent<GeneralSectionProps> = (props) => {
         options={languageOptions()}
       />
       <Button color="light" class="self-start" onClick={() => openConfigFolder()}>
+        <FolderOpen aria-hidden="true" class="size-4" />
         {m.settings_general_open_config()}
       </Button>
     </SettingsCard>

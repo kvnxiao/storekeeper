@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/solid-query";
 import { createVirtualizer } from "@tanstack/solid-virtual";
 import ArrowDown from "lucide-solid/icons/arrow-down";
+import FolderOpen from "lucide-solid/icons/folder-open";
 import {
   createEffect,
   createMemo,
@@ -142,6 +143,7 @@ export const LogsPage: VoidComponent = () => {
           </span>
         </div>
         <Button color="light" onClick={() => openLogFolder()}>
+          <FolderOpen aria-hidden="true" class="size-4" />
           {m.logs_open_folder()}
         </Button>
       </header>

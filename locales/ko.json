@@ -48,7 +48,7 @@
   "settings_failed_to_load": "설정 로드 실패: {error}",
   "settings_failed_to_save": "설정 저장 실패: {error}",
   "settings_loading": "설정 로드 중…",
-  "settings_unsaved_changes": "저장하지 않은 변경 사항이 있습니다.",
+  "settings_unsaved_changes": "저장되지 않은 변경 사항",
   "settings_undo": "변경 취소",
   "settings_save": "변경 저장",
 

@@ -48,7 +48,7 @@
   "settings_failed_to_load": "設定の読み込みに失敗しました：{error}",
   "settings_failed_to_save": "設定の保存に失敗しました：{error}",
   "settings_loading": "設定を読み込み中…",
-  "settings_unsaved_changes": "未保存の変更があります。",
+  "settings_unsaved_changes": "未保存の変更",
   "settings_undo": "変更を取り消す",
   "settings_save": "変更を保存",
 

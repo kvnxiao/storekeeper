@@ -48,7 +48,7 @@
   "settings_failed_to_load": "Failed to load settings: {error}",
   "settings_failed_to_save": "Failed to save settings: {error}",
   "settings_loading": "Loading settings...",
-  "settings_unsaved_changes": "You have unsaved changes.",
+  "settings_unsaved_changes": "Unsaved changes",
   "settings_undo": "Undo Changes",
   "settings_save": "Save Changes",
 
@@ -71,7 +71,7 @@
   "log_level_debug": "Debug",
   "log_level_trace": "Trace",
   "settings_logs_view": "View Logs",
-  "settings_logs_open_folder": "Open Log Folder",
+  "settings_logs_open_folder": "Open Logs Folder",
 
   "settings_game_enable_tracking": "Enable {title} tracking",
   "settings_game_uid": "UID",
