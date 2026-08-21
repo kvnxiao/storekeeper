@@ -141,10 +141,6 @@ mod tests {
     type BoxError = Box<dyn std::error::Error + Send + Sync>;
     type BoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + Send + 'a>>;
 
-    // =========================================================================
-    // Mock
-    // =========================================================================
-
     struct MockDailyRewardClient {
         id: GameId,
         should_fail: bool,
@@ -193,10 +189,6 @@ mod tests {
             })
         }
     }
-
-    // =========================================================================
-    // Sync - construction & registration
-    // =========================================================================
 
     #[test]
     fn new_registry_is_empty() {
@@ -252,10 +244,6 @@ mod tests {
         assert_eq!(r.len(), 1);
     }
 
-    // =========================================================================
-    // Async - get_status_for_game
-    // =========================================================================
-
     #[tokio::test(start_paused = true)]
     async fn status_for_game_success() {
         let mut r = DailyRewardRegistry::new();
@@ -288,10 +276,6 @@ mod tests {
         );
     }
 
-    // =========================================================================
-    // Async - claim_for_game
-    // =========================================================================
-
     #[tokio::test(start_paused = true)]
     async fn claim_for_game_success() {
         let mut r = DailyRewardRegistry::new();
@@ -308,10 +292,6 @@ mod tests {
         let result = r.claim_for_game(GameId::HonkaiStarRail).await;
         result.expect_err("claim should fail for unregistered game");
     }
-
-    // =========================================================================
-    // Async - get_all_status
-    // =========================================================================
 
     #[tokio::test(start_paused = true)]
     async fn get_all_status_empty() {
@@ -346,17 +326,11 @@ mod tests {
         assert_eq!(map.len(), 1, "only successful status collected");
     }
 
-    // =========================================================================
-    // Provider grouping (verifying the batch_by_provider behavior)
-    // =========================================================================
-
     #[test]
     fn verify_provider_grouping() {
-        // Ensure HoYoLab games share a provider
         assert_eq!(GameId::GenshinImpact.api_provider(), ApiProvider::HoYoLab);
         assert_eq!(GameId::HonkaiStarRail.api_provider(), ApiProvider::HoYoLab);
         assert_eq!(GameId::ZenlessZoneZero.api_provider(), ApiProvider::HoYoLab);
-        // WuWa is separate
         assert_eq!(GameId::WutheringWaves.api_provider(), ApiProvider::Kuro);
     }
 }

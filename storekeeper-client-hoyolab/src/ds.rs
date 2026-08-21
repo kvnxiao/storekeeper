@@ -91,25 +91,20 @@ fn md5_hex(input: &str) -> String {
 mod tests {
     use super::*;
 
-    // =========================================================================
-    // MD5 hash tests
-    // =========================================================================
-
     #[test]
-    fn test_md5_empty() {
+    fn md5_empty() {
         let hash = md5_hex("");
         assert_eq!(hash, "d41d8cd98f00b204e9800998ecf8427e");
     }
 
     #[test]
-    fn test_md5_hello() {
+    fn md5_hello() {
         let hash = md5_hex("hello");
         assert_eq!(hash, "5d41402abc4b2a76b9719d911017c592");
     }
 
     #[test]
-    fn test_md5_known_values() {
-        // Test with various known MD5 hashes
+    fn md5_known_values() {
         assert_eq!(md5_hex("world"), "7d793037a0760186574b0282f2f435e7");
         assert_eq!(md5_hex("test"), "098f6bcd4621d373cade4e832627b4f6");
         assert_eq!(
@@ -119,7 +114,7 @@ mod tests {
     }
 
     #[test]
-    fn test_md5_is_lowercase() {
+    fn md5_is_lowercase() {
         let hash = md5_hex("test");
         assert!(
             hash.chars()
@@ -129,33 +124,26 @@ mod tests {
     }
 
     #[test]
-    fn test_md5_length_is_32() {
+    fn md5_length_is_32() {
         let hash = md5_hex("any string here");
         assert_eq!(hash.len(), 32, "MD5 hash should always be 32 characters");
     }
 
-    // =========================================================================
-    // Overseas DS header tests
-    // =========================================================================
-
     #[test]
-    fn test_ds_format() {
+    fn ds_format() {
         let ds = generate_dynamic_secret_overseas();
         let mut parts = ds.split(',');
         let timestamp = parts.next().expect("timestamp part");
         let random = parts.next().expect("random part");
         let hash = parts.next().expect("hash part");
         assert!(parts.next().is_none(), "DS should have exactly 3 parts");
-        // First part should be a timestamp (digits only)
         assert!(timestamp.chars().all(|c| c.is_ascii_digit()));
-        // Second part should be 6 letters
         assert_eq!(random.len(), 6);
-        // Third part should be 32 hex chars
         assert_eq!(hash.len(), 32);
     }
 
     #[test]
-    fn test_overseas_ds_timestamp_is_current() {
+    fn overseas_ds_timestamp_is_current() {
         let before = jiff::Timestamp::now().as_second();
         let ds = generate_dynamic_secret_overseas();
         let after = jiff::Timestamp::now().as_second();
@@ -174,7 +162,7 @@ mod tests {
     }
 
     #[test]
-    fn test_overseas_ds_random_is_lowercase_letters() {
+    fn overseas_ds_random_is_lowercase_letters() {
         let ds = generate_dynamic_secret_overseas();
         let random = ds.split(',').nth(1).expect("random part");
 
@@ -186,7 +174,7 @@ mod tests {
     }
 
     #[test]
-    fn test_overseas_ds_hash_is_valid_hex() {
+    fn overseas_ds_hash_is_valid_hex() {
         let ds = generate_dynamic_secret_overseas();
         let hash = ds.split(',').nth(2).expect("hash part");
 
@@ -203,8 +191,7 @@ mod tests {
     }
 
     #[test]
-    fn test_overseas_ds_different_calls_produce_different_random() {
-        // Due to randomness, two calls should (almost always) produce different randoms
+    fn overseas_ds_different_calls_produce_different_random() {
         let mut randoms: Vec<String> = Vec::new();
         for _ in 0..10 {
             let ds = generate_dynamic_secret_overseas();
@@ -212,7 +199,6 @@ mod tests {
             randoms.push(random.to_string());
         }
 
-        // At least some of them should be different
         let first = randoms.first().expect("at least one random generated");
         let has_different = randoms.iter().any(|r| r != first);
         assert!(
@@ -221,12 +207,8 @@ mod tests {
         );
     }
 
-    // =========================================================================
-    // Chinese DS header tests
-    // =========================================================================
-
     #[test]
-    fn test_chinese_ds_format() {
+    fn chinese_ds_format() {
         let ds = generate_dynamic_secret_chinese("", "");
         let mut parts = ds.split(',');
         let timestamp = parts.next().expect("timestamp part");
@@ -234,23 +216,20 @@ mod tests {
         let hash = parts.next().expect("hash part");
         assert!(parts.next().is_none(), "DS should have exactly 3 parts");
 
-        // First part should be timestamp
         assert!(
             timestamp.chars().all(|c| c.is_ascii_digit()),
             "First part should be digits (timestamp)"
         );
-        // Second part should be integer 100001-200000
         let random: u32 = random.parse().expect("should parse random int");
         assert!(
             (100_001..=200_000).contains(&random),
             "Random should be in range 100001-200000, got {random}"
         );
-        // Third part should be 32 hex chars
         assert_eq!(hash.len(), 32, "Hash should be 32 characters");
     }
 
     #[test]
-    fn test_chinese_ds_with_body_and_query() {
+    fn chinese_ds_with_body_and_query() {
         let ds = generate_dynamic_secret_chinese(
             r#"{"game_biz":"hk4e_global"}"#,
             "role_id=123456789&server=os_usa",
@@ -260,7 +239,7 @@ mod tests {
     }
 
     #[test]
-    fn test_chinese_ds_random_in_range() {
+    fn chinese_ds_random_in_range() {
         for _ in 0..20 {
             let ds = generate_dynamic_secret_chinese("", "");
             let random: u32 = ds
@@ -278,26 +257,15 @@ mod tests {
     }
 
     #[test]
-    fn test_chinese_ds_different_body_produces_different_hash() {
-        // Same timestamp and random would produce different hashes with different
-        // bodies Since we can't control timestamp/random, we just verify the
-        // hash is computed
-        let ds1 = generate_dynamic_secret_chinese("body1", "");
-        let ds2 = generate_dynamic_secret_chinese("body2", "");
+    fn chinese_ds_hash_depends_on_the_body() {
+        let hash1 = compute_md5_chinese(1_704_067_200, 150_000, "body1", "");
+        let hash2 = compute_md5_chinese(1_704_067_200, 150_000, "body2", "");
 
-        // They should both be valid format
-        let hash1 = ds1.split(',').nth(2).expect("ds1 hash part");
-        let hash2 = ds2.split(',').nth(2).expect("ds2 hash part");
-        assert_eq!(hash1.len(), 32);
-        assert_eq!(hash2.len(), 32);
+        assert_ne!(hash1, hash2);
     }
 
-    // =========================================================================
-    // Helper function tests
-    // =========================================================================
-
     #[test]
-    fn test_generate_random_lowercase_string_length() {
+    fn generate_random_lowercase_string_length() {
         let s = generate_random_lowercase_string(6);
         assert_eq!(s.len(), 6);
 
@@ -309,7 +277,7 @@ mod tests {
     }
 
     #[test]
-    fn test_generate_random_lowercase_string_chars() {
+    fn generate_random_lowercase_string_chars() {
         let s = generate_random_lowercase_string(100);
         assert!(
             s.chars().all(|c| c.is_ascii_lowercase()),
@@ -318,7 +286,7 @@ mod tests {
     }
 
     #[test]
-    fn test_generate_random_int_in_range() {
+    fn generate_random_int_in_range() {
         for _ in 0..100 {
             let r = generate_random_int();
             assert!(
@@ -328,27 +296,20 @@ mod tests {
         }
     }
 
-    // =========================================================================
-    // Compute MD5 helper tests
-    // =========================================================================
-
     #[test]
-    fn test_compute_md5_overseas_format() {
-        // Test that the overseas MD5 computation works with known format
+    fn compute_md5_overseas_format() {
         let timestamp = 1_704_067_200i64; // 2024-01-01 00:00:00 UTC
         let random = "abcdef";
 
         let hash = compute_md5_overseas(timestamp, random);
         assert_eq!(hash.len(), 32);
 
-        // The input is "salt={SALT}&t={timestamp}&r={random}"
-        // We can verify the format is consistent
         let expected_input = format!("salt={SALT_OVERSEAS}&t={timestamp}&r={random}");
         assert_eq!(md5_hex(&expected_input), hash);
     }
 
     #[test]
-    fn test_compute_md5_chinese_format() {
+    fn compute_md5_chinese_format() {
         let timestamp = 1_704_067_200i64;
         let random = 150_000u32;
         let body = r#"{"test":"value"}"#;
@@ -357,7 +318,6 @@ mod tests {
         let hash = compute_md5_chinese(timestamp, random, body, query);
         assert_eq!(hash.len(), 32);
 
-        // Verify the format
         let expected_input =
             format!("salt={SALT_CHINESE}&t={timestamp}&r={random}&b={body}&q={query}");
         assert_eq!(md5_hex(&expected_input), hash);

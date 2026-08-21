@@ -11,7 +11,6 @@ pub(super) const DEFAULT_LOCALE: &str = "en";
 fn match_supported_locale(locale: &str) -> Option<&'static str> {
     let lower = locale.to_lowercase();
 
-    // Exact match
     if let Some(found) = SUPPORTED_LOCALES.iter().find(|l| l.to_lowercase() == lower) {
         return Some(found);
     }
@@ -41,7 +40,6 @@ pub fn resolve_locale(config_language: Option<&str>) -> &'static str {
         );
     }
 
-    // Auto-detect from system
     if let Some(sys_locale) = sys_locale::get_locale() {
         if let Some(matched) = match_supported_locale(&sys_locale) {
             tracing::info!(

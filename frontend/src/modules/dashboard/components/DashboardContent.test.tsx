@@ -30,6 +30,6 @@ describe("DashboardContent", () => {
     ));
 
     await screen.findByText(new RegExp(CONFIG_ERROR));
-    expect(container.textContent).not.toContain("No games configured");
+    expect(container).not.toHaveTextContent("No games configured");
   });
 });

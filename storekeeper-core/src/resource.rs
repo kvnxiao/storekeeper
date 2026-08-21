@@ -35,7 +35,7 @@ pub struct StaminaResource {
 
 impl StaminaResource {
     /// Creates a new stamina resource.
-    #[must_use = "this returns a new StaminaResource"]
+    #[must_use]
     pub fn new(current: u32, max: u32, full_at: Timestamp, regen_rate_seconds: u32) -> Self {
         Self {
             current,
@@ -73,13 +73,13 @@ pub struct CooldownResource {
 
 impl CooldownResource {
     /// Creates a new cooldown resource.
-    #[must_use = "this returns a new CooldownResource"]
+    #[must_use]
     pub fn new(is_ready: bool, ready_at: Timestamp) -> Self {
         Self { is_ready, ready_at }
     }
 
     /// Creates a cooldown resource that is ready.
-    #[must_use = "this returns a new CooldownResource"]
+    #[must_use]
     pub fn ready() -> Self {
         Self {
             is_ready: true,
@@ -88,7 +88,7 @@ impl CooldownResource {
     }
 
     /// Creates a cooldown resource that is on cooldown.
-    #[must_use = "this returns a new CooldownResource"]
+    #[must_use]
     pub fn on_cooldown(ready_at: Timestamp) -> Self {
         Self {
             is_ready: false,
@@ -111,7 +111,7 @@ pub struct ExpeditionResource {
 
 impl ExpeditionResource {
     /// Creates a new expedition resource.
-    #[must_use = "this returns a new ExpeditionResource"]
+    #[must_use]
     pub fn new(
         current_expeditions: u32,
         max_expeditions: u32,
@@ -142,12 +142,8 @@ mod tests {
     use super::*;
     use jiff::SignedDuration;
 
-    // =========================================================================
-    // StaminaResource tests
-    // =========================================================================
-
     #[test]
-    fn test_stamina_resource_new() {
+    fn stamina_resource_new() {
         let now = Timestamp::now();
         let resource = StaminaResource::new(100, 160, now, 480);
 
@@ -158,13 +154,13 @@ mod tests {
     }
 
     #[test]
-    fn test_stamina_is_full_when_current_equals_max() {
+    fn stamina_is_full_when_current_equals_max() {
         let resource = StaminaResource::new(160, 160, Timestamp::now(), 480);
         assert!(resource.is_full(), "Should be full when current equals max");
     }
 
     #[test]
-    fn test_stamina_is_full_when_current_exceeds_max() {
+    fn stamina_is_full_when_current_exceeds_max() {
         // Some games allow overflow (e.g., from fragile resin)
         let resource = StaminaResource::new(180, 160, Timestamp::now(), 480);
         assert!(
@@ -174,7 +170,7 @@ mod tests {
     }
 
     #[test]
-    fn test_stamina_is_not_full_when_current_less_than_max() {
+    fn stamina_is_not_full_when_current_less_than_max() {
         let resource = StaminaResource::new(100, 160, Timestamp::now(), 480);
         assert!(
             !resource.is_full(),
@@ -183,13 +179,13 @@ mod tests {
     }
 
     #[test]
-    fn test_stamina_is_not_full_at_zero() {
+    fn stamina_is_not_full_at_zero() {
         let resource = StaminaResource::new(0, 160, Timestamp::now(), 480);
         assert!(!resource.is_full(), "Should not be full at zero");
     }
 
     #[test]
-    fn test_fill_percentage_at_zero() {
+    fn fill_percentage_at_zero() {
         let resource = StaminaResource::new(0, 160, Timestamp::now(), 480);
         assert!(
             (resource.fill_percentage() - 0.0).abs() < f64::EPSILON,
@@ -198,7 +194,7 @@ mod tests {
     }
 
     #[test]
-    fn test_fill_percentage_at_half() {
+    fn fill_percentage_at_half() {
         let resource = StaminaResource::new(80, 160, Timestamp::now(), 480);
         assert!(
             (resource.fill_percentage() - 0.5).abs() < f64::EPSILON,
@@ -207,7 +203,7 @@ mod tests {
     }
 
     #[test]
-    fn test_fill_percentage_at_full() {
+    fn fill_percentage_at_full() {
         let resource = StaminaResource::new(160, 160, Timestamp::now(), 480);
         assert!(
             (resource.fill_percentage() - 1.0).abs() < f64::EPSILON,
@@ -216,7 +212,7 @@ mod tests {
     }
 
     #[test]
-    fn test_fill_percentage_over_max() {
+    fn fill_percentage_over_max() {
         let resource = StaminaResource::new(200, 160, Timestamp::now(), 480);
         assert!(
             resource.fill_percentage() > 1.0,
@@ -229,8 +225,7 @@ mod tests {
     }
 
     #[test]
-    fn test_fill_percentage_with_max_zero() {
-        // Edge case: max is zero (should return 0.0, not divide by zero)
+    fn fill_percentage_with_max_zero() {
         let resource = StaminaResource::new(0, 0, Timestamp::now(), 480);
         assert!(
             (resource.fill_percentage() - 0.0).abs() < f64::EPSILON,
@@ -239,8 +234,7 @@ mod tests {
     }
 
     #[test]
-    fn test_fill_percentage_with_current_nonzero_max_zero() {
-        // Edge case: current > 0 but max is 0
+    fn fill_percentage_with_current_nonzero_max_zero() {
         let resource = StaminaResource::new(100, 0, Timestamp::now(), 480);
         assert!(
             (resource.fill_percentage() - 0.0).abs() < f64::EPSILON,
@@ -248,12 +242,8 @@ mod tests {
         );
     }
 
-    // =========================================================================
-    // CooldownResource tests
-    // =========================================================================
-
     #[test]
-    fn test_cooldown_resource_new() {
+    fn cooldown_resource_new() {
         let now = Timestamp::now();
         let resource = CooldownResource::new(true, now);
 
@@ -262,7 +252,7 @@ mod tests {
     }
 
     #[test]
-    fn test_cooldown_ready_factory() {
+    fn cooldown_ready_factory() {
         let before = Timestamp::now();
         let resource = CooldownResource::ready();
         let after = Timestamp::now();
@@ -275,7 +265,7 @@ mod tests {
     }
 
     #[test]
-    fn test_cooldown_on_cooldown_factory() {
+    fn cooldown_on_cooldown_factory() {
         let future_time = Timestamp::now() + SignedDuration::from_hours(24);
         let resource = CooldownResource::on_cooldown(future_time);
 
@@ -286,12 +276,8 @@ mod tests {
         assert_eq!(resource.ready_at, future_time);
     }
 
-    // =========================================================================
-    // ExpeditionResource tests
-    // =========================================================================
-
     #[test]
-    fn test_expedition_resource_new() {
+    fn expedition_resource_new() {
         let now = Timestamp::now();
         let resource = ExpeditionResource::new(3, 5, now);
 
@@ -301,7 +287,7 @@ mod tests {
     }
 
     #[test]
-    fn test_all_slots_used_when_full() {
+    fn all_slots_used_when_full() {
         let resource = ExpeditionResource::new(5, 5, Timestamp::now());
         assert!(
             resource.all_slots_used(),
@@ -310,8 +296,7 @@ mod tests {
     }
 
     #[test]
-    fn test_all_slots_used_when_over_max() {
-        // Edge case: current > max (shouldn't happen in practice)
+    fn all_slots_used_when_over_max() {
         let resource = ExpeditionResource::new(6, 5, Timestamp::now());
         assert!(
             resource.all_slots_used(),
@@ -320,7 +305,7 @@ mod tests {
     }
 
     #[test]
-    fn test_all_slots_not_used_when_below_max() {
+    fn all_slots_not_used_when_below_max() {
         let resource = ExpeditionResource::new(3, 5, Timestamp::now());
         assert!(
             !resource.all_slots_used(),
@@ -329,13 +314,13 @@ mod tests {
     }
 
     #[test]
-    fn test_all_slots_not_used_at_zero() {
+    fn all_slots_not_used_at_zero() {
         let resource = ExpeditionResource::new(0, 5, Timestamp::now());
         assert!(!resource.all_slots_used(), "Should not be full at zero");
     }
 
     #[test]
-    fn test_has_completed_when_finish_time_is_past() {
+    fn has_completed_when_finish_time_is_past() {
         let past_time = Timestamp::now() - SignedDuration::from_hours(1);
         let resource = ExpeditionResource::new(3, 5, past_time);
         assert!(
@@ -345,12 +330,9 @@ mod tests {
     }
 
     #[test]
-    fn test_has_completed_when_finish_time_is_now() {
-        // Note: This test is slightly flaky due to timing, but the logic is correct
+    fn has_completed_when_finish_time_is_now() {
         let now = Timestamp::now();
         let resource = ExpeditionResource::new(3, 5, now);
-        // The check is earliest_finish_at <= Timestamp::now(), so it should be
-        // completed
         assert!(
             resource.has_completed(),
             "Should have completed when finish time is now"
@@ -358,7 +340,7 @@ mod tests {
     }
 
     #[test]
-    fn test_has_not_completed_when_finish_time_is_future() {
+    fn has_not_completed_when_finish_time_is_future() {
         let future_time = Timestamp::now() + SignedDuration::from_hours(1);
         let resource = ExpeditionResource::new(3, 5, future_time);
         assert!(
@@ -367,12 +349,8 @@ mod tests {
         );
     }
 
-    // =========================================================================
-    // Serde tests
-    // =========================================================================
-
     #[test]
-    fn test_stamina_resource_serde_roundtrip() {
+    fn stamina_resource_serde_roundtrip() {
         let now = Timestamp::now();
         let resource = StaminaResource::new(100, 160, now, 480);
 
@@ -391,9 +369,7 @@ mod tests {
     }
 
     #[test]
-    fn test_stamina_resource_serializes_full_at_as_utc_z() {
-        // Locks the JSON contract consumed by the frontend: the `fullAt` field
-        // is an RFC3339 string in UTC with a trailing `Z`.
+    fn stamina_resource_serializes_full_at_as_utc_z() {
         let ts = Timestamp::from_second(1_704_067_200).expect("valid timestamp");
         let resource = StaminaResource::new(100, 160, ts, 480);
         let value = serde_json::to_value(&resource).expect("should serialize");
@@ -404,7 +380,7 @@ mod tests {
     }
 
     #[test]
-    fn test_cooldown_resource_serde_roundtrip() {
+    fn cooldown_resource_serde_roundtrip() {
         let resource = CooldownResource::ready();
 
         let json = serde_json::to_string(&resource).expect("should serialize");
@@ -415,7 +391,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expedition_resource_serde_roundtrip() {
+    fn expedition_resource_serde_roundtrip() {
         let now = Timestamp::now();
         let resource = ExpeditionResource::new(3, 5, now);
 

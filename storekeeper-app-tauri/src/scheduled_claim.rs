@@ -76,12 +76,9 @@ pub fn start_scheduled_claims(app_handle: AppHandle, cancel_token: CancellationT
         let state = app_handle.state::<AppState>();
         let notify = state.scheduler_notify();
 
-        // Run startup claims before entering the main loop
         run_startup_claims(&state, &app_handle).await;
 
-        // Main scheduling loop
         loop {
-            // Get games that have auto-claim enabled
             let auto_claim_games = state.get_auto_claim_games().await;
 
             if auto_claim_games.is_empty() {
@@ -92,11 +89,9 @@ pub fn start_scheduled_claims(app_handle: AppHandle, cancel_token: CancellationT
                 }
             }
 
-            // Find the earliest next claim time across all games
             let Some((target, games_to_claim)) =
                 calculate_next_claim(&auto_claim_games, &state).await
             else {
-                // No games need claiming right now, idle sleep
                 tracing::debug!("No games need claiming, idle sleeping");
                 match idle_wait(&cancel_token, &notify, &state, &app_handle).await {
                     ControlFlow::Break(()) => break,
@@ -114,7 +109,6 @@ pub fn start_scheduled_claims(app_handle: AppHandle, cancel_token: CancellationT
                 "Waiting until next scheduled claim time"
             );
 
-            // Wait until claim time, config change, or cancellation
             match handle_wake_reason(&sleep_until(target, &cancel_token, &notify).await) {
                 ControlFlow::Break(()) => break,
                 ControlFlow::Continue(PostWake::Rerun) => {
@@ -124,7 +118,6 @@ pub fn start_scheduled_claims(app_handle: AppHandle, cancel_token: CancellationT
                     run_startup_claims(&state, &app_handle).await;
                 }
                 ControlFlow::Continue(PostWake::Resume) => {
-                    // Claim rewards for all games that are due
                     claim_games_and_emit(&state, &app_handle, &games_to_claim).await;
                 }
             }
@@ -246,7 +239,7 @@ async fn sleep_until(
                 return WakeReason::ConfigChanged;
             }
             () = tokio::time::sleep(chunk) => {
-                // Loop back to re-check wall clock
+                // Re-check the wall clock; a config change may have moved it.
             }
         }
     }
@@ -301,12 +294,10 @@ async fn calculate_next_claim(
     let mut games_at_earliest: Vec<GameId> = Vec::new();
 
     for (game_id, claim_time) in auto_claim_games {
-        // Check if this game has auto-claim enabled
         if !state.should_auto_claim_game(*game_id).await {
             continue;
         }
 
-        // Calculate the next claim time for this game
         let next_claim = match next_claim_datetime_utc(*claim_time) {
             Ok(dt) => dt,
             Err(e) => {

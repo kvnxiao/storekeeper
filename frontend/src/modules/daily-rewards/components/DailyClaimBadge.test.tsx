@@ -31,12 +31,12 @@ describe("DailyClaimBadge", () => {
   it("names the game and the action on the claim button", async () => {
     const button = await mountUnclaimed();
 
-    expect(button.textContent).toContain("Claim daily reward for Genshin Impact");
+    expect(button).toHaveTextContent("Claim daily reward for Genshin Impact");
   });
 
   it("keeps the visible claim state inside the accessible name", async () => {
     const button = await mountUnclaimed();
 
-    expect(button.textContent).toContain("Unclaimed");
+    expect(button).toHaveTextContent("Unclaimed");
   });
 });

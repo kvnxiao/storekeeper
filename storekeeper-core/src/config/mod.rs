@@ -4,10 +4,10 @@
 //! - `config.toml`: Non-sensitive settings that can be synced across machines
 //! - `secrets.toml`: Sensitive credentials that must be set manually
 
-pub mod claim_time;
-pub mod games;
-pub mod notification;
-pub mod secrets;
+mod claim_time;
+mod games;
+mod notification;
+mod secrets;
 
 use crate::error::Error;
 use crate::error::Result;
@@ -17,21 +17,20 @@ use crate::resource_types::WuwaResourceType;
 use crate::resource_types::ZzzResourceType;
 use camino::Utf8Path;
 use camino::Utf8PathBuf;
-// Re-exports: keep the same public surface as the original single-file module.
-pub use claim_time::{ClaimTime, DEFAULT_AUTO_CLAIM_TIME, next_claim_datetime_utc};
+pub use claim_time::ClaimTime;
+pub use claim_time::DEFAULT_AUTO_CLAIM_TIME;
+pub use claim_time::next_claim_datetime_utc;
 pub use games::GenshinConfig;
 pub use games::HsrConfig;
 pub use games::WuwaConfig;
 pub use games::ZzzConfig;
 pub use notification::ResourceNotificationConfig;
+pub use secrets::HoyolabSecrets;
+pub use secrets::KuroSecrets;
 pub use secrets::SecretsConfig;
 use serde::Deserialize;
 use serde::Serialize;
 use std::path::PathBuf;
-
-// ============================================================================
-// Shared serde default functions
-// ============================================================================
 
 pub(crate) fn default_true() -> bool {
     true
@@ -54,10 +53,6 @@ fn to_utf8_path(path: PathBuf) -> Result<Utf8PathBuf> {
         message: format!("Config path is not valid UTF-8: {}", p.display()),
     })
 }
-
-// ============================================================================
-// AppConfig
-// ============================================================================
 
 /// Main application configuration loaded from `config.toml`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -138,7 +133,6 @@ impl AppConfig {
     ///
     /// Returns an error if the config file cannot be written.
     pub fn save_to_path(&self, path: &Utf8Path) -> Result<()> {
-        // Ensure the directory exists
         if let Some(parent) = path.parent() {
             fs_err::create_dir_all(parent)?;
         }
@@ -165,16 +159,13 @@ impl AppConfig {
             return Ok(false);
         }
 
-        // Ensure the directory exists
         if let Some(parent) = path.parent() {
             fs_err::create_dir_all(parent)?;
         }
 
-        // Write default config with helpful comments
         let content = Self::default_config_content();
         fs_err::write(&path, content)?;
 
-        // Verify it can be loaded
         let _ = Self::load_from_path(&path)?;
 
         tracing::info!("Created default config file at: {path}");
@@ -273,10 +264,6 @@ uid = ""
     }
 }
 
-// ============================================================================
-// GeneralConfig
-// ============================================================================
-
 /// General application settings.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GeneralConfig {
@@ -313,10 +300,6 @@ impl Default for GeneralConfig {
         }
     }
 }
-
-// ============================================================================
-// GamesConfig
-// ============================================================================
 
 /// Per-game configuration.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -541,10 +524,6 @@ impl GamesConfig {
     }
 }
 
-// ============================================================================
-// ensure_configs_exist
-// ============================================================================
-
 /// Ensures both config files exist, creating defaults if missing.
 ///
 /// This should be called at application startup to ensure the user
@@ -583,7 +562,7 @@ mod tests {
     }
 
     #[test]
-    fn test_app_config_without_notifications_section() {
+    fn app_config_without_notifications_section() {
         let toml_str = r"
             [general]
             poll_interval_secs = 300
@@ -628,7 +607,6 @@ mod tests {
     #[cfg(any(windows, unix))]
     #[test]
     fn to_utf8_path_rejects_non_utf8() {
-        // Build a path that is not valid UTF-8 in a platform-specific way.
         #[cfg(windows)]
         let bad: PathBuf = {
             use std::os::windows::ffi::OsStringExt;

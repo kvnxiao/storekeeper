@@ -1,5 +1,17 @@
 # Clippy configuration
 # See: https://doc.rust-lang.org/clippy/configuration.html
 
-# Allow expect in test code
 allow-expect-in-tests = true
+allow-print-in-tests = true
+
+# Domain and vendor spellings that read as names, not code identifiers.
+# `..` extends clippy's built-in list rather than replacing it.
+doc-valid-idents = [
+    "HoYoLab",
+    "HoYoverse",
+    "WuWa",
+    "MessageFormat",
+    "AppData",
+    "OAuth",
+    "..",
+]

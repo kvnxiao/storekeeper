@@ -22,7 +22,7 @@ import { formatAbsoluteDateTime, formatTimeRemaining } from "@/modules/resources
 export function createFormattedTime(
   datetime: Accessor<string | null | undefined>,
 ): Accessor<FormattedTime> {
-  return createMemo(() => ({
+  const formatted = createMemo(() => ({
     relativeTime: formatTimeRemaining(datetime(), core.tick(), core.durationFormatter()),
     absoluteTime: formatAbsoluteDateTime(
       datetime(),
@@ -31,17 +31,18 @@ export function createFormattedTime(
       core.weekdayTimeFormatter(),
     ),
   }));
+  return formatted;
 }
 
 /** Selects a game's stamina resource and derives its formatted full-at time. */
 export function createStaminaResource<G extends GameId>(
   resources: Accessor<AllResources | undefined>,
-  gameId: G,
-  resourceType: GameResourceTypeMap[G],
+  gameId: Accessor<G>,
+  resourceType: Accessor<GameResourceTypeMap[G]>,
 ) {
   const data = createMemo(() =>
     fillStaminaWhenDue(
-      selectResource(resources(), gameId, resourceType, isStaminaResource),
+      selectResource(resources(), gameId(), resourceType(), isStaminaResource),
       core.tick(),
     ),
   );
@@ -52,12 +53,12 @@ export function createStaminaResource<G extends GameId>(
 /** Selects a game's cooldown resource and derives its formatted ready-at time. */
 export function createCooldownResource<G extends GameId>(
   resources: Accessor<AllResources | undefined>,
-  gameId: G,
-  resourceType: GameResourceTypeMap[G],
+  gameId: Accessor<G>,
+  resourceType: Accessor<GameResourceTypeMap[G]>,
 ) {
   const data = createMemo(() =>
     readyCooldownWhenDue(
-      selectResource(resources(), gameId, resourceType, isCooldownResource),
+      selectResource(resources(), gameId(), resourceType(), isCooldownResource),
       core.tick(),
     ),
   );

@@ -20,18 +20,18 @@ export function createGenshinResources() {
 
   const [resin, resinTime] = createStaminaResource(
     resources,
-    GameId.GenshinImpact,
-    GenshinResource.Resin,
+    () => GameId.GenshinImpact,
+    () => GenshinResource.Resin,
   );
   const [realmCurrency, realmCurrencyTime] = createStaminaResource(
     resources,
-    GameId.GenshinImpact,
-    GenshinResource.RealmCurrency,
+    () => GameId.GenshinImpact,
+    () => GenshinResource.RealmCurrency,
   );
   const [parametricTransformer, parametricTransformerTime] = createCooldownResource(
     resources,
-    GameId.GenshinImpact,
-    GenshinResource.ParametricTransformer,
+    () => GameId.GenshinImpact,
+    () => GenshinResource.ParametricTransformer,
   );
 
   const expeditions = createMemo(() =>

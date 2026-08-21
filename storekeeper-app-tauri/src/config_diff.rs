@@ -19,7 +19,7 @@ pub(crate) struct ConfigDiff {
     /// Whether game client registries need to be rebuilt.
     ///
     /// True when any game's client-relevant fields (enabled, uid, region,
-    /// tracked_resources) or provider credentials changed.
+    /// `tracked_resources`) or provider credentials changed.
     pub needs_registry_rebuild: bool,
 
     /// Games whose resources should be re-fetched from API.
@@ -54,7 +54,6 @@ pub(crate) fn compute(
     let mut games_to_refresh = HashSet::new();
     let mut games_to_reset_notifications = HashSet::new();
 
-    // Check per-game client config changes
     for change in [
         check_game_config(
             GameId::GenshinImpact,
@@ -82,7 +81,7 @@ pub(crate) fn compute(
         games_to_reset_notifications.extend(change.game_to_reset_notifications);
     }
 
-    // Check secrets changes - affects all games of the corresponding provider
+    // A secrets change invalidates every game under that provider.
     if old_secrets.hoyolab != new_secrets.hoyolab {
         needs_registry_rebuild = true;
         for &game_id in &[
@@ -131,7 +130,7 @@ trait ClientFields {
 struct ClientIdentity<'a, R> {
     enabled: bool,
     uid: &'a str,
-    region: Option<&'a storekeeper_core::region::Region>,
+    region: Option<&'a storekeeper_core::Region>,
     tracked_resources: &'a [R],
 }
 
@@ -232,7 +231,6 @@ fn check_game_config<T: ClientFields>(
 
     match (old, new) {
         (None, None) => none,
-        // Game added or removed - needs rebuild + refresh
         (None, Some(cfg)) if cfg.enabled() => GameConfigChange {
             needs_registry_rebuild: true,
             game_to_refresh: Some(game_id),
@@ -243,7 +241,6 @@ fn check_game_config<T: ClientFields>(
             ..none
         },
         (None, Some(_)) | (Some(_), None) => GameConfigChange {
-            // Disabled game added/removed - rebuild but no fetch needed
             needs_registry_rebuild: true,
             ..none
         },
@@ -272,10 +269,10 @@ mod tests {
     use storekeeper_core::AppConfig;
     use storekeeper_core::GamesConfig;
     use storekeeper_core::GenshinConfig;
+    use storekeeper_core::HoyolabSecrets;
+    use storekeeper_core::KuroSecrets;
     use storekeeper_core::SecretsConfig;
     use storekeeper_core::WuwaConfig;
-    use storekeeper_core::config::secrets::HoyolabSecrets;
-    use storekeeper_core::config::secrets::KuroSecrets;
 
     fn default_genshin() -> GenshinConfig {
         GenshinConfig {
@@ -383,7 +380,6 @@ mod tests {
         let diff = compute(&old, &new, &secrets, &secrets);
 
         assert!(diff.needs_registry_rebuild);
-        // Disabled game doesn't need refresh
         assert!(!diff.games_to_refresh.contains(&GameId::GenshinImpact));
     }
 
@@ -392,7 +388,7 @@ mod tests {
         let old = config_with_genshin(default_genshin());
         let mut new_genshin = default_genshin();
         new_genshin.notifications.insert(
-            storekeeper_core::resource_types::GenshinResourceType::Resin,
+            storekeeper_core::GenshinResourceType::Resin,
             storekeeper_core::ResourceNotificationConfig {
                 enabled: true,
                 notify_minutes_before_full: Some(30),
@@ -432,7 +428,6 @@ mod tests {
         let diff = compute(&old, &new, &old_secrets, &new_secrets);
 
         assert!(diff.needs_registry_rebuild);
-        // Only enabled HoYoLab games get refreshed
         assert!(diff.games_to_refresh.contains(&GameId::GenshinImpact));
         assert!(!diff.games_to_refresh.contains(&GameId::HonkaiStarRail));
     }

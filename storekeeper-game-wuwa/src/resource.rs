@@ -17,35 +17,26 @@ mod tests {
     use jiff::Timestamp;
     use storekeeper_core::DisplayableResource;
 
-    // =========================================================================
-    // DisplayableResource trait tests
-    // =========================================================================
-
     #[test]
-    fn test_waveplates_display_name() {
+    fn waveplates_display_name() {
         let resource =
             WuwaResource::Waveplates(StaminaResource::new(120, 240, Timestamp::now(), 360));
         assert_eq!(resource.display_name(), "Waveplates");
     }
 
     #[test]
-    fn test_waveplates_icon() {
+    fn waveplates_icon() {
         let resource =
             WuwaResource::Waveplates(StaminaResource::new(120, 240, Timestamp::now(), 360));
         assert_eq!(resource.icon(), "waveplate");
     }
 
-    // =========================================================================
-    // Serde serialization tests (tagged format)
-    // =========================================================================
-
     #[test]
-    fn test_waveplates_serialization_format() {
+    fn waveplates_serialization_format() {
         let resource =
             WuwaResource::Waveplates(StaminaResource::new(120, 240, Timestamp::now(), 360));
         let json = serde_json::to_string(&resource).expect("should serialize");
 
-        // Verify tagged format
         assert!(
             json.contains(r#""type":"waveplates""#),
             "Should have type tag 'waveplates', got: {json}"
@@ -56,12 +47,8 @@ mod tests {
         );
     }
 
-    // =========================================================================
-    // Serde roundtrip tests
-    // =========================================================================
-
     #[test]
-    fn test_waveplates_serde_roundtrip() {
+    fn waveplates_serde_roundtrip() {
         let original =
             WuwaResource::Waveplates(StaminaResource::new(120, 240, Timestamp::now(), 360));
         let json = serde_json::to_string(&original).expect("should serialize");
@@ -74,9 +61,7 @@ mod tests {
     }
 
     #[test]
-    fn test_waveplates_serializes_full_at_as_utc_z() {
-        // Locks the JSON datetime contract consumed by the frontend: the nested
-        // `data.fullAt` is an RFC3339 string in UTC with a trailing `Z`.
+    fn waveplates_serializes_full_at_as_utc_z() {
         let ts = Timestamp::from_second(1_704_067_200).expect("valid timestamp");
         let resource = WuwaResource::Waveplates(StaminaResource::new(120, 240, ts, 360));
         let value = serde_json::to_value(&resource).expect("should serialize");
@@ -93,24 +78,16 @@ mod tests {
         );
     }
 
-    // =========================================================================
-    // Debug trait tests
-    // =========================================================================
-
     #[test]
-    fn test_resource_is_debug() {
+    fn resource_is_debug() {
         let resource =
             WuwaResource::Waveplates(StaminaResource::new(120, 240, Timestamp::now(), 360));
         let debug = format!("{resource:?}");
         assert!(debug.contains("Waveplates"));
     }
 
-    // =========================================================================
-    // Clone trait tests
-    // =========================================================================
-
     #[test]
-    fn test_resource_is_clone() {
+    fn resource_is_clone() {
         let resource =
             WuwaResource::Waveplates(StaminaResource::new(120, 240, Timestamp::now(), 360));
         let cloned = resource.clone();

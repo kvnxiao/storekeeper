@@ -35,7 +35,7 @@ pub struct CommandError {
 
 impl CommandError {
     /// Creates a new `CommandError` with the `Internal` error code.
-    #[must_use = "this returns a new CommandError instance"]
+    #[must_use]
     pub fn internal(message: impl Into<String>) -> Self {
         Self {
             code: ErrorCode::Internal,
@@ -77,9 +77,9 @@ impl From<std::io::Error> for CommandError {
     }
 }
 
-impl From<String> for CommandError {
-    fn from(message: String) -> Self {
-        Self::internal(message)
+impl From<crate::polling::RefreshInProgress> for CommandError {
+    fn from(err: crate::polling::RefreshInProgress) -> Self {
+        Self::internal(err.to_string())
     }
 }
 

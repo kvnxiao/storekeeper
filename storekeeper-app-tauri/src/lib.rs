@@ -9,7 +9,7 @@ mod config_diff;
 mod daily_reward_registry;
 mod error;
 mod events;
-pub mod i18n;
+mod i18n;
 mod notification;
 mod polling;
 mod provider_batch;
@@ -40,6 +40,10 @@ fn init_tracing() {
 /// # Errors
 ///
 /// Returns an error if the Tauri application fails to build.
+#[expect(
+    clippy::exit,
+    reason = "tauri::generate_context! expands to a process::exit path"
+)]
 pub fn run() -> Result<()> {
     init_tracing();
 
@@ -63,10 +67,8 @@ pub fn run() -> Result<()> {
         .plugin(tauri_plugin_autostart::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
         .setup(|app| {
-            // Initialize application state with config and game clients
             let app_state = state::AppState::with_config();
 
-            // Read config values needed for setup
             let (language, should_autostart) = tauri::async_runtime::block_on(async {
                 let inner = app_state.inner.read().await;
                 (
@@ -75,7 +77,6 @@ pub fn run() -> Result<()> {
                 )
             });
 
-            // Initialize i18n with resolved locale (auto-detect if no override)
             let effective_locale = i18n::resolve_locale(language.as_deref());
             if let Err(e) = i18n::init(effective_locale) {
                 tracing::warn!(error = %e, "Failed to initialize i18n, falling back to defaults");
@@ -86,7 +87,6 @@ pub fn run() -> Result<()> {
 
             app.manage(app_state);
 
-            // Sync autostart state from config
             let autolaunch = app.autolaunch();
             let autostart_result = if should_autostart {
                 autolaunch.enable()
@@ -97,23 +97,17 @@ pub fn run() -> Result<()> {
                 tracing::warn!(error = %e, "Failed to sync autostart state");
             }
 
-            // Create cancellation token for background tasks
             let cancel_token = CancellationToken::new();
             app.manage(cancel_token.clone());
 
-            // Start background polling for resources
             polling::start_polling(app.handle().clone(), cancel_token.clone());
 
-            // Start scheduled daily reward claims
             scheduled_claim::start_scheduled_claims(app.handle().clone(), cancel_token.clone());
 
-            // Start notification checker
             notification::start_notification_checker(app.handle().clone(), cancel_token.clone());
 
-            // Set up Ctrl+C handler to trigger graceful shutdown
             setup_ctrlc_handler(app.handle().clone(), cancel_token);
 
-            // Set up system tray
             tray::setup_tray(app)?;
 
             Ok(())
@@ -125,23 +119,17 @@ pub fn run() -> Result<()> {
             commands::get_secrets,
             commands::save_and_apply,
             commands::open_config_folder,
-            // Notification commands
             commands::send_preview_notification,
-            // Daily reward commands
             commands::get_daily_reward_status,
             commands::refresh_daily_reward_status,
             commands::claim_daily_reward_for_game,
             commands::get_daily_reward_status_for_game,
-            // Locale commands
             commands::get_supported_locales,
             commands::get_effective_locale,
         ])
         .on_window_event(|window, event| {
-            // Handle close button - minimize to tray instead of closing
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                // Prevent the window from closing
                 api.prevent_close();
-                // Hide the window instead
                 if let Err(e) = window.hide() {
                     tracing::debug!(error = %e, "Failed to hide window");
                 }
@@ -150,12 +138,10 @@ pub fn run() -> Result<()> {
         .build(tauri::generate_context!())
         .context("error while building tauri application")?;
 
-    // Run with custom event loop to handle graceful shutdown
     app.run(|app_handle, event| {
         if let RunEvent::ExitRequested { code, api, .. } = &event {
             tracing::info!(exit_code = ?code, "Application exit requested");
 
-            // Cancel all background tasks
             if let Some(cancel_token) = app_handle.try_state::<CancellationToken>()
                 && !cancel_token.is_cancelled()
             {
@@ -163,7 +149,7 @@ pub fn run() -> Result<()> {
                 cancel_token.cancel();
             }
 
-            // Allow the exit to proceed (don't call api.prevent_exit())
+            // The exit proceeds unless api.prevent_exit() is called.
             let _ = api;
         }
     });
@@ -177,18 +163,15 @@ pub fn run() -> Result<()> {
 /// On Unix, this handles SIGINT and SIGTERM.
 fn setup_ctrlc_handler(app_handle: tauri::AppHandle, cancel_token: CancellationToken) {
     tauri::async_runtime::spawn(async move {
-        // Wait for Ctrl+C signal
         match tokio::signal::ctrl_c().await {
             Ok(()) => {
                 tracing::info!("Ctrl+C received, initiating graceful shutdown...");
 
-                // Cancel all background tasks
                 cancel_token.cancel();
 
-                // Give tasks a moment to clean up
+                // Let cancelled tasks finish cleanup before the process exits.
                 tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-                // Exit the application
                 app_handle.exit(0);
             }
             Err(e) => {

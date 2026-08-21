@@ -12,7 +12,7 @@ Install the following tools:
 | Rust nightly toolchain | Latest | `cargo +nightly fmt` (formatting only) |
 | [fnm](https://github.com/Schniz/fnm) | Latest | Node.js version management |
 | [pnpm](https://pnpm.io/) | See `frontend/package.json` `packageManager` | Frontend package manager |
-| [Vite+](https://viteplus.dev/) | Latest (`vp` CLI) | Frontend toolchain: dev, build, lint, format, test |
+| [Vite+](https://viteplus.dev/) | Latest (`vp` CLI) | Frontend checks, fixes, tests, and dependency updates |
 | [just](https://github.com/casey/just) | Latest | Command runner |
 | [tauri-cli](https://v2.tauri.app/reference/cli/) | v2 | Desktop app bundling |
 | [Platform deps](https://v2.tauri.app/start/prerequisites/) | n/a | OS-specific build tools |
@@ -72,7 +72,9 @@ A Rust workspace of nine crates plus a SolidJS frontend. See [02-directory-struc
 
 ## Coding Standards
 
-Before submitting code, familiarise yourself with the project standards:
+Before touching code, read the matching skill from `.agents/skills/` or
+`.claude/skills/`:
+
 - [Rust rules](../../.claude/skills/rust-rules/) for linting, error handling, testing, performance
 - [SolidJS rules](../../.claude/skills/solidjs-rules/) for components, state architecture, data fetching, i18n
 

@@ -34,7 +34,7 @@ impl Default for RetryConfig {
 
 impl RetryConfig {
     /// Creates a new retry configuration.
-    #[must_use = "this returns a new RetryConfig and does not modify self"]
+    #[must_use]
     pub fn new(max_retries: u32, base_delay_ms: u64, max_delay_ms: u64) -> Self {
         Self {
             max_retries,
@@ -47,15 +47,14 @@ impl RetryConfig {
     /// jitter.
     ///
     /// Formula: `min(base_delay * 2^attempt + jitter, max_delay)`
-    /// where jitter is a random value between 0 and base_delay.
-    #[must_use = "this returns a Duration and does not modify self"]
+    /// where jitter is a random value between 0 and `base_delay`.
+    #[must_use]
     pub fn delay_for_attempt(&self, attempt: u32) -> Duration {
         let base = self
             .base_delay_ms
             .saturating_mul(2u64.saturating_pow(attempt));
         let capped = base.min(self.max_delay_ms);
 
-        // Add bounded jitter: random value between 0 and base_delay_ms
         let jitter = rand::rng().random_range(0..=self.base_delay_ms);
         let with_jitter = capped.saturating_add(jitter).min(self.max_delay_ms);
 
@@ -63,7 +62,7 @@ impl RetryConfig {
     }
 
     /// Returns whether another retry should be attempted.
-    #[must_use = "this returns a bool and does not modify self"]
+    #[must_use]
     pub fn should_retry(&self, current_attempt: u32) -> bool {
         current_attempt < self.max_retries
     }
@@ -116,276 +115,122 @@ where
 mod tests {
     use super::*;
 
-    // =========================================================================
-    // Default configuration tests
-    // =========================================================================
-
     #[test]
-    fn test_default_values() {
+    fn default_config_uses_the_declared_constants() {
         let config = RetryConfig::default();
 
-        assert_eq!(
-            config.max_retries, DEFAULT_MAX_RETRIES,
-            "Default max_retries should be {DEFAULT_MAX_RETRIES}"
-        );
-        assert_eq!(
-            config.base_delay_ms, DEFAULT_BASE_DELAY_MS,
-            "Default base_delay_ms should be {DEFAULT_BASE_DELAY_MS}"
-        );
-        assert_eq!(
-            config.max_delay_ms, DEFAULT_MAX_DELAY_MS,
-            "Default max_delay_ms should be {DEFAULT_MAX_DELAY_MS}"
-        );
+        assert_eq!(config.max_retries, DEFAULT_MAX_RETRIES);
+        assert_eq!(config.base_delay_ms, DEFAULT_BASE_DELAY_MS);
+        assert_eq!(config.max_delay_ms, DEFAULT_MAX_DELAY_MS);
     }
 
     #[test]
-    fn test_default_constants() {
-        assert_eq!(DEFAULT_MAX_RETRIES, 3);
-        assert_eq!(DEFAULT_BASE_DELAY_MS, 500);
-        assert_eq!(DEFAULT_MAX_DELAY_MS, 30_000);
-    }
+    fn new_stores_its_arguments() {
+        for (retries, base, max) in [(5, 1000, 60_000), (0, 0, 0)] {
+            let config = RetryConfig::new(retries, base, max);
 
-    // =========================================================================
-    // RetryConfig::new tests
-    // =========================================================================
-
-    #[test]
-    fn test_new_with_custom_values() {
-        let config = RetryConfig::new(5, 1000, 60_000);
-
-        assert_eq!(config.max_retries, 5);
-        assert_eq!(config.base_delay_ms, 1000);
-        assert_eq!(config.max_delay_ms, 60_000);
+            assert_eq!(config.max_retries, retries);
+            assert_eq!(config.base_delay_ms, base);
+            assert_eq!(config.max_delay_ms, max);
+        }
     }
 
     #[test]
-    fn test_new_with_zero_values() {
-        let config = RetryConfig::new(0, 0, 0);
-
-        assert_eq!(config.max_retries, 0);
-        assert_eq!(config.base_delay_ms, 0);
-        assert_eq!(config.max_delay_ms, 0);
-    }
-
-    // =========================================================================
-    // should_retry tests
-    // =========================================================================
-
-    #[test]
-    fn test_should_retry_when_under_limit() {
+    fn should_retry_until_the_attempt_reaches_max_retries() {
         let config = RetryConfig::new(3, 500, 30_000);
 
-        assert!(
-            config.should_retry(0),
-            "Should retry when attempt 0 < max_retries 3"
-        );
-        assert!(
-            config.should_retry(1),
-            "Should retry when attempt 1 < max_retries 3"
-        );
-        assert!(
-            config.should_retry(2),
-            "Should retry when attempt 2 < max_retries 3"
-        );
+        for (attempt, expected) in [
+            (0, true),
+            (1, true),
+            (2, true),
+            (3, false),
+            (4, false),
+            (100, false),
+        ] {
+            assert_eq!(
+                config.should_retry(attempt),
+                expected,
+                "attempt {attempt} against max_retries 3"
+            );
+        }
     }
 
     #[test]
-    fn test_should_not_retry_at_limit() {
-        let config = RetryConfig::new(3, 500, 30_000);
-
-        assert!(
-            !config.should_retry(3),
-            "Should not retry when attempt 3 >= max_retries 3"
-        );
-    }
-
-    #[test]
-    fn test_should_not_retry_over_limit() {
-        let config = RetryConfig::new(3, 500, 30_000);
-
-        assert!(
-            !config.should_retry(4),
-            "Should not retry when attempt 4 > max_retries 3"
-        );
-        assert!(
-            !config.should_retry(100),
-            "Should not retry when attempt 100 > max_retries 3"
-        );
-    }
-
-    #[test]
-    fn test_should_not_retry_when_max_is_zero() {
+    fn should_not_retry_when_max_retries_is_zero() {
         let config = RetryConfig::new(0, 500, 30_000);
 
-        assert!(
-            !config.should_retry(0),
-            "Should not retry when max_retries is 0"
-        );
-    }
-
-    // =========================================================================
-    // delay_for_attempt tests
-    // =========================================================================
-
-    #[test]
-    fn test_delay_is_duration() {
-        let config = RetryConfig::new(3, 500, 30_000);
-        let delay = config.delay_for_attempt(0);
-
-        // delay should be a Duration, not panic
-        assert!(delay.as_millis() > 0, "Delay should be positive");
+        assert!(!config.should_retry(0));
     }
 
     #[test]
-    fn test_delay_respects_max_delay() {
+    fn delay_grows_exponentially_below_the_cap() {
+        let config = RetryConfig::new(5, 100, 1_000_000);
+
+        for attempt in 0..5 {
+            let floor = 100 * 2u128.pow(attempt);
+            let delay = config.delay_for_attempt(attempt).as_millis();
+
+            assert!(
+                (floor..=floor + 100).contains(&delay),
+                "attempt {attempt} should land in [{floor}, {}], got {delay}",
+                floor + 100
+            );
+        }
+    }
+
+    #[test]
+    fn delay_never_exceeds_max_delay() {
         let config = RetryConfig::new(10, 1000, 5000);
 
-        // Even at high attempts, delay should not exceed max_delay_ms
         for attempt in 0..10 {
-            let delay = config.delay_for_attempt(attempt);
-            assert!(
-                delay.as_millis() <= 5000,
-                "Delay at attempt {attempt} should not exceed max_delay_ms (5000), got {}",
-                delay.as_millis()
-            );
+            assert!(config.delay_for_attempt(attempt).as_millis() <= 5000);
         }
     }
 
     #[test]
-    fn test_delay_exponential_growth_bounded() {
-        let config = RetryConfig::new(5, 100, 10_000);
-
-        // The base calculation is: base * 2^attempt + jitter
-        // Attempt 0: 100 * 1 + jitter = 100-200
-        // Attempt 1: 100 * 2 + jitter = 200-300
-        // Attempt 2: 100 * 4 + jitter = 400-500
-        // etc.
-
-        let delay_0 = config.delay_for_attempt(0);
-        let delay_1 = config.delay_for_attempt(1);
-
-        // delay_1 should generally be larger than delay_0
-        // but due to jitter, we can't guarantee exact values
-        // Just verify they're reasonable
-        assert!(
-            delay_0.as_millis() >= 100,
-            "Delay at attempt 0 should be at least base_delay_ms"
-        );
-        assert!(
-            delay_1.as_millis() >= 100,
-            "Delay at attempt 1 should be at least base_delay_ms"
-        );
-    }
-
-    #[test]
-    fn test_delay_includes_jitter() {
+    fn delay_varies_across_calls_within_the_jitter_range() {
         let config = RetryConfig::new(3, 500, 30_000);
 
-        // Run multiple times and check that we get different values (jitter)
-        let mut delays: Vec<u128> = Vec::new();
-        for _ in 0..20 {
-            let delay = config.delay_for_attempt(0);
-            delays.push(delay.as_millis());
-        }
+        let delays: Vec<u128> = (0..20)
+            .map(|_| config.delay_for_attempt(0).as_millis())
+            .collect();
 
-        // With jitter, we should see some variation (not all identical)
-        // The jitter range is 0..=base_delay_ms, so 0..=500
-        // All values should be in range [500, 1000] (base + 0 to base + base)
-        for &d in &delays {
+        for &delay in &delays {
             assert!(
-                (500..=1000).contains(&d),
-                "Delay at attempt 0 should be in range [500, 1000], got {d}"
+                (500..=1000).contains(&delay),
+                "attempt 0 should land in [500, 1000], got {delay}"
             );
         }
 
-        // Check we got at least some variation (not all the same)
-        let first = *delays.first().expect("at least one delay recorded");
-        let has_variation = delays.iter().any(|&d| d != first);
-        // Note: There's a very small chance all 20 are identical, but extremely
-        // unlikely We'll allow this test to pass even without variation to
-        // avoid flakiness
-        if !has_variation {
-            // Just print a note, don't fail
-            println!("Note: All delays were identical (rare but possible with random jitter)");
-        }
+        let first = *delays.first().expect("twenty delays were recorded");
+        assert!(
+            delays.iter().any(|&d| d != first),
+            "twenty draws from a 501-value jitter range should not all match"
+        );
     }
 
     #[test]
-    fn test_delay_saturating_at_high_attempts() {
+    fn delay_saturates_instead_of_overflowing() {
         let config = RetryConfig::new(100, 500, 30_000);
 
-        // At very high attempts, 2^attempt would overflow, but we use saturating_mul
-        // The delay should still be bounded by max_delay_ms
-        let delay = config.delay_for_attempt(50);
-        assert!(
-            delay.as_millis() <= 30_000,
-            "Delay at attempt 50 should be capped at max_delay_ms"
-        );
-
-        let delay = config.delay_for_attempt(99);
-        assert!(
-            delay.as_millis() <= 30_000,
-            "Delay at attempt 99 should be capped at max_delay_ms"
-        );
+        for attempt in [50, 99] {
+            assert!(config.delay_for_attempt(attempt).as_millis() <= 30_000);
+        }
     }
 
     #[test]
-    fn test_delay_with_zero_base() {
+    fn delay_with_zero_base_stays_under_max() {
         let config = RetryConfig::new(3, 0, 1000);
 
-        // With zero base, delay should still work (jitter of 0..=0 is just 0)
-        let delay = config.delay_for_attempt(0);
-        assert!(
-            delay.as_millis() <= 1000,
-            "Delay with zero base should not exceed max"
-        );
+        assert!(config.delay_for_attempt(0).as_millis() <= 1000);
     }
 
     #[test]
-    fn test_delay_with_zero_max() {
+    fn delay_with_zero_max_is_zero() {
         let config = RetryConfig::new(3, 500, 0);
 
-        // With zero max, delay should be capped to 0
-        let delay = config.delay_for_attempt(0);
-        assert_eq!(
-            delay.as_millis(),
-            0,
-            "Delay with zero max_delay should be 0"
-        );
+        assert_eq!(config.delay_for_attempt(0).as_millis(), 0);
     }
-
-    // =========================================================================
-    // Clone and Debug tests
-    // =========================================================================
-
-    #[test]
-    fn test_config_is_clone() {
-        let config = RetryConfig::new(3, 500, 30_000);
-        let cloned = config.clone();
-
-        assert_eq!(config.max_retries, cloned.max_retries);
-        assert_eq!(config.base_delay_ms, cloned.base_delay_ms);
-        assert_eq!(config.max_delay_ms, cloned.max_delay_ms);
-    }
-
-    #[test]
-    fn test_config_is_debug() {
-        let config = RetryConfig::new(3, 500, 30_000);
-        let debug_str = format!("{config:?}");
-
-        assert!(
-            debug_str.contains("RetryConfig"),
-            "Debug output should contain type name"
-        );
-        assert!(
-            debug_str.contains("max_retries"),
-            "Debug output should contain field names"
-        );
-    }
-
-    // =========================================================================
-    // retry_with_backoff tests
-    // =========================================================================
 
     #[tokio::test(start_paused = true)]
     async fn retry_with_backoff_succeeds_immediately() {
@@ -450,6 +295,6 @@ mod tests {
         )
         .await;
         assert_eq!(result, Err("always fails".to_string()));
-        assert_eq!(calls, 3, "1 initial + 2 retries = 3 total attempts");
+        assert_eq!(calls, 3, "one initial attempt plus two retries");
     }
 }

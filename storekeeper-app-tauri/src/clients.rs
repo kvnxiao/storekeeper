@@ -136,7 +136,6 @@ pub fn create_registry(config: &AppConfig, secrets: &SecretsConfig) -> GameClien
     tracing::info!("Creating game client registry from configuration");
     let mut registry = GameClientRegistry::new();
 
-    // Initialize HoYoLab-based clients if credentials are configured
     if secrets.hoyolab.is_configured() {
         tracing::debug!("HoYoLab credentials found, initializing HoYoLab-based clients");
         let ltuid = secrets.hoyolab.ltuid();
@@ -164,7 +163,6 @@ pub fn create_registry(config: &AppConfig, secrets: &SecretsConfig) -> GameClien
         tracing::debug!("HoYoLab credentials not configured, skipping HoYoLab-based clients");
     }
 
-    // Initialize Kuro-based clients (Wuthering Waves)
     if let Some(ref wuwa_config) = config.games.wuthering_waves
         && wuwa_config.enabled
     {

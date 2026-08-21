@@ -3,9 +3,9 @@
 //! This crate provides the game client for fetching Genshin Impact resources
 //! from the HoYoLab API.
 
-pub mod client;
-pub mod error;
-pub mod resource;
+mod client;
+mod error;
+mod resource;
 
 pub use client::GenshinClient;
 pub use error::Error;

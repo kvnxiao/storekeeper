@@ -10,9 +10,9 @@ use serde::de::DeserializeOwned;
 use storekeeper_client_core::ApiResponse;
 use storekeeper_client_core::ClientError;
 use storekeeper_client_core::ClientWithMiddleware;
+use storekeeper_client_core::DEFAULT_MAX_RETRIES;
 use storekeeper_client_core::HoyolabApiResponse;
 use storekeeper_client_core::HttpClientBuilder;
-use storekeeper_client_core::retry::DEFAULT_MAX_RETRIES;
 
 /// HoYoLab API client.
 #[derive(Debug, Clone)]
@@ -81,7 +81,6 @@ impl HoyolabClient {
     ///
     /// Returns an error if the authentication check fails.
     pub async fn check_auth(&self) -> Result<bool> {
-        // Try to fetch user info to verify credentials
         match self.get::<serde_json::Value>(&self.auth_check_url).await {
             Ok(_) => Ok(true),
             Err(Error::Client(ClientError::ApiError { code: -100, .. })) => Ok(false), /* Not logged in */
@@ -121,12 +120,12 @@ impl HoyolabClient {
         let mut request = self.client.request(method, url);
         request = request.header(COOKIE, &self.cookie).header("DS", ds);
 
-        // Add extra headers (e.g., x-rpc-signgame for daily rewards)
+        // Attach caller-supplied headers, including `x-rpc-signgame` for
+        // daily-reward endpoints.
         for (name, value) in extra_headers {
             request = request.header(*name, *value);
         }
 
-        // Add body for POST requests if provided
         if let Some(body) = body {
             request = request.json(body);
         }

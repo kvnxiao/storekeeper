@@ -194,7 +194,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_genshin_uid_parsing() {
+    fn genshin_uid_parsing() {
         assert_eq!(
             Region::from_genshin_uid("700000001").expect("valid uid"),
             Region::Europe
@@ -210,13 +210,11 @@ mod tests {
     }
 
     #[test]
-    fn test_zzz_uid_parsing() {
-        // 8-digit = China
+    fn zzz_uid_parsing() {
         assert_eq!(
             Region::from_zzz_uid("12345678").expect("valid uid"),
             Region::China
         );
-        // 10-digit with prefix
         assert_eq!(
             Region::from_zzz_uid("1012345678").expect("valid uid"),
             Region::America
@@ -228,7 +226,7 @@ mod tests {
     }
 
     #[test]
-    fn test_wuwa_uid_parsing() {
+    fn wuwa_uid_parsing() {
         assert_eq!(
             Region::from_wuwa_uid("502763418").expect("valid uid"),
             Region::America

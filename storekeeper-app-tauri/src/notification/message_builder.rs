@@ -95,12 +95,8 @@ mod tests {
         let _ = crate::i18n::init("en");
     }
 
-    // =========================================================================
-    // resource_display_name tests
-    // =========================================================================
-
     #[test]
-    fn test_display_names() {
+    fn display_names() {
         ensure_init();
         assert_eq!(resource_display_name("resin"), "Original Resin");
         assert_eq!(
@@ -118,17 +114,13 @@ mod tests {
     }
 
     #[test]
-    fn test_display_name_unknown_fallback() {
+    fn display_name_unknown_fallback() {
         ensure_init();
         assert_eq!(resource_display_name("unknown_thing"), "Unknown Resource");
     }
 
-    // =========================================================================
-    // body text tests - stamina resources
-    // =========================================================================
-
     #[test]
-    fn test_stamina_full() {
+    fn stamina_full() {
         ensure_init();
         let now = Timestamp::now();
         let info = ResourceInfo {
@@ -143,7 +135,7 @@ mod tests {
     }
 
     #[test]
-    fn test_stamina_not_full_shows_status() {
+    fn stamina_not_full_shows_status() {
         ensure_init();
         let now = Timestamp::now();
         let completion_at = now + SignedDuration::from_mins(75);
@@ -155,16 +147,11 @@ mod tests {
             regen_rate_seconds: Some(480),
         };
         let body = build_notification_body(&info, now);
-        // Should contain /max and time info
         assert!(body.contains("/160"));
     }
 
-    // =========================================================================
-    // body text tests - cooldown resources
-    // =========================================================================
-
     #[test]
-    fn test_cooldown_complete() {
+    fn cooldown_complete() {
         ensure_init();
         let now = Timestamp::now();
         let info = ResourceInfo {
@@ -179,7 +166,7 @@ mod tests {
     }
 
     #[test]
-    fn test_cooldown_not_complete() {
+    fn cooldown_not_complete() {
         ensure_init();
         let now = Timestamp::now();
         let completion_at = now + SignedDuration::from_mins(30);
@@ -194,12 +181,8 @@ mod tests {
         assert!(body.contains("Ready in"));
     }
 
-    // =========================================================================
-    // duration >= 24h tests
-    // =========================================================================
-
     #[test]
-    fn test_stamina_duration_over_24h() {
+    fn stamina_duration_over_24h() {
         ensure_init();
         let now = Timestamp::now();
         // 3000 minutes = 2d 2h 0m
@@ -212,12 +195,11 @@ mod tests {
             regen_rate_seconds: Some(480),
         };
         let body = build_notification_body(&info, now);
-        // Should contain day unit (e.g. "2d" in narrow format)
         assert!(body.contains("2d"), "Expected '2d' in: {body}");
     }
 
     #[test]
-    fn test_cooldown_duration_over_24h() {
+    fn cooldown_duration_over_24h() {
         ensure_init();
         let now = Timestamp::now();
         // 3000 minutes = 2d 2h 0m
@@ -233,12 +215,8 @@ mod tests {
         assert!(body.contains("2d"), "Expected '2d' in: {body}");
     }
 
-    // =========================================================================
-    // weekday shown for different-day completion
-    // =========================================================================
-
     #[test]
-    fn test_completion_different_day_shows_weekday() {
+    fn completion_different_day_shows_weekday() {
         ensure_init();
         let now = Timestamp::now();
         let completion_at = now + SignedDuration::from_hours(48);

@@ -6,26 +6,34 @@ Zero, Wuthering Waves, ...).
 
 ## Commands
 
-All tasks run through `just` (see `justfile` for the full list):
+Use `just` for repository tasks; see `justfile` for the full list.
 
-- `just fix` / `just fix-web` - lint auto-fix + format (Rust / frontend).
-  Run the relevant one before finishing any change; fix remaining warnings.
-- `just test` / `just test-web` - Rust / frontend tests
-- `just dev` - run the app
+- For Rust changes, run `just fix`; for frontend changes, run `just fix-web`.
+  Fix remaining warnings before finishing.
+- Run `just test` for Rust changes and `just test-web` for frontend changes.
+- Run `just dev` to start the app.
 
-Never disable a lint rule to silence errors. If one rule fires many times,
-stop and ask how to proceed.
+Never disable a lint rule to silence an error. If the same rule fires
+repeatedly, stop and ask how to proceed.
 
-## Conventions
+## Development conventions
 
-- Frontend tooling is `vp` (vite-plus) backed by `pnpm`: use `vp` commands for
-  deps, checks, and tests, and `pnpm` (`pnpm exec`, `pnpm dlx`) otherwise -
-  never `npm`/`npx`.
-- Every frontend `*.utils.ts` and `*.state.ts` ships a sibling test file. Keep
-  derivation logic in pure functions so it is testable without rendering.
-- Always invoke the matching `*-rules` skill before touching code in its area:
-  `solidjs-rules` (frontend), `rust-rules` (Rust), `github-actions-rules`
-  (workflows). Agents without skill support read them from `.claude/skills/`.
+- Use `vp` for frontend dependency, check, and test commands. Use `pnpm`
+  (`pnpm exec`, `pnpm dlx`) when `vp` does not provide the command; never use
+  `npm` or `npx`.
+- Add a sibling test file for every frontend `*.utils.ts` and `*.state.ts` file.
+  Keep derivation logic in pure functions so it is testable without rendering.
+- Before touching frontend, Rust, or workflow code, use the matching skill:
+  `solidjs-rules` (frontend), `rust-rules` (Rust), or `github-actions-rules`
+  (workflows). When the skill is unavailable, read it from `.agents/skills/`
+  or `.claude/skills/`.
+
+## Managed content
+
+- Treat `.agents/` and `.claude/` as curated or third-party-installed content.
+- Do not run completion-check review, simplification, or prose-correction passes
+  over files under these directories.
+- Preserve those files verbatim unless the task explicitly targets them.
 
 ## Docs
 

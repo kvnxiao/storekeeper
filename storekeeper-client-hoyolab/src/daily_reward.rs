@@ -15,10 +15,6 @@ use storekeeper_core::DailyRewardInfo;
 use storekeeper_core::DailyRewardStatus;
 use storekeeper_core::GameId;
 
-// ============================================================================
-// Configuration
-// ============================================================================
-
 /// Configuration for a HoYoLab daily reward endpoint.
 #[derive(Debug, Clone, Copy)]
 pub struct HoyolabDailyRewardConfig {
@@ -56,10 +52,6 @@ pub const ZZZ_DAILY_REWARD: HoyolabDailyRewardConfig = HoyolabDailyRewardConfig 
     game_id: GameId::ZenlessZoneZero,
 };
 
-// ============================================================================
-// Response Structures
-// ============================================================================
-
 /// API response for daily reward info (`/info` endpoint).
 #[derive(Debug, Deserialize)]
 struct RewardInfoResponse {
@@ -81,10 +73,6 @@ struct RewardItem {
     count: u32,
     icon: String,
 }
-
-// ============================================================================
-// Client
-// ============================================================================
 
 /// Generic HoYoLab daily reward client.
 pub struct HoyolabDailyRewardClient {
@@ -184,7 +172,6 @@ impl DailyRewardClient for HoyolabDailyRewardClient {
         let game = self.config.game_id.display_name();
         tracing::info!(game = game, "Claiming daily reward");
 
-        // Check current status first
         let pre_info = self.get_reward_info().await?;
         if pre_info.is_signed {
             tracing::debug!(game = game, "Daily reward already claimed");
@@ -195,7 +182,6 @@ impl DailyRewardClient for HoyolabDailyRewardClient {
             ));
         }
 
-        // Perform the claim
         let url = self.reward_url("sign");
         let headers = self.reward_headers();
 
@@ -204,7 +190,6 @@ impl DailyRewardClient for HoyolabDailyRewardClient {
             .request_with_headers::<serde_json::Value, ()>(Method::POST, &url, None, &headers)
             .await?;
 
-        // Fetch updated status to get reward details
         let status = self.get_reward_status().await?;
 
         tracing::info!(

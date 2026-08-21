@@ -47,7 +47,7 @@ pub fn t_args(key: &str, args: &[(&str, Value)]) -> String {
             Some(s) => s.clone(),
             None => return key.to_string(),
         };
-        // Create PluralRules on-demand (not stored because it's !Send+!Sync)
+        // PluralRules is neither Send nor Sync, so it cannot be cached in state.
         let plural_rules = PluralRules::try_new_cardinal(m.locale.clone().into()).ok();
         format_message(&template, args, plural_rules.as_ref())
     })
@@ -70,20 +70,20 @@ mod tests {
     }
 
     #[test]
-    fn test_simple_lookup() {
+    fn simple_lookup() {
         ensure_init();
         assert_eq!(t("tray_quit"), "Quit");
         assert_eq!(t("tray_refresh_now"), "Refresh Now");
     }
 
     #[test]
-    fn test_missing_key_returns_key() {
+    fn missing_key_returns_key() {
         ensure_init();
         assert_eq!(t("nonexistent.key"), "nonexistent.key");
     }
 
     #[test]
-    fn test_simple_substitution() {
+    fn simple_substitution() {
         ensure_init();
         let result = t_args(
             "notification_title",
@@ -96,21 +96,21 @@ mod tests {
     }
 
     #[test]
-    fn test_stamina_full() {
+    fn stamina_full() {
         ensure_init();
         let result = t("notification_stamina_full");
         assert_eq!(result, "Full!");
     }
 
     #[test]
-    fn test_cooldown_complete() {
+    fn cooldown_complete() {
         ensure_init();
         let result = t("notification_cooldown_complete");
         assert_eq!(result, "Ready!");
     }
 
     #[test]
-    fn test_cooldown_remaining() {
+    fn cooldown_remaining() {
         ensure_init();
         let result = t_args(
             "notification_cooldown_remaining",
@@ -123,7 +123,7 @@ mod tests {
     }
 
     #[test]
-    fn test_stamina_progress() {
+    fn stamina_progress() {
         ensure_init();
         let result = t_args(
             "notification_stamina_progress",
@@ -138,23 +138,22 @@ mod tests {
     }
 
     #[test]
-    fn test_format_duration_hours_and_minutes() {
+    fn format_duration_hours_and_minutes() {
         ensure_init();
         let result = format_duration(75);
-        // ICU4X short style - exact format may vary but should contain hours and
-        // minutes
+        // ICU4X may reorder or respell the units, so assert on presence only.
         assert!(!result.is_empty());
     }
 
     #[test]
-    fn test_format_duration_minutes_only() {
+    fn format_duration_minutes_only() {
         ensure_init();
         let result = format_duration(30);
         assert!(!result.is_empty());
     }
 
     #[test]
-    fn test_format_duration_days() {
+    fn format_duration_days() {
         ensure_init();
         // 3000 minutes = 2d 2h 0m
         let result = format_duration(3000);
@@ -162,24 +161,22 @@ mod tests {
     }
 
     #[test]
-    fn test_format_duration_zero() {
+    fn format_duration_zero() {
         ensure_init();
         let result = format_duration(0);
-        // ICU4X narrow style with FieldDisplay::Always on minutes should produce "0m"
-        // (en locale)
+        // FieldDisplay::Always on minutes renders "0m" rather than an empty string.
         assert_eq!(result, "0m");
     }
 
     #[test]
-    fn test_format_duration_negative_clamps() {
+    fn format_duration_negative_clamps() {
         ensure_init();
         let result = format_duration(-10);
-        // Negative clamps to 0, same as zero duration
         assert_eq!(result, "0m");
     }
 
     #[test]
-    fn test_format_time_today() {
+    fn format_time_today() {
         ensure_init();
         // Pin to noon so +1 hour never crosses midnight.
         let now = jiff::Zoned::now()
@@ -194,9 +191,7 @@ mod tests {
             .checked_add(jiff::SignedDuration::from_hours(1))
             .expect("adding one hour is valid");
         let result = format_time(&completion, &now);
-        // Same day: should produce time only (e.g. "3:45 PM" for en)
         assert!(!result.is_empty());
-        // Should NOT contain a weekday abbreviation
         assert!(
             !result.contains("Mon")
                 && !result.contains("Tue")
@@ -209,14 +204,13 @@ mod tests {
     }
 
     #[test]
-    fn test_format_time_different_day() {
+    fn format_time_different_day() {
         ensure_init();
         let now = jiff::Zoned::now();
         let completion = now
             .checked_add(jiff::SignedDuration::from_hours(48))
             .expect("adding 48 hours is valid");
         let result = format_time(&completion, &now);
-        // Different day: should contain a weekday abbreviation
         assert!(!result.is_empty());
         let has_weekday = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
             .iter()
@@ -225,7 +219,7 @@ mod tests {
     }
 
     #[test]
-    fn test_game_names() {
+    fn game_names() {
         ensure_init();
         assert_eq!(t("game_genshin_name"), "Genshin Impact");
         assert_eq!(t("game_hsr_name"), "Honkai: Star Rail");
@@ -234,7 +228,7 @@ mod tests {
     }
 
     #[test]
-    fn test_resource_names() {
+    fn resource_names() {
         ensure_init();
         assert_eq!(t("resource_resin"), "Original Resin");
         assert_eq!(t("resource_trailblaze_power"), "Trailblaze Power");
@@ -243,13 +237,12 @@ mod tests {
     }
 
     #[test]
-    fn test_supported_locales() {
-        let locales = supported_locales();
-        assert!(locales.contains(&"en"));
+    fn supported_locales_include_english() {
+        assert!(supported_locales().contains(&"en"));
     }
 
     #[test]
-    fn test_format_message_nested_braces() {
+    fn format_message_nested_braces() {
         ensure_init();
         let plural_rules =
             PluralRules::try_new_cardinal("en".parse::<Locale>().expect("valid locale").into())
@@ -267,7 +260,7 @@ mod tests {
     }
 
     #[test]
-    fn test_format_duration_ja_uses_localized_units() {
+    fn format_duration_ja_uses_localized_units() {
         use icu_experimental::duration::DurationFormatter;
         use icu_experimental::duration::DurationFormatterPreferences;
         use icu_experimental::duration::ValidatedDurationFormatterOptions;

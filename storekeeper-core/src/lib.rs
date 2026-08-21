@@ -3,23 +3,27 @@
 //! This crate provides the foundational types and abstractions used across
 //! all game implementations and the main application.
 
-pub mod config;
-pub mod daily_reward;
-pub mod error;
-pub mod game;
-pub mod game_id;
-pub mod macros;
-pub mod region;
-pub mod resource;
-pub mod resource_types;
+mod config;
+mod daily_reward;
+mod error;
+mod game;
+mod game_id;
+mod macros;
+mod region;
+mod resource;
+mod resource_types;
+
 pub mod serde_utils;
 
 pub use config::AppConfig;
 pub use config::ClaimTime;
 pub use config::DEFAULT_AUTO_CLAIM_TIME;
 pub use config::GamesConfig;
+pub use config::GeneralConfig;
 pub use config::GenshinConfig;
+pub use config::HoyolabSecrets;
 pub use config::HsrConfig;
+pub use config::KuroSecrets;
 pub use config::ResourceNotificationConfig;
 pub use config::SecretsConfig;
 pub use config::WuwaConfig;

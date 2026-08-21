@@ -1,6 +1,5 @@
 //! Error types for the HoYoLab API client.
 
-// Re-export base error for convenience
 pub use storekeeper_client_core::ClientError;
 use thiserror::Error;
 
@@ -21,8 +20,6 @@ pub enum Error {
 
 /// Result type alias using the HoYoLab Error type.
 pub type Result<T> = std::result::Result<T, Error>;
-
-// Convenience conversions for common base error types
 impl From<reqwest::Error> for Error {
     fn from(err: reqwest::Error) -> Self {
         Self::Client(ClientError::from(err))
@@ -38,5 +35,18 @@ impl From<serde_json::Error> for Error {
 impl From<reqwest_middleware::Error> for Error {
     fn from(err: reqwest_middleware::Error) -> Self {
         Self::Client(ClientError::from(err))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn error_crosses_task_boundaries() {
+        const fn assert_send<T: Send>() {}
+        const fn assert_sync<T: Sync>() {}
+        assert_send::<Error>();
+        assert_sync::<Error>();
     }
 }

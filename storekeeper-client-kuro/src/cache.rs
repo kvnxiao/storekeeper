@@ -43,6 +43,7 @@ struct KuroSdkCacheEntry {
 /// - The roaming app data directory cannot be determined
 /// - The cache file exists but cannot be read
 /// - The cache file contains invalid JSON
+/// - The first non-empty OAuth code is not ASCII
 pub fn load_oauth_from_cache() -> Result<Option<String>> {
     let cache_path = get_cache_path()?;
 
@@ -65,12 +66,11 @@ pub fn load_oauth_from_cache() -> Result<Option<String>> {
         )))
     })?;
 
-    // Find the first entry with a non-empty OAuth code
     for entry in cache_entries {
         if let Some(encoded) = entry.oauth_code
             && !encoded.is_empty()
         {
-            let decoded = crate::decode_xor5(&encoded);
+            let decoded = decode_xor5(&encoded)?;
             tracing::info!("Successfully loaded OAuth code from Kuro SDK cache");
             return Ok(Some(decoded));
         }
@@ -78,6 +78,14 @@ pub fn load_oauth_from_cache() -> Result<Option<String>> {
 
     tracing::debug!("Kuro SDK cache file exists but contains no OAuth code");
     Ok(None)
+}
+
+// The Kuro SDK stores OAuth codes as ASCII bytes XORed with 5.
+fn decode_xor5(s: &str) -> Result<String> {
+    if !s.is_ascii() {
+        return Err(Error::NonAsciiXor5Payload);
+    }
+    Ok(s.bytes().map(|b| char::from(b ^ 5)).collect())
 }
 
 /// Returns the path to the Kuro SDK cache file.
@@ -112,42 +120,36 @@ fn to_utf8_data_dir(path: PathBuf) -> Result<Utf8PathBuf> {
 
 #[cfg(test)]
 mod tests {
+    use super::decode_xor5;
+    use crate::error::Error;
 
     #[test]
-    fn test_decode_xor5() {
-        // XOR-5 is its own inverse
-        let original = "test_oauth_code_123";
-        let encoded: String = original
-            .chars()
-            .map(|c| char::from((c as u8) ^ 5))
-            .collect();
-        let decoded = crate::decode_xor5(&encoded);
-        assert_eq!(decoded, original);
+    fn decode_xor5_is_its_own_inverse() {
+        for original in ["", "a", "hello", "OAuth123!@#", "test_oauth_code_123"] {
+            let encoded = decode_xor5(original).expect("ASCII input encodes");
+            let decoded = decode_xor5(&encoded).expect("ASCII input decodes");
+            assert_eq!(decoded, original);
+        }
     }
 
     #[test]
-    fn test_decode_xor5_roundtrip() {
-        let test_strings = ["", "a", "hello", "OAuth123!@#", "日本語"]; // Note: non-ASCII may have issues
-        for original in test_strings {
-            // Only test ASCII strings as XOR-5 on bytes may produce invalid UTF-8 for
-            // non-ASCII
-            if original.is_ascii() {
-                let encoded: String = original
-                    .chars()
-                    .map(|c| char::from((c as u8) ^ 5))
-                    .collect();
-                let decoded = crate::decode_xor5(&encoded);
-                assert_eq!(decoded, original, "Failed roundtrip for: {original}");
-            }
-        }
+    fn decode_xor5_maps_ascii_onto_ascii() {
+        let all_ascii: String = (0u8..=127).map(char::from).collect();
+        let decoded = decode_xor5(&all_ascii).expect("ASCII input decodes");
+        assert!(decoded.is_ascii());
+    }
+
+    #[test]
+    fn decode_xor5_rejects_non_ascii() {
+        assert!(matches!(
+            decode_xor5("\u{65e5}\u{672c}\u{8a9e}"),
+            Err(Error::NonAsciiXor5Payload)
+        ));
     }
 
     #[cfg(any(windows, unix))]
     #[test]
     fn to_utf8_data_dir_rejects_non_utf8() {
-        use crate::error::Error;
-
-        // Build a path that is not valid UTF-8 in a platform-specific way.
         #[cfg(windows)]
         let bad: std::path::PathBuf = {
             use std::os::windows::ffi::OsStringExt;
@@ -161,9 +163,6 @@ mod tests {
         };
 
         let result = super::to_utf8_data_dir(bad);
-        assert!(
-            matches!(result, Err(Error::Client(_))),
-            "a non-UTF-8 data directory must be rejected"
-        );
+        assert!(matches!(result, Err(Error::Client(_))));
     }
 }

@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use storekeeper_core::GameId;
 use storekeeper_core::ResourceNotificationConfig;
 
-/// Pre-built HashMap key for a (game, resource) pair.
+/// Pre-built `HashMap` key for a (game, resource) pair.
 pub type NotifyKey = (GameId, String);
 
 /// Result of a `should_notify` check.
@@ -50,8 +50,8 @@ impl NotificationTracker {
         now: Timestamp,
     ) -> NotifyAction {
         let in_window = match (config.notify_at_value, config.notify_minutes_before_full) {
-            // Value-threshold mode: convert to minutes via regen rate, fallback to direct
-            // comparison
+            // Value-threshold mode: a regen rate converts the remaining units
+            // into minutes; absent a rate, the comparison uses the raw value.
             (Some(threshold), _) => {
                 if let (Some(max), Some(rate)) = (info.max, info.regen_rate_seconds) {
                     let units_remaining = max.saturating_sub(threshold);
@@ -66,28 +66,25 @@ impl NotificationTracker {
                     let window = SignedDuration::from_secs(effective_minutes.saturating_mul(60));
                     info.is_complete || info.completion_at.duration_since(now) <= window
                 } else {
-                    // Fallback: direct value comparison (no rate available)
                     info.current.is_some_and(|c| c >= threshold) || info.is_complete
                 }
             }
-            // Minutes-before-full mode (existing behavior)
+            // Minutes-before-full mode.
             (None, Some(minutes)) => {
                 let window = SignedDuration::from_mins(i64::from(minutes));
                 info.is_complete || info.completion_at.duration_since(now) <= window
             }
-            // Neither set: notify only when full/ready
+            // Neither set: notify only when the resource is full.
             (None, None) => info.is_complete,
         };
 
         let key = (game_id, resource_type.to_string());
 
-        // Not in notification window yet - reset cooldown tracking
         if !in_window {
             self.cooldowns.remove(&key);
             return NotifyAction::Skip;
         }
 
-        // In window or already full - check cooldown
         if let Some(last_notified) = self.cooldowns.get(&key).copied() {
             // cooldown_minutes == 0 means "notify once, don't repeat"
             if config.cooldown_minutes == 0 {
@@ -156,13 +153,12 @@ mod tests {
     }
 
     #[test]
-    fn test_not_in_window_clears_and_returns_false() {
+    fn not_in_window_clears_and_returns_false() {
         let mut tracker = NotificationTracker::default();
         let now = Timestamp::now();
         let game = GameId::GenshinImpact;
         let config = stub_config(60, 10);
 
-        // Seed a prior cooldown entry
         tracker.record(key(game, "resin"), now - SignedDuration::from_hours(1));
 
         let info = stub_info(now + SignedDuration::from_hours(2), false);
@@ -172,7 +168,6 @@ mod tests {
                 .is_notify()
         );
 
-        // Internal state was cleared - next in-window check should return true
         let in_window_info = stub_info(now + SignedDuration::from_mins(30), false);
         assert!(
             tracker
@@ -182,7 +177,7 @@ mod tests {
     }
 
     #[test]
-    fn test_in_window_first_time_returns_true() {
+    fn in_window_first_time_returns_true() {
         let mut tracker = NotificationTracker::default();
         let now = Timestamp::now();
         let config = stub_config(60, 10);
@@ -196,7 +191,7 @@ mod tests {
     }
 
     #[test]
-    fn test_in_window_within_cooldown_returns_false() {
+    fn in_window_within_cooldown_returns_false() {
         let mut tracker = NotificationTracker::default();
         let now = Timestamp::now();
         let game = GameId::GenshinImpact;
@@ -215,7 +210,7 @@ mod tests {
     }
 
     #[test]
-    fn test_in_window_after_cooldown_expired_returns_true() {
+    fn in_window_after_cooldown_expired_returns_true() {
         let mut tracker = NotificationTracker::default();
         let now = Timestamp::now();
         let game = GameId::HonkaiStarRail;
@@ -234,7 +229,7 @@ mod tests {
     }
 
     #[test]
-    fn test_at_full_returns_true() {
+    fn at_full_returns_true() {
         let mut tracker = NotificationTracker::default();
         let now = Timestamp::now();
         let config = stub_config(60, 10);
@@ -248,7 +243,7 @@ mod tests {
     }
 
     #[test]
-    fn test_clear_resets_state() {
+    fn clear_resets_state() {
         let mut tracker = NotificationTracker::default();
         let now = Timestamp::now();
         let game = GameId::WutheringWaves;
@@ -257,14 +252,12 @@ mod tests {
         tracker.record(key(game, "waveplates"), now);
 
         let info = stub_info(now + SignedDuration::from_mins(30), false);
-        // Within cooldown - should be false
         assert!(
             !tracker
                 .should_notify(game, "waveplates", &config, &info, now)
                 .is_notify()
         );
 
-        // Manually clear - next check should return true
         tracker.cooldowns.remove(&key(game, "waveplates"));
         assert!(
             tracker
@@ -274,7 +267,7 @@ mod tests {
     }
 
     #[test]
-    fn test_zero_cooldown_notifies_once_then_stops() {
+    fn zero_cooldown_notifies_once_then_stops() {
         let mut tracker = NotificationTracker::default();
         let now = Timestamp::now();
         let game = GameId::GenshinImpact;
@@ -282,7 +275,6 @@ mod tests {
 
         let info = stub_info(now + SignedDuration::from_mins(30), false);
 
-        // First check - no prior notification, should fire
         assert!(
             tracker
                 .should_notify(game, "resin", &config, &info, now)
@@ -290,7 +282,6 @@ mod tests {
         );
         tracker.record(key(game, "resin"), now);
 
-        // Subsequent checks - never re-notifies regardless of time elapsed
         let much_later = now + SignedDuration::from_hours(24);
         assert!(
             !tracker
@@ -300,13 +291,12 @@ mod tests {
     }
 
     #[test]
-    fn test_zero_cooldown_resets_on_leaving_window() {
+    fn zero_cooldown_resets_on_leaving_window() {
         let mut tracker = NotificationTracker::default();
         let now = Timestamp::now();
         let game = GameId::GenshinImpact;
         let config = stub_config(60, 0);
 
-        // In window - notifies
         let in_window = stub_info(now + SignedDuration::from_mins(30), false);
         assert!(
             tracker
@@ -315,7 +305,6 @@ mod tests {
         );
         tracker.record(key(game, "resin"), now);
 
-        // Leaves window (resource consumed) - clears state
         let out_of_window = stub_info(now + SignedDuration::from_hours(5), false);
         assert!(
             !tracker
@@ -323,7 +312,6 @@ mod tests {
                 .is_notify()
         );
 
-        // Re-enters window - should notify again (one-shot reset)
         assert!(
             tracker
                 .should_notify(game, "resin", &config, &in_window, now)
@@ -331,12 +319,8 @@ mod tests {
         );
     }
 
-    // =========================================================================
-    // Value-threshold mode tests
-    // =========================================================================
-
     #[test]
-    fn test_value_threshold_with_regen_rate() {
+    fn value_threshold_with_regen_rate() {
         let mut tracker = NotificationTracker::default();
         let now = Timestamp::now();
         let config = ResourceNotificationConfig {
@@ -364,7 +348,7 @@ mod tests {
     }
 
     #[test]
-    fn test_value_threshold_not_in_window() {
+    fn value_threshold_not_in_window() {
         let mut tracker = NotificationTracker::default();
         let now = Timestamp::now();
         let config = ResourceNotificationConfig {
@@ -391,9 +375,9 @@ mod tests {
     }
 
     #[test]
-    fn test_value_threshold_regen_rate_math_boundary() {
-        // Verify exact math: threshold=140, max=160, rate=480s/unit
-        // units_remaining = 160-140 = 20, effective_minutes = 20*480/60 = 160
+    fn value_threshold_regen_rate_math_boundary() {
+        // threshold=140, max=160, rate=480s/unit: units_remaining = 20 and
+        // effective_minutes = 20 * 480 / 60 = 160.
         let mut tracker = NotificationTracker::default();
         let now = Timestamp::now();
         let config = ResourceNotificationConfig {
@@ -403,7 +387,6 @@ mod tests {
             cooldown_minutes: 10,
         };
 
-        // Exactly at boundary (160 min to full) - should notify (<=)
         let at_boundary = ResourceInfo {
             completion_at: now + SignedDuration::from_mins(160),
             is_complete: false,
@@ -421,7 +404,6 @@ mod tests {
             .cooldowns
             .remove(&key(GameId::GenshinImpact, "resin"));
 
-        // Just outside boundary (161 min to full) - should NOT notify
         let outside_boundary = ResourceInfo {
             completion_at: now + SignedDuration::from_mins(161),
             is_complete: false,
@@ -443,7 +425,7 @@ mod tests {
     }
 
     #[test]
-    fn test_value_threshold_fallback_direct_comparison() {
+    fn value_threshold_fallback_direct_comparison() {
         let mut tracker = NotificationTracker::default();
         let now = Timestamp::now();
         let config = ResourceNotificationConfig {
@@ -453,7 +435,6 @@ mod tests {
             cooldown_minutes: 10,
         };
 
-        // No regen rate - falls back to direct comparison
         let info = ResourceInfo {
             completion_at: now + SignedDuration::from_hours(1),
             is_complete: false,
@@ -470,7 +451,7 @@ mod tests {
     }
 
     #[test]
-    fn test_value_threshold_fallback_below_threshold() {
+    fn value_threshold_fallback_below_threshold() {
         let mut tracker = NotificationTracker::default();
         let now = Timestamp::now();
         let config = ResourceNotificationConfig {
@@ -480,7 +461,6 @@ mod tests {
             cooldown_minutes: 10,
         };
 
-        // No regen rate, current < threshold
         let info = ResourceInfo {
             completion_at: now + SignedDuration::from_hours(1),
             is_complete: false,
@@ -497,7 +477,7 @@ mod tests {
     }
 
     #[test]
-    fn test_neither_threshold_only_notifies_when_full() {
+    fn neither_threshold_only_notifies_when_full() {
         let mut tracker = NotificationTracker::default();
         let now = Timestamp::now();
         let config = ResourceNotificationConfig {
@@ -507,7 +487,6 @@ mod tests {
             cooldown_minutes: 10,
         };
 
-        // Not full - should NOT notify
         let info = stub_info(now + SignedDuration::from_mins(5), false);
         assert!(
             !tracker
@@ -515,7 +494,6 @@ mod tests {
                 .is_notify()
         );
 
-        // Full - should notify
         let full_info = stub_info(now - SignedDuration::from_secs(1), true);
         assert!(
             tracker

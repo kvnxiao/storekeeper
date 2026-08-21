@@ -52,10 +52,8 @@ pub fn build_tray_menu(app: &AppHandle) -> Result<()> {
 ///
 /// Returns an error if the tray icon or menu cannot be created.
 pub fn setup_tray(app: &App) -> Result<()> {
-    // Build initial menu using the app handle
     build_tray_menu(app.handle())?;
 
-    // Get the tray icon and attach event handlers
     let tray = app
         .tray_by_id("main")
         .context("tray icon 'main' not found, ensure it's defined in tauri.conf.json")?;
@@ -71,7 +69,6 @@ pub fn setup_tray(app: &App) -> Result<()> {
                 });
             }
             "open_config" => {
-                // Open config folder
                 if let Err(e) = crate::commands::open_config_folder() {
                     tracing::error!("Failed to open config folder: {e}");
                 }
@@ -79,7 +76,7 @@ pub fn setup_tray(app: &App) -> Result<()> {
             "quit" => {
                 tracing::info!("Quit requested from tray menu");
 
-                // Cancel background tasks before exiting
+                // Background tasks must be cancelled before the exit call.
                 if let Some(cancel_token) = app.try_state::<CancellationToken>() {
                     cancel_token.cancel();
                 }
@@ -90,35 +87,18 @@ pub fn setup_tray(app: &App) -> Result<()> {
         }
     });
 
-    tray.on_tray_icon_event(|tray, event| {
-        match event {
-            TrayIconEvent::Click {
-                button: MouseButton::Left,
-                button_state: MouseButtonState::Up,
-                ..
-            } => {
-                // Toggle window visibility on left click
-                if let Some(window) = tray.app_handle().get_webview_window("main") {
-                    if window.is_visible().unwrap_or(false) {
-                        if let Err(e) = window.hide() {
-                            tracing::debug!(error = %e, "Failed to hide window");
-                        }
-                    } else {
-                        if let Err(e) = window.show() {
-                            tracing::debug!(error = %e, "Failed to show window");
-                        }
-                        if let Err(e) = window.set_focus() {
-                            tracing::debug!(error = %e, "Failed to focus window");
-                        }
+    tray.on_tray_icon_event(|tray, event| match event {
+        TrayIconEvent::Click {
+            button: MouseButton::Left,
+            button_state: MouseButtonState::Up,
+            ..
+        } => {
+            if let Some(window) = tray.app_handle().get_webview_window("main") {
+                if window.is_visible().unwrap_or(false) {
+                    if let Err(e) = window.hide() {
+                        tracing::debug!(error = %e, "Failed to hide window");
                     }
-                }
-            }
-            TrayIconEvent::DoubleClick {
-                button: MouseButton::Left,
-                ..
-            } => {
-                // Show window on double click
-                if let Some(window) = tray.app_handle().get_webview_window("main") {
+                } else {
                     if let Err(e) = window.show() {
                         tracing::debug!(error = %e, "Failed to show window");
                     }
@@ -127,8 +107,21 @@ pub fn setup_tray(app: &App) -> Result<()> {
                     }
                 }
             }
-            _ => {}
         }
+        TrayIconEvent::DoubleClick {
+            button: MouseButton::Left,
+            ..
+        } => {
+            if let Some(window) = tray.app_handle().get_webview_window("main") {
+                if let Err(e) = window.show() {
+                    tracing::debug!(error = %e, "Failed to show window");
+                }
+                if let Err(e) = window.set_focus() {
+                    tracing::debug!(error = %e, "Failed to focus window");
+                }
+            }
+        }
+        _ => {}
     });
 
     Ok(())

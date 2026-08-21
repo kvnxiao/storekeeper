@@ -18,18 +18,8 @@ pub const DEFAULT_USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) 
 
 /// Builder for creating configured HTTP clients.
 ///
-/// This builder provides a fluent API for configuring common HTTP client
-/// options like headers, timeouts, and other settings.
-///
-/// # Example
-///
-/// ```rust,ignore
-/// use storekeeper_client_core::HttpClientBuilder;
-///
-/// let client = HttpClientBuilder::new()
-///     .header_static("x-custom-header", "value")
-///     .build()?;
-/// ```
+/// Setters store their values; `build` and `build_with_retry` construct the
+/// client.
 #[derive(Debug, Default)]
 pub struct HttpClientBuilder {
     headers: HeaderMap,
@@ -38,7 +28,7 @@ pub struct HttpClientBuilder {
 
 impl HttpClientBuilder {
     /// Creates a new HTTP client builder with default settings.
-    #[must_use = "builder must be used to create an HTTP client"]
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -46,7 +36,7 @@ impl HttpClientBuilder {
     /// Sets the User-Agent header.
     ///
     /// If not called, uses the default User-Agent string.
-    #[must_use = "this returns the modified builder"]
+    #[must_use]
     pub fn user_agent(mut self, user_agent: impl Into<String>) -> Self {
         self.user_agent = Some(user_agent.into());
         self
@@ -71,7 +61,7 @@ impl HttpClientBuilder {
     /// Adds a static header to the default headers.
     ///
     /// Use this when the header value is a compile-time constant.
-    #[must_use = "this returns the modified builder"]
+    #[must_use]
     pub fn header_static(
         mut self,
         name: impl reqwest::header::IntoHeaderName,
@@ -87,7 +77,6 @@ impl HttpClientBuilder {
     ///
     /// Returns an error if the HTTP client cannot be created.
     pub fn build(mut self) -> Result<reqwest::Client> {
-        // Set User-Agent
         let user_agent = self.user_agent.as_deref().unwrap_or(DEFAULT_USER_AGENT);
         let user_agent_value = HeaderValue::from_str(user_agent)
             .map_err(|e| ClientError::invalid_config(format!("Invalid User-Agent: {e}")))?;
@@ -113,8 +102,6 @@ impl HttpClientBuilder {
     /// use the [`RetryConfig`](crate::retry::RetryConfig) utility directly.
     ///
     /// # Arguments
-    ///
-    /// * `max_retries` - Maximum number of retry attempts
     ///
     /// # Errors
     ///

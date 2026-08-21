@@ -47,3 +47,16 @@ pub enum Error {
 
 /// Result type alias using the core Error type.
 pub type Result<T> = std::result::Result<T, Error>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn error_crosses_task_boundaries() {
+        const fn assert_send<T: Send>() {}
+        const fn assert_sync<T: Sync>() {}
+        assert_send::<Error>();
+        assert_sync::<Error>();
+    }
+}

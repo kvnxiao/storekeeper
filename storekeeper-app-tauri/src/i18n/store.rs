@@ -71,7 +71,6 @@ fn load_messages(locale_str: &str) -> Result<Messages> {
     let strings: HashMap<String, String> =
         serde_json::from_str(json_str).context("failed to parse locale JSON")?;
 
-    // Validate that plural rules can be created for this locale
     PluralRules::try_new_cardinal(locale.clone().into())
         .map_err(|e| anyhow::anyhow!("failed to create plural rules for {locale_str}: {e}"))?;
 
@@ -88,7 +87,6 @@ fn load_messages(locale_str: &str) -> Result<Messages> {
 /// Returns an error if the locale cannot be loaded or parsed.
 pub fn init(locale_str: &str) -> Result<()> {
     let messages = load_messages(locale_str)?;
-    // Subsequent calls after the first are intentionally ignored (see doc above).
     #[expect(
         clippy::let_underscore_must_use,
         reason = "init is idempotent; a second call leaves the first value in place"

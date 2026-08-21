@@ -1,4 +1,5 @@
 import { render, screen } from "@solidjs/testing-library";
+import userEvent from "@testing-library/user-event";
 import { QueryClientProvider, useMutation } from "@tanstack/solid-query";
 import type { VoidComponent } from "solid-js";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vite-plus/test";
@@ -127,7 +128,7 @@ describe("resource refresh", () => {
   it("leaves the view to the snapshot event, not the refresh command response", async () => {
     const { container } = await mount();
 
-    screen.getByRole("button", { name: "trigger refresh" }).click();
+    await userEvent.setup().click(screen.getByRole("button", { name: "trigger refresh" }));
     await vi.waitFor(() => expect(queryClient.isMutating()).toBe(0), {
       timeout: WAIT_TIMEOUT_MS,
     });
