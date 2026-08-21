@@ -121,7 +121,7 @@ export const LogsPage: VoidComponent = () => {
   // their identity so a row's DOM outlives a poll.
   const rows = createMemo(() => {
     const items: (VirtualItem | undefined)[] = virtualizer.getVirtualItems();
-    return items.filter((item): item is VirtualItem => item !== undefined);
+    return items.filter((item) => item !== undefined);
   });
 
   const scrollToLatest = (): void => {
