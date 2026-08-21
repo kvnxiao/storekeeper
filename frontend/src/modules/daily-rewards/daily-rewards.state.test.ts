@@ -10,8 +10,8 @@ vi.mock("@/modules/daily-rewards/daily-rewards.query", () => ({
 const refresh = vi.mocked(refreshDailyRewardStatus);
 
 /** 23:00 UTC+8 on 2026-08-05, an hour before the reset. */
-const BEFORE_RESET = Date.UTC(2026, 7, 5, 15, 0, 0);
-const AFTER_RESET = Date.UTC(2026, 7, 5, 16, 30, 0);
+const BEFORE_RESET = Temporal.Instant.from("2026-08-05T15:00:00Z");
+const AFTER_RESET = Temporal.Instant.from("2026-08-05T16:30:00Z");
 
 /** Lets the deferred tick effect register and then run. */
 async function flushEffects(): Promise<void> {
@@ -21,11 +21,10 @@ async function flushEffects(): Promise<void> {
 
 describe("daily rewards state", () => {
   let dispose: () => void;
-  let setTick: (value: number) => void;
+  let setTick: (value: Temporal.Instant) => void;
 
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.setSystemTime(BEFORE_RESET);
     refresh.mockClear();
 
     createRoot((disposeRoot) => {
@@ -49,7 +48,6 @@ describe("daily rewards state", () => {
     await flushEffects();
     refresh.mockClear();
 
-    vi.setSystemTime(AFTER_RESET);
     setTick(AFTER_RESET);
     await flushEffects();
 
@@ -62,9 +60,7 @@ describe("daily rewards state", () => {
     await flushEffects();
     refresh.mockClear();
 
-    const later = BEFORE_RESET + 30 * 60_000;
-    vi.setSystemTime(later);
-    setTick(later);
+    setTick(BEFORE_RESET.add({ minutes: 30 }));
     await flushEffects();
     await vi.advanceTimersByTimeAsync(60_000);
 
@@ -75,10 +71,9 @@ describe("daily rewards state", () => {
     await flushEffects();
     refresh.mockClear();
 
-    vi.setSystemTime(AFTER_RESET);
     setTick(AFTER_RESET);
     await flushEffects();
-    setTick(AFTER_RESET + 60_000);
+    setTick(AFTER_RESET.add({ minutes: 1 }));
     await flushEffects();
     await vi.advanceTimersByTimeAsync(60_000);
 

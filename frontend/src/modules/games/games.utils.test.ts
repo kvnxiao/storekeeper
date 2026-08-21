@@ -14,9 +14,9 @@ import {
   type StaminaResource,
 } from "@/modules/resources/resources.types";
 
-const NOW = Date.UTC(2026, 7, 5, 12, 0, 0);
-const PAST = new Date(NOW - 60_000).toISOString();
-const FUTURE = new Date(NOW + 60_000).toISOString();
+const NOW = Temporal.Instant.from("2026-08-05T12:00:00Z");
+const PAST = NOW.subtract({ minutes: 1 }).toString();
+const FUTURE = NOW.add({ minutes: 1 }).toString();
 
 function stamina(overrides: Partial<StaminaResource> = {}): StaminaResource {
   return { current: 100, max: 160, fullAt: FUTURE, regenRateSeconds: 480, ...overrides };

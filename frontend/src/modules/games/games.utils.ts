@@ -30,21 +30,21 @@ export function selectResource<G extends GameId, T>(
  */
 export function fillStaminaWhenDue(
   resource: StaminaResource | null,
-  nowMs: number,
+  now: Temporal.Instant,
 ): StaminaResource | null {
   if (!resource || resource.current >= resource.max) {
     return resource;
   }
-  return isPastDateTime(resource.fullAt, nowMs) ? { ...resource, current: resource.max } : resource;
+  return isPastDateTime(resource.fullAt, now) ? { ...resource, current: resource.max } : resource;
 }
 
 /** Marks a cooldown resource ready once its `readyAt` has passed. */
 export function readyCooldownWhenDue(
   resource: CooldownResource | null,
-  nowMs: number,
+  now: Temporal.Instant,
 ): CooldownResource | null {
   if (!resource || resource.isReady) {
     return resource;
   }
-  return isPastDateTime(resource.readyAt, nowMs) ? { ...resource, isReady: true } : resource;
+  return isPastDateTime(resource.readyAt, now) ? { ...resource, isReady: true } : resource;
 }

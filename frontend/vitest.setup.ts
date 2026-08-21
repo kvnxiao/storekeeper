@@ -1,3 +1,4 @@
+import "temporal-polyfill/global";
 import { cleanup, configure } from "@solidjs/testing-library";
 import { afterEach } from "vite-plus/test";
 

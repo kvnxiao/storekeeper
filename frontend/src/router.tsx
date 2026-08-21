@@ -1,3 +1,5 @@
+import "temporal-polyfill/global";
+
 import { createRouter } from "@tanstack/solid-router";
 import { queryClient } from "@/modules/core/core.queryClient";
 import { routeTree } from "@/routeTree.gen";

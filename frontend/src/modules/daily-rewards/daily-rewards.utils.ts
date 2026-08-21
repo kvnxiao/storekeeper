@@ -21,17 +21,7 @@ export function extractClaimStatus(status: AllDailyRewardStatus): Map<GameId, bo
   return map;
 }
 
-const UTC8_DATE_FORMAT = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "Asia/Shanghai",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
-
-/** The `YYYY-MM-DD` calendar date in UTC+8, the boundary the games reset on. */
-export function utc8DateString(nowMs: number): string {
-  const { year, month, day } = Object.fromEntries(
-    UTC8_DATE_FORMAT.formatToParts(nowMs).map(({ type, value }) => [type, value]),
-  );
-  return `${year}-${month}-${day}`;
+/** The calendar date in UTC+8, the boundary the games reset on. */
+export function utc8Date(now: Temporal.Instant): Temporal.PlainDate {
+  return now.toZonedDateTimeISO("+08:00").toPlainDate();
 }

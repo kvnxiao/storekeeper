@@ -6,7 +6,7 @@
     "forceConsistentCasingInFileNames": true,
     "target": "ES2022",
     "useDefineForClassFields": true,
-    "lib": ["ES2025", "DOM", "DOM.Iterable"],
+    "lib": ["ES2025", "ESNext.Temporal", "ESNext.Intl", "DOM", "DOM.Iterable"],
     "types": ["vite-plus/client", "@testing-library/jest-dom/vitest"],
     "module": "ESNext",
     "moduleResolution": "bundler",

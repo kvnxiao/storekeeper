@@ -25,26 +25,27 @@ const WAIT_TIMEOUT_MS = 3_000;
 function snapshot(resin: number): AllResources {
   // Backdate the snapshot so its fetch-to-render interval stays non-zero when
   // render and snapshot creation share a millisecond.
-  const now = Date.now() - FETCH_LEAD_MS;
+  const now = Temporal.Now.instant().subtract({ milliseconds: FETCH_LEAD_MS });
   return {
     games: {
       [GameId.GenshinImpact]: [
         {
           type: "resin",
-          data: { current: resin, max: 200, fullAt: iso(now + FULL_IN_MS), regenRateSeconds: 480 },
+          data: {
+            current: resin,
+            max: 200,
+            fullAt: now.add({ milliseconds: FULL_IN_MS }).toString(),
+            regenRateSeconds: 480,
+          },
         },
         {
           type: "parametric_transformer",
-          data: { isReady: false, readyAt: iso(now + COOLDOWN_MS) },
+          data: { isReady: false, readyAt: now.add({ milliseconds: COOLDOWN_MS }).toString() },
         },
       ],
     },
-    lastUpdated: iso(now),
+    lastUpdated: now.toString(),
   };
-}
-
-function iso(ms: number): string {
-  return new Date(ms).toISOString();
 }
 
 vi.mock("@tauri-apps/api/core", () => ({
