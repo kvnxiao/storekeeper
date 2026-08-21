@@ -8,6 +8,7 @@ import { refreshResourcesMutationOptions } from "@/modules/resources/resources.q
 import { resourcesState } from "@/modules/resources/resources.state";
 import { Button } from "@/modules/ui/components/Button";
 import { ButtonLink } from "@/modules/ui/components/ButtonLink";
+import { createLoadingPhase } from "@/modules/ui/ui.loading";
 import { cn } from "@/modules/ui/ui.styles";
 import { setViewTransitionDirection } from "@/modules/ui/ui.utils";
 import * as m from "@/paraglide/messages";
@@ -16,6 +17,8 @@ export const DashboardPage: VoidComponent = () => {
   onMount(() => core.initDashboard());
 
   const refresh = useMutation(() => refreshResourcesMutationOptions());
+
+  const spinning = createLoadingPhase(() => resourcesState.isRefreshing());
 
   return (
     <div class="mx-auto min-h-screen max-w-sm p-3">
@@ -30,7 +33,7 @@ export const DashboardPage: VoidComponent = () => {
           >
             <RefreshClockwise
               aria-hidden="true"
-              class={cn("size-5", resourcesState.isRefreshing() && "animate-spin")}
+              class={cn("size-5", spinning() && "animate-spin")}
             />
           </Button>
           <ButtonLink

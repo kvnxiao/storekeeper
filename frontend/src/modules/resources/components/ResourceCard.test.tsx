@@ -22,10 +22,16 @@ function renderCard(hasData: boolean): HTMLElement {
 
 describe("ResourceCard", () => {
   it("masks the card while it has no values to show", () => {
-    expect(renderCard(false)).toHaveClass("mask-shimmer");
+    const card = renderCard(false);
+
+    expect(card).toHaveClass("mask-shimmer");
+    expect(card).toHaveAttribute("data-shimmer", "active");
   });
 
   it("leaves a card with values unmasked", () => {
-    expect(renderCard(true)).not.toHaveClass("mask-shimmer");
+    const card = renderCard(true);
+
+    expect(card).not.toHaveClass("mask-shimmer");
+    expect(card).not.toHaveAttribute("data-shimmer");
   });
 });
