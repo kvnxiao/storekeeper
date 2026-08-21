@@ -18,8 +18,6 @@ export const DashboardPage: VoidComponent = () => {
 
   const refresh = useMutation(() => refreshResourcesMutationOptions());
 
-  // Only the icon holds. The button re-enables the moment the fetch lands, so
-  // a refresh that answers in milliseconds never blocks the control.
   const spinning = createLoadingPhase(() => resourcesState.isRefreshing());
 
   return (

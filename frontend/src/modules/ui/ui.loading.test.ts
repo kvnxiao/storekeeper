@@ -21,7 +21,7 @@ describe("createLoadingPhase", () => {
     expect(phase()).toBeUndefined();
   });
 
-  it("holds a fetch that lands early for the minimum duration", () => {
+  it("keeps an early completion active for the minimum duration", () => {
     vi.useFakeTimers();
     const { phase, setLoading } = mountPhase();
 
@@ -39,7 +39,7 @@ describe("createLoadingPhase", () => {
     expect(phase()).toBeUndefined();
   });
 
-  it("fades as soon as a fetch that outlasts the minimum lands", () => {
+  it("starts fading when a long load completes", () => {
     vi.useFakeTimers();
     const { phase, setLoading } = mountPhase();
 
@@ -89,7 +89,7 @@ describe("createLoadingPhase", () => {
     expect(phase()).toBe("fading");
   });
 
-  it("drops the pending fade when the root disposes", () => {
+  it("clears the pending fade when the owner disposes", () => {
     vi.useFakeTimers();
     const { phase, setLoading, cleanup } = mountPhase();
 

@@ -1,27 +1,20 @@
 import { type Accessor, createEffect, createSignal, on, onCleanup } from "solid-js";
 
-/**
- * Shortest time a loading indicator stays at full strength, long enough for
- * one full `mask-shimmer` sweep in `styles.css`. A provider that answers in
- * milliseconds would otherwise flash the indicator on and off.
- */
+/** Keep the loading phase active for one `mask-shimmer` sweep. */
 export const LOADING_MIN_MS = 1_200;
 
-/**
- * How long the indicator takes to leave, matching the `--shimmer-dim`
- * transition in `styles.css`. Dropping the mask any sooner returns the card to
- * full opacity mid-sweep.
- */
+/** Match the `--shimmer-dim` transition duration in `styles.css`. */
 export const LOADING_FADE_MS = 250;
 
 export type LoadingPhase = "active" | "fading";
 
 /**
- * Tracks `isLoading` as a phase that holds for `LOADING_MIN_MS` and then fades.
+ * Track loading through an active phase and a fade phase.
  *
- * Loading that resumes during either the hold or the fade returns the phase to
- * `active` and restarts the hold. Call this under a reactive root; the pending
- * timers are cleared when that root disposes.
+ * When loading ends before `LOADING_MIN_MS`, keep the phase active until the
+ * original hold expires. When loading resumes during the fade, return to
+ * `active` and start a new hold. Use this under a reactive owner; disposing the
+ * owner clears pending timers.
  */
 export function createLoadingPhase(
   isLoading: Accessor<boolean>,

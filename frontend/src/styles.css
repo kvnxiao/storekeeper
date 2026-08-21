@@ -243,17 +243,16 @@ body {
    Mask Shimmer - Loading effect for refresh
    ============================================================================= */
 
-/* Registering the dim stop makes it interpolable, so the band can fade out on
-   whatever frame the sweep is on instead of snapping back to full opacity. */
+/* Make the gradient's middle stop interpolable so the mask fades at its
+   current sweep position. */
 @property --shimmer-dim {
   syntax: "<number>";
   inherits: false;
   initial-value: 1;
 }
 
-/* Held for both `createLoadingPhase` phases. Pausing the sweep rather than
-   dropping the animation freezes mask-position, leaving the fade nothing to
-   cover but the dim itself. */
+/* Keep the mask through both loading phases and pause the sweep during fading.
+   This preserves mask-position while --shimmer-dim transitions. */
 @utility mask-shimmer {
   mask-image: linear-gradient(120deg, #000 25%, rgb(0 0 0 / var(--shimmer-dim)) 50%, #000 75%);
   mask-size: 300% 100%;
