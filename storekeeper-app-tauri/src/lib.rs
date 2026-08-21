@@ -29,8 +29,8 @@ use tauri_plugin_window_state::StateFlags;
 use tokio_util::sync::CancellationToken;
 use window::MAIN_WINDOW_LABEL;
 
-/// Applies the loaded configuration and starts the background tasks and the
-/// tray icon.
+/// Apply the loaded configuration, start background tasks, and build the tray
+/// icon.
 ///
 /// # Errors
 ///
@@ -107,9 +107,8 @@ pub fn run() -> Result<()> {
     );
 
     let app = tauri::Builder::default()
-        // Must be registered first so it runs before any other plugin. When a
-        // second instance is launched, this fires in the already-running
-        // instance and the new process exits; reveal the existing window.
+        // Register this plugin before the others. A second instance invokes the
+        // callback in the running process, then the new process exits.
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
             if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
                 if let Err(e) = window.unminimize() {
@@ -125,8 +124,8 @@ pub fn run() -> Result<()> {
         }))
         .plugin(tauri_plugin_autostart::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
-        // The main window is centred by its config and minimizes to the tray,
-        // so only secondary windows keep a remembered size and position.
+        // Preserve size and position for secondary windows; the main window is
+        // centered by its config and minimizes to the tray.
         .plugin(
             tauri_plugin_window_state::Builder::default()
                 .with_state_flags(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED)
@@ -153,8 +152,8 @@ pub fn run() -> Result<()> {
             commands::get_effective_locale,
         ])
         .on_window_event(|window, event| {
-            // Only the main window survives its close button; a secondary
-            // window kept alive hidden would keep polling the backend.
+            // Keep the main window in the tray; close secondary windows so they
+            // do not keep their own frontend work alive.
             if let tauri::WindowEvent::CloseRequested { api, .. } = event
                 && window.label() == MAIN_WINDOW_LABEL
             {

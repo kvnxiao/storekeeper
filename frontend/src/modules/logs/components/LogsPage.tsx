@@ -35,7 +35,7 @@ import { TextField } from "@/modules/ui/components/TextField";
 import { cn } from "@/modules/ui/ui.styles";
 import * as m from "@/paraglide/messages";
 
-/** Height of one unwrapped row, used until the row has been measured. */
+/** Estimated row height used until the virtualizer measures a row. */
 const ROW_ESTIMATE_PX = 28;
 
 const ROW_OVERSCAN = 12;
@@ -48,14 +48,13 @@ const LEVEL_CLASS: Record<LogLevel, string> = {
   trace: "bg-zinc-500/10 text-zinc-500 dark:bg-white/5 dark:text-zinc-500",
 };
 
-// Fixed widths rather than intrinsic ones: each row is its own grid, so only a
-// shared template lines the columns up down the list.
+// Give every row the same fixed grid template so columns stay aligned.
 const ROW_COLUMNS =
   "grid grid-cols-[4.5rem_2.75rem_1fr_7rem] gap-x-3 sm:grid-cols-[4.5rem_2.75rem_1fr_13rem]";
 
 const MUTED_TEXT = "text-zinc-500 dark:text-zinc-400";
 
-/** Reads the stamp in the viewer's locale; a value that will not parse renders as written. */
+/** Format a valid timestamp in the viewer's locale; render invalid text unchanged. */
 function entryTime(entry: LogEntry): string {
   const stamped = parseLogTimestamp(entry.timestamp);
   return stamped ? core.timeWithSecondsFormatter().format(stamped) : entry.timestamp;
@@ -97,8 +96,7 @@ export const LogsPage: VoidComponent = () => {
   const [minimumLevel, setMinimumLevel] = createSignal<LogLevel>("info");
   const [search, setSearch] = createSignal("");
 
-  // Parsing is memoized apart from filtering so a keystroke re-filters the
-  // entries instead of re-parsing every line of the tail.
+  // Keep parsing separate from filtering so search changes reuse parsed entries.
   const entries = createMemo(() => parseLogLines(tail.data ?? []));
   const visible = createMemo(() => filterEntries(entries(), minimumLevel(), search()));
 
@@ -115,10 +113,9 @@ export const LogsPage: VoidComponent = () => {
     overscan: ROW_OVERSCAN,
   });
 
-  // The adapter reconciles its items into a store keyed by index, which leaves
-  // the array sparse while it shrinks. Dropping the holes keeps `For` from
-  // handing the row callback an undefined item, and the surviving proxies keep
-  // their identity so a row's DOM outlives a poll.
+  // Virtualizer items are sparse while the visible range shrinks. Remove holes
+  // before passing items to `For`; retained proxies preserve row identity across
+  // polls.
   const rows = createMemo(() => {
     const items: (VirtualItem | undefined)[] = virtualizer.getVirtualItems();
     return items.filter((item) => item !== undefined);
@@ -131,8 +128,8 @@ export const LogsPage: VoidComponent = () => {
     }
   };
 
-  // Re-anchors on the total size as well as the count: a row measured after it
-  // renders moves the bottom edge without adding an entry.
+  // Re-anchor when total height changes because measuring a row can move the
+  // bottom edge without adding an entry.
   createEffect(
     on([() => visible().length, () => virtualizer.getTotalSize()], () => {
       const element = scroller();
@@ -190,10 +187,8 @@ export const LogsPage: VoidComponent = () => {
       </Show>
 
       <div class="relative min-h-0 flex-1">
-        {/* Held back until the node is in the document: a ref assigned during
-            render still belongs to the template's contents document, whose
-            defaultView is null, and the virtualizer that attaches to it never
-            measures the container. */}
+        {/* Register the scroller in onMount because the render-time ref belongs
+            to the template document and the virtualizer cannot measure it. */}
         <div
           ref={(node) => onMount(() => setScroller(node))}
           onScroll={(event) => setFollowing(isAtBottom(event.currentTarget))}

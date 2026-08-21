@@ -1,10 +1,10 @@
 import { queryOptions } from "@tanstack/solid-query";
 import { invoke } from "@tauri-apps/api/core";
 
-/** How often the viewer re-reads the log tail while its window is open. */
+/** Interval between log-tail reads while the viewer is open. */
 const LOG_POLL_MS = 2_000;
 
-/** How many trailing entries one read returns. */
+/** Maximum number of trailing entries requested per read. */
 const LOG_TAIL_LINES = 1_000;
 
 /**
@@ -21,12 +21,12 @@ export function logTailQueryOptions() {
   });
 }
 
-/** Opens the log directory in the OS file manager. */
+/** Open the log directory in the OS file manager. */
 export function openLogFolder(): void {
   invoke("open_log_folder").catch(console.error);
 }
 
-/** Opens the log viewer window, or focuses the one already open. */
+/** Open the log viewer window, or focus the one already open. */
 export function openLogsWindow(): void {
   invoke("open_logs_window").catch(console.error);
 }

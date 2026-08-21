@@ -46,20 +46,19 @@ enum PostWake {
     Resume,
 }
 
-/// What a scheduled claim attempt resolved to.
+/// Result of a scheduled claim attempt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ClaimOutcome {
-    /// This attempt registered the reward.
+    /// The attempt registered the reward.
     Claimed,
-    /// The reward was already signed before this attempt.
+    /// The API reported the reward already signed before this attempt.
     AlreadyClaimed,
 }
 
-/// Confirms a claim response recorded the reward.
+/// Require the claim response to report a recorded reward.
 ///
-/// `success` is not the test: a claim whose reward name is absent still
-/// registered, while a response reading unsigned means HoYoLab accepted the
-/// sign without recording it.
+/// Use `info.is_signed` rather than `success`: a registered claim can lack
+/// reward details, while an unsigned response did not record the claim.
 fn ensure_claim_registered(result: &ClaimResult) -> anyhow::Result<()> {
     anyhow::ensure!(
         result.info.is_signed,
@@ -291,8 +290,8 @@ async fn sleep_short(cancel_token: &CancellationToken, notify: &Arc<Notify>) -> 
 ///
 /// # Errors
 ///
-/// Returns an error when the status or claim call fails, or when the claim
-/// response reports the reward still unsigned.
+/// Returns an error when status or claim retrieval fails, or when the response
+/// reports the reward still unsigned.
 async fn claim_with_status_check(
     state: &AppState,
     game_id: GameId,

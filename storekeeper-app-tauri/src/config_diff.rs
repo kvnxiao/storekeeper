@@ -8,15 +8,15 @@ use storekeeper_core::AppConfig;
 use storekeeper_core::GameId;
 use storekeeper_core::SecretsConfig;
 
-/// What changed in the general section, each applied on its own.
+/// Track general settings that `save_and_apply` applies independently.
 pub(crate) struct GeneralDiff {
-    /// Whether the locale/language setting changed (requires tray rebuild).
+    /// Whether the locale or language changed and requires a tray rebuild.
     pub locale_changed: bool,
 
-    /// Whether the autostart setting changed (requires OS sync).
+    /// Whether autostart changed and requires OS synchronization.
     pub autostart_changed: bool,
 
-    /// Whether the log level changed (requires a filter swap).
+    /// Whether the log level changed and requires a filter swap.
     pub log_level_changed: bool,
 }
 
@@ -26,7 +26,7 @@ impl GeneralDiff {
     }
 }
 
-/// Describes what changed between two configurations.
+/// Track the configuration changes that determine selective application work.
 pub(crate) struct ConfigDiff {
     pub general: GeneralDiff,
 

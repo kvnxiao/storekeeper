@@ -48,7 +48,7 @@ const SettingsForm: VoidComponent<SettingsFormProps> = (props) => {
         await save.mutateAsync(value);
         formApi.reset(value);
       } catch {
-        // Surfaced reactively via save.error.
+        // Keep the mutation error in save.error for rendering.
       }
     },
   }));
@@ -90,8 +90,8 @@ const SettingsForm: VoidComponent<SettingsFormProps> = (props) => {
           void form.handleSubmit();
         }}
       >
-        {/* Disabled while a save is in flight so edits can't land between submit
-            and the post-save formApi.reset(value), which would revert them. */}
+        {/* Disable the fieldset while saving so edits cannot be overwritten by
+            formApi.reset(value). */}
         <fieldset class="min-w-0 space-y-6" disabled={save.isPending}>
           <form.Field name="config.general">
             {(field) => (
@@ -111,9 +111,8 @@ const SettingsForm: VoidComponent<SettingsFormProps> = (props) => {
             )}
           </form.Field>
 
-          {/* Two form.Field branches rather than one over the union: the field's
-              value type follows configKey, so a single field would widen it past
-              what either section component accepts. */}
+          {/* Keep separate branches so each field preserves the config type
+              selected by its configKey. */}
           <For each={GAMES}>
             {(game) => (
               <Show

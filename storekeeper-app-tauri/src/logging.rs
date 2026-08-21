@@ -17,7 +17,7 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::reload;
 use tracing_subscriber::util::SubscriberInitExt;
 
-/// Subdirectory of the config directory that holds the rolling log files.
+/// Config subdirectory that holds rolling log files.
 const LOG_DIR_NAME: &str = "logs";
 
 const LOG_FILE_PREFIX: &str = "storekeeper";
@@ -33,20 +33,19 @@ const DEFAULT_LEVEL: &str = "info";
 /// Upper bound on how much of a log file's tail is read for one request.
 const TAIL_READ_BYTES: u64 = 1 << 20;
 
-/// Swaps the global log filter while the application runs.
+/// Swap the global log filter while the application runs.
 ///
-/// A `RUST_LOG` set at startup pins the filter for the process lifetime, which
-/// makes [`LogFilter::set_level`] a no-op.
+/// A `RUST_LOG` value set at startup keeps precedence for the process lifetime.
 pub struct LogFilter {
     handle: reload::Handle<EnvFilter, Registry>,
     env_override: bool,
 }
 
 impl LogFilter {
-    /// Applies a configured log level to every layer.
+    /// Apply a configured log level to the subscriber.
     ///
-    /// Skips the swap while `RUST_LOG` holds precedence, and keeps the current
-    /// filter when `level` parses to no directive.
+    /// Keep the current filter when `RUST_LOG` holds precedence or `level`
+    /// contains no valid directive.
     pub fn set_level(&self, level: &str) {
         if self.env_override {
             tracing::debug!(
@@ -71,7 +70,7 @@ impl LogFilter {
     }
 }
 
-/// Returns the directory holding the rolling log files.
+/// Return the directory holding rolling log files.
 ///
 /// # Errors
 ///
@@ -81,14 +80,12 @@ pub fn log_dir() -> Result<Utf8PathBuf> {
     Ok(AppConfig::config_dir()?.join(LOG_DIR_NAME))
 }
 
-/// Installs the tracing subscriber and returns the handle that swaps its
-/// filter.
+/// Install the tracing subscriber and return its reload handle.
 ///
-/// `RUST_LOG` selects the startup filter when set and pins it against later
-/// swaps; otherwise the filter starts at [`DEFAULT_LEVEL`] and the caller
-/// applies the configured level once the config has loaded. A log directory
-/// that cannot be created leaves stdout as the only destination rather than
-/// failing startup.
+/// `RUST_LOG` selects and pins the startup filter. Without it, the filter
+/// starts at [`DEFAULT_LEVEL`] and the caller applies the configured level
+/// after the config loads. If the log directory cannot be created, stdout
+/// remains the only destination and startup continues.
 ///
 /// # Panics
 ///
@@ -132,9 +129,8 @@ pub fn init() -> LogFilter {
     }
 }
 
-/// Creates `dir` and builds the daily rolling appender writing into it.
-///
-/// The filename parts here are the ones [`newest_log_file`] matches on.
+/// Build a daily rolling appender in `dir` with the filename parts that
+/// [`newest_log_file`] matches.
 fn build_appender(dir: &Utf8Path) -> Result<tracing_appender::rolling::RollingFileAppender> {
     fs_err::create_dir_all(dir).context("failed to create the log directory")?;
 
@@ -147,10 +143,8 @@ fn build_appender(dir: &Utf8Path) -> Result<tracing_appender::rolling::RollingFi
         .context("failed to build the rolling log appender")
 }
 
-/// Returns the newest rolling log file, or `None` when none has been written.
-///
-/// The rotation stamps `%Y-%m-%d` into each name, so the lexicographic maximum
-/// is the current day's file.
+/// Select the lexicographically latest date-stamped log file, or return `None`
+/// when the directory or a matching file is absent.
 fn newest_log_file(dir: &Utf8Path) -> Result<Option<Utf8PathBuf>> {
     if !dir.exists() {
         return Ok(None);
@@ -190,8 +184,7 @@ pub fn read_tail(lines: usize) -> Result<Vec<String>> {
     read_tail_from(&log_dir()?, TAIL_READ_BYTES, lines)
 }
 
-/// Reads the last `lines` entries of the newest log file in `dir`, looking at
-/// no more than `window_bytes` from its end.
+/// Read at most `window_bytes` from the end of the newest log file in `dir`.
 fn read_tail_from(dir: &Utf8Path, window_bytes: u64, lines: usize) -> Result<Vec<String>> {
     let Some(path) = newest_log_file(dir)? else {
         return Ok(Vec::new());
@@ -202,8 +195,8 @@ fn read_tail_from(dir: &Utf8Path, window_bytes: u64, lines: usize) -> Result<Vec
         .metadata()
         .context("failed to read the log file size")?
         .len();
-    // Reading one byte before the window shows whether it opens on a line
-    // boundary, which decides whether its first line is whole.
+    // Read one byte before the window to distinguish a line boundary from a
+    // truncated first line.
     let start = length.saturating_sub(window_bytes);
     let probed = start > 0;
 
@@ -222,10 +215,7 @@ fn read_tail_from(dir: &Utf8Path, window_bytes: u64, lines: usize) -> Result<Vec
     Ok(tail_lines(window, partial_first, lines))
 }
 
-/// Takes the last `lines` complete entries out of a tail window.
-///
-/// `partial_first` marks a window that starts mid-line, whose first entry is
-/// dropped.
+/// Drop a partial first entry, then return the last `lines` entries in order.
 fn tail_lines(window: &str, partial_first: bool, lines: usize) -> Vec<String> {
     let mut entries = window.lines();
     if partial_first {
@@ -246,10 +236,8 @@ mod tests {
     use super::*;
     use std::io::Write;
 
-    /// Returns an empty fixture directory under the OS temp directory.
-    ///
-    /// Clearing on entry rather than on exit keeps a panicking test from
-    /// leaving a dated log file that the next run would append to.
+    /// Clear the fixture directory on entry so a failed test cannot leave a
+    /// dated log file for the next run.
     fn fixture_dir(name: &str) -> Utf8PathBuf {
         let dir = Utf8PathBuf::from_path_buf(std::env::temp_dir())
             .expect("the temp directory path is valid UTF-8")

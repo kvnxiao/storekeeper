@@ -25,8 +25,7 @@ vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(async (command: string) => (command === "read_log_tail" ? TAIL : undefined)),
 }));
 
-// The virtualizer sizes its range from the container's offsetHeight, which
-// jsdom reports as 0 for every element; without a height it renders no rows.
+// Set a nonzero test height because jsdom reports offsetHeight as 0.
 const offsetHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "offsetHeight");
 
 beforeAll(() => {

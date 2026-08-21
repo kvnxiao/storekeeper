@@ -1,16 +1,14 @@
 /**
- * Parsing and filtering for the backend's JSON log file.
+ * Parse and filter the backend's JSON log file.
  *
- * The backend writes one `tracing_subscriber` JSON object per line, so the
- * viewer parses each line on its own and a truncated tail costs one entry
- * rather than the whole read.
+ * The backend writes one `tracing_subscriber` JSON object per line. Parse lines
+ * independently so a truncated tail drops one entry rather than the whole read.
  */
 
 import { LOG_LEVELS, type LogLevel } from "@/modules/logs/logs.constants";
 import type { SelectOption } from "@/modules/ui/components/Select";
 import * as m from "@/paraglide/messages";
 
-/** One parsed line of the log file. */
 export interface LogEntry {
   /** RFC 3339 timestamp as the backend wrote it. */
   timestamp: string;
@@ -18,7 +16,7 @@ export interface LogEntry {
   /** Emitting module path, e.g. `storekeeper_app_tauri::scheduled_claim`. */
   target: string;
   message: string;
-  /** Structured fields other than the message. */
+  /** Structured fields excluding `message`. */
   fields: Record<string, unknown>;
 }
 
@@ -73,12 +71,10 @@ export function parseLogLine(line: string): LogEntry | null {
   };
 }
 
-/** Parses every line, dropping those that are not a log record. */
 export function parseLogLines(lines: readonly string[]): LogEntry[] {
   return lines.map((line) => parseLogLine(line)).filter((entry) => entry !== null);
 }
 
-/** Reports whether `level` is at least as severe as `minimum`. */
 export function admitsLevel(minimum: LogLevel, level: LogLevel): boolean {
   return LOG_LEVELS.indexOf(level) <= LOG_LEVELS.indexOf(minimum);
 }
@@ -91,7 +87,7 @@ function matchesSearch(entry: LogEntry, needle: string): boolean {
   );
 }
 
-/** Keeps the entries at or above `minimum` whose text contains `search`. */
+/** Keep entries at or above `minimum` whose text contains `search`. */
 export function filterEntries(
   entries: readonly LogEntry[],
   minimum: LogLevel,
@@ -104,11 +100,10 @@ export function filterEntries(
 }
 
 /**
- * Reads an entry's timestamp as a `Date`.
+ * Read an entry's timestamp as a `Date`.
  *
- * The backend stamps UTC, so the viewer has to convert before it can show a
- * time that lines up with the rest of the app. A value that is not a date
- * returns `null`, and the caller renders it verbatim.
+ * Convert the backend's UTC timestamp for local display. Return `null` for an
+ * invalid value so the caller can render the original text.
  */
 export function parseLogTimestamp(timestamp: string): Date | null {
   const parsed = new Date(timestamp);
@@ -116,7 +111,7 @@ export function parseLogTimestamp(timestamp: string): Date | null {
 }
 
 /**
- * Log-level choices for a `Select`, most to least severe.
+ * Build localized log-level choices in descending severity order.
  *
  * Evaluated at call time so labels follow the active locale.
  */
@@ -130,33 +125,31 @@ export function logLevelOptions(): SelectOption<LogLevel>[] {
   ];
 }
 
-/** Renders an entry's structured fields as `name=value` pairs. */
 export function fieldSummary(entry: LogEntry): string {
   return Object.entries(entry.fields)
     .map(([name, value]) => `${name}=${typeof value === "string" ? value : JSON.stringify(value)}`)
     .join(" ");
 }
 
-/** Slack, in pixels, between the scroll position and the bottom edge that still counts as the bottom. */
+/** Pixel slack that still counts a scroll position as the bottom edge. */
 const BOTTOM_SLACK_PX = 24;
 
-/** Metrics a scroll container exposes; an `Element` satisfies it structurally. */
 export interface ScrollMetrics {
   scrollHeight: number;
   scrollTop: number;
   clientHeight: number;
 }
 
-/** Reports whether a scroll container rests at its bottom edge. */
+/** Treat a scroll position within the configured slack as the bottom edge. */
 export function isAtBottom(metrics: ScrollMetrics): boolean {
   return metrics.scrollHeight - metrics.scrollTop - metrics.clientHeight <= BOTTOM_SLACK_PX;
 }
 
 /**
- * Reports whether the document's selection starts inside `element`.
+ * Report whether the document's selection starts inside `element`.
  *
- * Scrolling a virtualized list recycles the node a selection lives in, so the
- * viewer stops following the tail while text inside it is selected.
+ * Stop tail-following while text inside a virtualized row is selected because
+ * scrolling recycles that row's DOM node.
  */
 export function containsSelection(element: Node): boolean {
   const selection = document.getSelection();
@@ -167,7 +160,7 @@ export function containsSelection(element: Node): boolean {
   return anchor !== null && element.contains(anchor);
 }
 
-/** Reads a rejected `invoke`'s message; a `CommandError` stringifies to `[object Object]`. */
+/** Read a rejected Tauri command's message before stringifying the value. */
 export function errorText(error: unknown): string {
   if (typeof error === "object" && error !== null && "message" in error) {
     return String(error.message);

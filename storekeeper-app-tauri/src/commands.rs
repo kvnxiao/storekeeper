@@ -171,7 +171,7 @@ pub async fn save_and_apply(
     })
 }
 
-/// Creates a directory when absent, then reveals it in the OS file manager.
+/// Create `dir` when absent, then reveal it in the OS file manager.
 fn reveal_directory(dir: &Utf8Path) -> Result<(), CommandError> {
     if !dir.exists() {
         fs_err::create_dir_all(dir)?;
@@ -195,32 +195,32 @@ fn reveal_directory(dir: &Utf8Path) -> Result<(), CommandError> {
     Ok(())
 }
 
-/// Opens the configuration folder in the system file manager.
+/// Open the configuration folder in the system file manager.
 #[tauri::command]
 pub fn open_config_folder() -> Result<(), CommandError> {
     reveal_directory(&storekeeper_core::AppConfig::config_dir()?)
 }
 
-/// Opens the log folder in the system file manager.
+/// Open the log folder in the system file manager.
 #[tauri::command]
 pub fn open_log_folder() -> Result<(), CommandError> {
     reveal_directory(&logging::log_dir()?)
 }
 
-/// Opens the log viewer window, or focuses it when it is already open.
+/// Open the log viewer window, or focus it when it is already open.
 ///
-/// `WebviewWindowBuilder::build` deadlocks on Windows inside a synchronous
-/// command, so this one is async.
+/// Build the window asynchronously because `WebviewWindowBuilder::build` can
+/// deadlock on Windows when a synchronous command calls it.
 #[tauri::command]
 pub async fn open_logs_window(app_handle: AppHandle) -> Result<(), CommandError> {
     window::open_logs_window(&app_handle)?;
     Ok(())
 }
 
-/// Returns the last `lines` entries of the current day's log file, as raw JSON.
+/// Return the last `lines` entries of the current day's log file as raw JSON.
 ///
-/// The viewer polls this every couple of seconds and each read covers up to a
-/// megabyte, so the blocking file IO runs on the blocking pool.
+/// The viewer polls every couple of seconds and each read covers up to one
+/// megabyte, so file I/O runs on the blocking pool.
 #[tauri::command]
 pub async fn read_log_tail(lines: usize) -> Result<Vec<String>, CommandError> {
     tauri::async_runtime::spawn_blocking(move || logging::read_tail(lines))

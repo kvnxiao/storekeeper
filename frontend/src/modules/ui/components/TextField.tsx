@@ -35,7 +35,7 @@ export interface TextFieldProps {
   type?: "text" | "password";
   value: string;
   onChange: (value: string) => void;
-  /** Merged onto the input, so a caller can resolve a conflicting utility such as its height. */
+  /** Merge classes onto the input so callers can override utilities such as height. */
   inputClass?: string;
 }
 

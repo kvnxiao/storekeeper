@@ -18,11 +18,11 @@ pub enum Error {
         retry_after_secs: u64,
     },
 
-    /// The sign endpoint accepted the request but the reward is still
-    /// unclaimed.
+    /// The sign endpoint accepted the request but the follow-up status remains
+    /// unsigned.
     #[error("Sign accepted but the reward is still unclaimed (risk_code {risk_code:?})")]
     ClaimNotRegistered {
-        /// Risk-control code from the sign response, when it reported one.
+        /// Risk-control code returned by the sign endpoint, when present.
         risk_code: Option<i32>,
     },
 }

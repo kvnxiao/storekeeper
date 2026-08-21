@@ -102,10 +102,9 @@ export function createCore() {
     unlisteners.push(listen<T>(name, handler));
   }
 
-  // Because the init functions run from a component's onMount scope, that scope
-  // can dispose while the factory root remains alive. Register cleanup in the
-  // factory root and keep the init flags in its closure so component disposal
-  // does not register listeners again.
+  // Component onMount scopes can dispose while the factory root remains alive.
+  // Register cleanup in the factory root and keep init flags in its closure so
+  // component disposal cannot register listeners again.
   onCleanup(() => {
     clearInterval(tickInterval);
     clearTimeout(localeTimeout);
@@ -114,13 +113,7 @@ export function createCore() {
     }
   });
 
-  /**
-   * Starts what every window needs: the tick interval and the resolved locale.
-   *
-   * Every Tauri window runs its own module registry, so this runs once per
-   * window. It does not register a backend listener or reach a game API, so a
-   * secondary window boots without repeating the dashboard's work.
-   */
+  /** Initialize the locale gate and tick interval for this webview. */
   function initShell(): void {
     if (shellInitialized) {
       return;
@@ -129,10 +122,8 @@ export function createCore() {
 
     startTickInterval();
 
-    // Sync Paraglide locale from backend config on startup. Views wait on
-    // localeReady so the first render already uses the resolved locale. The
-    // timeout is what keeps a command that never settles from leaving the
-    // window permanently blank; a rejection releases the views the same way.
+    // Set localeReady on resolution, rejection, or timeout so a stalled
+    // backend command cannot leave the route blank.
     localeTimeout = setTimeout(() => setLocaleReady(true), LOCALE_RESOLVE_TIMEOUT_MS);
     void invoke<string>("get_effective_locale")
       .then((effectiveLocale) => setAppLocale(effectiveLocale))
@@ -144,11 +135,9 @@ export function createCore() {
   }
 
   /**
-   * Registers the backend listeners and seeds the daily-reward state.
-   *
-   * `app_handle.emit` broadcasts to every webview, so only the dashboard window
-   * calls this; a second registration would double-handle every event and issue
-   * a second round of live game-API requests.
+   * Register dashboard listeners and initialize daily-reward state.
+   * Secondary windows do not call this because backend events reach every
+   * webview.
    */
   function initDashboard(): void {
     if (dashboardInitialized) {

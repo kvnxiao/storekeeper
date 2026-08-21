@@ -15,7 +15,7 @@ const listeners = new Map<string, (event: { payload: unknown }) => void>();
 /** Resin value the command response carries; never rendered on its own. */
 const RESPONSE_RESIN = 180;
 
-/** How far back a snapshot's fetch time sits, keeping the render gap non-zero. */
+/** Interval used to keep the snapshot-to-render time gap non-zero. */
 const FETCH_LEAD_MS = 1_000;
 
 const FULL_IN_MS = 3_600_000;
@@ -23,8 +23,8 @@ const COOLDOWN_MS = 5 * 86_400_000;
 const WAIT_TIMEOUT_MS = 3_000;
 
 function snapshot(resin: number): AllResources {
-  // Backdated so the fetch-to-render gap this file asserts on stays non-zero
-  // when a render lands in the same millisecond the snapshot was built.
+  // Backdate the snapshot so its fetch-to-render interval stays non-zero when
+  // render and snapshot creation share a millisecond.
   const now = Date.now() - FETCH_LEAD_MS;
   return {
     games: {

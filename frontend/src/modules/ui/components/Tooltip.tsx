@@ -7,11 +7,11 @@ const tooltipStyle =
 
 const DEFAULT_PLACEMENT = "top";
 const DEFAULT_OPEN_DELAY_MS = 300;
-// Kobalte offsets the bubble by this value plus half the arrow's height, so 0
-// puts the arrow tip against the trigger.
+// Kobalte adds gutter to half the arrow height; zero places the arrow tip
+// against the trigger.
 const DEFAULT_GUTTER_PX = 0;
 
-// Kobalte's arrow defaults to 30px, which alone offsets the bubble by 15px.
+// Use a 12px arrow instead of Kobalte's 30px default.
 const ARROW_SIZE_PX = 12;
 
 export interface TooltipBehaviorProps {
@@ -19,12 +19,12 @@ export interface TooltipBehaviorProps {
   placement?: TooltipPrimitive.TooltipRootProps["placement"];
   /** Hover time in milliseconds before the bubble opens. Defaults to 300. */
   openDelay?: number;
-  /** Gap in pixels between the trigger and the bubble. Defaults to 8. */
+  /** Gap in pixels between the trigger and the bubble. Defaults to 0. */
   gutter?: number;
 }
 
 export interface TooltipProps extends TooltipBehaviorProps {
-  /** Tooltip bubble content; `children` is the trigger content. */
+  /** Tooltip content; `children` is the trigger content. */
   content: JSX.Element;
   triggerClass?: string;
 }
@@ -52,18 +52,17 @@ export const Tooltip: ParentComponent<TooltipProps> = (props) => {
 };
 
 export interface TooltipButtonProps
-  // `type` is fixed: a tooltip trigger inside a form must never submit it.
+  // Fix `type` to keep tooltip triggers from submitting an enclosing form.
   extends Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement>, "type">, TooltipBehaviorProps {
-  /** Tooltip bubble content. An icon-only trigger still needs its own `aria-label`. */
+  /** Tooltip content. Icon-only triggers require an `aria-label`. */
   tooltip: JSX.Element;
   variant?: ButtonProps["variant"];
   color?: ButtonProps["color"];
   size?: ButtonProps["size"];
 }
 
-// The trigger carries the button's own styles rather than wrapping a Button:
-// the trigger is already a button, and Kobalte anchors the bubble to the
-// element it renders itself.
+// Apply button styles to the trigger because Kobalte anchors the bubble to that
+// element.
 export const TooltipButton: ParentComponent<TooltipButtonProps> = (props) => {
   const [style, local, rest] = splitProps(
     props,

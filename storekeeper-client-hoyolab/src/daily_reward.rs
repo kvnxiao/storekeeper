@@ -75,10 +75,7 @@ struct RewardItem {
     icon: String,
 }
 
-/// API response for a sign attempt (`/sign` endpoint).
-///
-/// A risk-gated sign answers with a geetest challenge in `gt` and `challenge`
-/// and records no reward.
+/// API response fields used to diagnose an unregistered sign attempt.
 #[derive(Debug, Deserialize)]
 struct SignResponse {
     risk_code: Option<i32>,
@@ -443,8 +440,8 @@ mod tests {
         }))
     }
 
-    /// Serves `/info` as unsigned until the sign POST lands, then as signed on
-    /// day one, so `today_index` selects the first award.
+    /// Switch `/info` to signed after the POST so the successful path returns
+    /// the first award.
     fn sign_flow_handler(
         awards: &'static str,
         sign_body: &'static str,

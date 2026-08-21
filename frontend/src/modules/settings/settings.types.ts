@@ -1,8 +1,4 @@
-/**
- * Hand-mirrored `AppConfig`/`SecretsConfig` from `storekeeper-core`. Field names
- * stay snake_case end to end so Rust serializes straight into these shapes with
- * no DTO layer (see `docs/architecture/04-data-flow.md`).
- */
+/** Match the configuration shapes serialized by the Rust backend. */
 
 import type { ResourceType } from "@/modules/games/games.constants";
 import type { Locale } from "@/modules/i18n/i18n.constants";

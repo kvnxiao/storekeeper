@@ -19,7 +19,7 @@ export interface GeneralSectionProps {
 /** Sentinel for "follow the system locale", which persists as a null language. */
 const SYSTEM_LOCALE = "auto";
 
-// Evaluated at call time so labels follow the active locale
+// Evaluate at call time to keep labels in the active locale.
 const languageOptions = (): SelectOption<Locale | typeof SYSTEM_LOCALE>[] => [
   { id: SYSTEM_LOCALE, label: m.settings_general_language_system_default() },
   ...locales.map((code) => ({ id: code, label: LOCALE_ENDONYMS[code] })),

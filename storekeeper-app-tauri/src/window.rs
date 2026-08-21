@@ -11,7 +11,7 @@ use tauri::WebviewWindowBuilder;
 use tauri::utils::config::Color;
 use tauri::utils::config::WindowConfig;
 
-/// Label of the primary window, declared in `tauri.conf.json`.
+/// Label of the primary window declared in `tauri.conf.json`.
 pub const MAIN_WINDOW_LABEL: &str = "main";
 
 pub const LOGS_WINDOW_LABEL: &str = "logs";
@@ -22,7 +22,7 @@ const LOGS_WINDOW_MIN_WIDTH: f64 = 480.0;
 const LOGS_WINDOW_MIN_HEIGHT: f64 = 320.0;
 
 /// `--background` from the stylesheet, painted before the webview's first
-/// frame so the window does not open on a white flash.
+/// frame.
 const LOGS_BACKGROUND_LIGHT: Color = Color(255, 255, 255, 255);
 
 const LOGS_BACKGROUND_DARK: Color = Color(9, 9, 11, 255);
@@ -34,12 +34,11 @@ fn logs_window_background(theme: Option<Theme>) -> Color {
     }
 }
 
-/// Derives the log window's configuration from the main window's.
+/// Derive the log window configuration from the main window configuration.
 ///
-/// `WebView2` fails with `ERROR_INVALID_STATE` when a second webview requests
-/// environment options differing from the environment already open over the
-/// same data directory, and `scrollBarStyle` is one of those options, so the
-/// log window inherits every field it does not override.
+/// `WebView2` requires matching environment options for webviews that share a
+/// data directory. Inherit every field that the log window does not override;
+/// this includes `scrollBarStyle`.
 fn logs_window_config(main: &WindowConfig, theme: Option<Theme>) -> WindowConfig {
     WindowConfig {
         label: LOGS_WINDOW_LABEL.to_owned(),
@@ -50,15 +49,15 @@ fn logs_window_config(main: &WindowConfig, theme: Option<Theme>) -> WindowConfig
         min_width: Some(LOGS_WINDOW_MIN_WIDTH),
         min_height: Some(LOGS_WINDOW_MIN_HEIGHT),
         center: true,
-        // Tauri centres the window after creating it, so a window created
-        // visible is drawn at the origin first and then moved.
+        // Create the centered window hidden; showing it first paints it at the
+        // origin before Tauri moves it.
         visible: false,
         background_color: Some(logs_window_background(theme)),
         ..main.clone()
     }
 }
 
-/// Opens the log viewer window, or reveals the one already open.
+/// Open the log viewer window, or reveal the one already open.
 ///
 /// The window loads the `/logs` route, which a bundled build serves from the
 /// prerendered `logs/index.html`.

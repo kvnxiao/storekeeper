@@ -20,8 +20,8 @@ export interface HoyolabGameSectionProps {
 }
 
 export const HoyolabGameSection: VoidComponent<HoyolabGameSectionProps> = (props) => {
-  // Normalizes the possibly-undefined config once so every onChange handler
-  // only states the field it changes.
+  // Normalize the optional config once; each onChange handler then updates one
+  // field.
   const current = (): HoyolabGameConfig => ({
     enabled: false,
     uid: "",

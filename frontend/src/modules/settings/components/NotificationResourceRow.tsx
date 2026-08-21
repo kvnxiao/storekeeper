@@ -30,7 +30,7 @@ export interface NotificationResourceRowProps {
   onChange: (config: ResourceNotificationConfig) => void;
 }
 
-// Evaluated at call time so labels follow the active locale
+// Evaluate at call time to keep labels in the active locale.
 const modeItems = () => [
   { id: "minutes", label: m.settings_notification_minutes_before_full() },
   { id: "value", label: m.settings_notification_at_value() },

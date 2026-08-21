@@ -9,8 +9,7 @@
 
 /* Semantic color tokens (light mode) - zinc scale */
 :root {
-  /* WebView2 paints its native scrollbars and form controls from this, so the
-     fluent overlay scrollbar tracks the palette below instead of staying light. */
+  /* WebView2 uses this value for native scrollbars and form controls. */
   color-scheme: light dark;
 
   --background: oklch(1 0 0); /* white */
