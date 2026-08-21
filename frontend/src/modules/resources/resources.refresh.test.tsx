@@ -148,7 +148,7 @@ describe("resource refresh", () => {
 
   it("unmasks a game's cards on its own event, without waiting for the refresh to end", async () => {
     const { container } = await mount();
-    const masked = () => container.querySelectorAll(".mask-shimmer").length;
+    const masked = () => container.querySelectorAll('[data-shimmer="active"]').length;
     // The snapshot carries two of Genshin's four resources, so the other two
     // cards stay masked for want of data whatever the refresh is doing.
     const withoutData = masked();
