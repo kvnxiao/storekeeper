@@ -29,13 +29,13 @@ export const LogsSection: VoidComponent<LogsSectionProps> = (props) => {
         options={logLevelOptions()}
       />
       <div class="flex flex-wrap gap-2">
-        <Button color="light" onClick={() => openLogsWindow()}>
-          <ExternalLink aria-hidden="true" class="size-4" />
-          {m.settings_logs_view()}
-        </Button>
         <Button color="light" onClick={() => openLogFolder()}>
           <FolderOpen aria-hidden="true" class="size-4" />
           {m.settings_logs_open_folder()}
+        </Button>
+        <Button color="light" onClick={() => openLogsWindow()}>
+          <ExternalLink aria-hidden="true" class="size-4" />
+          {m.settings_logs_view()}
         </Button>
       </div>
     </SettingsCard>
