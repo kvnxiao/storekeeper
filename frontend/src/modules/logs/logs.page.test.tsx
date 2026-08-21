@@ -1,7 +1,7 @@
 import { render, screen } from "@solidjs/testing-library";
 import { QueryClientProvider } from "@tanstack/solid-query";
 import { userEvent } from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vite-plus/test";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vite-plus/test";
 import { queryClient } from "@/modules/core/core.queryClient";
 import { LogsPage } from "@/modules/logs/components/LogsPage";
 
@@ -25,8 +25,23 @@ vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(async (command: string) => (command === "read_log_tail" ? TAIL : undefined)),
 }));
 
-// jsdom reports every element as zero-height, so the virtualizer renders an
-// empty range and the assertions below read the count rather than the rows.
+// The virtualizer sizes its range from the container's offsetHeight, which
+// jsdom reports as 0 for every element; without a height it renders no rows.
+const offsetHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "offsetHeight");
+
+beforeAll(() => {
+  Object.defineProperty(HTMLElement.prototype, "offsetHeight", {
+    configurable: true,
+    get: () => 600,
+  });
+});
+
+afterAll(() => {
+  if (offsetHeight) {
+    Object.defineProperty(HTMLElement.prototype, "offsetHeight", offsetHeight);
+  }
+});
+
 function renderLogsPage(): void {
   render(() => (
     <QueryClientProvider client={queryClient}>
@@ -36,19 +51,30 @@ function renderLogsPage(): void {
 }
 
 describe("LogsPage", () => {
-  it("counts the entries at or above the minimum level", async () => {
+  it("renders a row per entry at or above the minimum level", async () => {
     renderLogsPage();
 
-    expect(await screen.findByText("2 shown")).toBeInTheDocument();
-    expect(screen.queryByText("Reading logs...")).not.toBeInTheDocument();
+    expect(await screen.findByText("Storekeeper starting")).toBeInTheDocument();
+    expect(screen.getByText("Kuro API requested retry")).toBeInTheDocument();
+    expect(screen.getByText("2 shown")).toBeInTheDocument();
   });
 
-  it("narrows the count to the entries matching the filter", async () => {
+  it("holds back an entry below the minimum level", async () => {
     renderLogsPage();
-    await screen.findByText("2 shown");
+    await screen.findByText("Storekeeper starting");
+
+    expect(
+      screen.queryByText("Sign endpoint reports today already signed"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("narrows the list to the entries matching the filter", async () => {
+    renderLogsPage();
+    await screen.findByText("Storekeeper starting");
 
     await userEvent.type(screen.getByLabelText("Filter"), "Kuro");
 
-    expect(await screen.findByText("1 shown")).toBeInTheDocument();
+    expect(screen.getByText("Kuro API requested retry")).toBeInTheDocument();
+    expect(screen.queryByText("Storekeeper starting")).not.toBeInTheDocument();
   });
 });

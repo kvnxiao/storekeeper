@@ -8,7 +8,7 @@ import * as m from "@/paraglide/messages";
 
 const inputStyle = tv({
   base: [
-    "h-9 w-full rounded-lg bg-white px-3 text-sm",
+    "w-full rounded-lg bg-white px-3 py-1.5 text-sm",
     "text-zinc-950 placeholder:text-zinc-500 dark:bg-zinc-800/50 dark:text-white dark:placeholder:text-zinc-400",
     "shadow-sm ring-1 ring-zinc-950/10 dark:ring-white/10",
     "outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -35,6 +35,8 @@ export interface TextFieldProps {
   type?: "text" | "password";
   value: string;
   onChange: (value: string) => void;
+  /** Merged onto the input, so a caller can resolve a conflicting utility such as its height. */
+  inputClass?: string;
 }
 
 export const TextField: VoidComponent<TextFieldProps> = (props) => {
@@ -54,7 +56,7 @@ export const TextField: VoidComponent<TextFieldProps> = (props) => {
         <TextFieldPrimitive.Input
           type={isPassword() && !revealed() ? "password" : "text"}
           placeholder={props.placeholder}
-          class={inputStyle({ type: isPassword() ? "password" : "text" })}
+          class={inputStyle({ type: isPassword() ? "password" : "text", class: props.inputClass })}
         />
         <Show when={isPassword()}>
           <button

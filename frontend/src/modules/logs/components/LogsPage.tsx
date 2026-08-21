@@ -8,6 +8,7 @@ import {
   For,
   Match,
   on,
+  onMount,
   Show,
   Switch,
   type VoidComponent,
@@ -160,6 +161,7 @@ export const LogsPage: VoidComponent = () => {
             placeholder={m.logs_search_placeholder()}
             value={search()}
             onChange={setSearch}
+            inputClass="h-9"
           />
         </div>
       </div>
@@ -173,8 +175,12 @@ export const LogsPage: VoidComponent = () => {
       </Show>
 
       <div class="relative min-h-0 flex-1">
+        {/* Held back until the node is in the document: a ref assigned during
+            render still belongs to the template's contents document, whose
+            defaultView is null, and the virtualizer that attaches to it never
+            measures the container. */}
         <div
-          ref={setScroller}
+          ref={(node) => onMount(() => setScroller(node))}
           onScroll={(event) => setFollowing(isAtBottom(event.currentTarget))}
           class="h-full overflow-y-auto rounded-lg font-mono text-xs ring-1 ring-zinc-950/10 [overflow-anchor:none] dark:ring-white/10"
         >

@@ -50,7 +50,9 @@ fn logs_window_config(main: &WindowConfig, theme: Option<Theme>) -> WindowConfig
         min_width: Some(LOGS_WINDOW_MIN_WIDTH),
         min_height: Some(LOGS_WINDOW_MIN_HEIGHT),
         center: true,
-        visible: true,
+        // Tauri centres the window after creating it, so a window created
+        // visible is drawn at the origin first and then moved.
+        visible: false,
         background_color: Some(logs_window_background(theme)),
         ..main.clone()
     }
@@ -90,10 +92,12 @@ pub fn open_logs_window(app_handle: &AppHandle) -> Result<()> {
         .map(|main| logs_window_config(main, theme))
         .context("tauri.conf.json declares no main window")?;
 
-    WebviewWindowBuilder::from_config(app_handle, &config)
+    let window = WebviewWindowBuilder::from_config(app_handle, &config)
         .context("failed to configure the log window")?
         .build()
         .context("failed to create the log window")?;
+
+    window.show().context("failed to show the log window")?;
 
     Ok(())
 }
@@ -124,7 +128,11 @@ mod tests {
 
         assert_eq!(logs.label, LOGS_WINDOW_LABEL);
         assert_eq!(logs.url, WebviewUrl::App(LOGS_WINDOW_LABEL.into()));
-        assert!(logs.visible, "a hidden log window would never be shown");
+        assert!(logs.center, "an off-centre log window opens at the origin");
+        assert!(
+            !logs.visible,
+            "the caller shows the window once it has been centred"
+        );
     }
 
     #[test]
