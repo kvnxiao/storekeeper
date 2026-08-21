@@ -7,11 +7,38 @@ use tauri::AppHandle;
 use tauri::Manager;
 use tauri::WebviewUrl;
 use tauri::WebviewWindowBuilder;
+use tauri::utils::config::WindowConfig;
 
 /// Label of the primary window, declared in `tauri.conf.json`.
 pub const MAIN_WINDOW_LABEL: &str = "main";
 
 pub const LOGS_WINDOW_LABEL: &str = "logs";
+
+const LOGS_WINDOW_WIDTH: f64 = 900.0;
+const LOGS_WINDOW_HEIGHT: f64 = 600.0;
+const LOGS_WINDOW_MIN_WIDTH: f64 = 480.0;
+const LOGS_WINDOW_MIN_HEIGHT: f64 = 320.0;
+
+/// Derives the log window's configuration from the main window's.
+///
+/// `WebView2` fails with `ERROR_INVALID_STATE` when a second webview requests
+/// environment options differing from the environment already open over the
+/// same data directory, and `scrollBarStyle` is one of those options, so the
+/// log window inherits every field it does not override.
+fn logs_window_config(main: &WindowConfig) -> WindowConfig {
+    WindowConfig {
+        label: LOGS_WINDOW_LABEL.to_owned(),
+        title: i18n::t("logs_window_title"),
+        url: WebviewUrl::App(LOGS_WINDOW_LABEL.into()),
+        width: LOGS_WINDOW_WIDTH,
+        height: LOGS_WINDOW_HEIGHT,
+        min_width: Some(LOGS_WINDOW_MIN_WIDTH),
+        min_height: Some(LOGS_WINDOW_MIN_HEIGHT),
+        center: true,
+        visible: true,
+        ..main.clone()
+    }
+}
 
 /// Opens the log viewer window, or reveals the one already open.
 ///
@@ -20,7 +47,8 @@ pub const LOGS_WINDOW_LABEL: &str = "logs";
 ///
 /// # Errors
 ///
-/// Returns an error if the window cannot be created or brought to the front.
+/// Returns an error if `tauri.conf.json` declares no main window, and if the
+/// window cannot be created or brought to the front.
 pub fn open_logs_window(app_handle: &AppHandle) -> Result<()> {
     if let Some(window) = app_handle.get_webview_window(LOGS_WINDOW_LABEL) {
         window
@@ -33,16 +61,49 @@ pub fn open_logs_window(app_handle: &AppHandle) -> Result<()> {
         return Ok(());
     }
 
-    WebviewWindowBuilder::new(
-        app_handle,
-        LOGS_WINDOW_LABEL,
-        WebviewUrl::App(LOGS_WINDOW_LABEL.into()),
-    )
-    .title(i18n::t("logs_window_title"))
-    .inner_size(900.0, 600.0)
-    .min_inner_size(480.0, 320.0)
-    .build()
-    .context("failed to create the log window")?;
+    let config = app_handle
+        .config()
+        .app
+        .windows
+        .iter()
+        .find(|window| window.label == MAIN_WINDOW_LABEL)
+        .map(logs_window_config)
+        .context("tauri.conf.json declares no main window")?;
+
+    WebviewWindowBuilder::from_config(app_handle, &config)
+        .context("failed to configure the log window")?
+        .build()
+        .context("failed to create the log window")?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tauri::utils::config::ScrollBarStyle;
+
+    fn main_window() -> WindowConfig {
+        WindowConfig {
+            scroll_bar_style: ScrollBarStyle::FluentOverlay,
+            visible: false,
+            ..WindowConfig::default()
+        }
+    }
+
+    #[test]
+    fn logs_window_config_inherits_the_main_window_webview_options() {
+        let logs = logs_window_config(&main_window());
+
+        assert_eq!(logs.scroll_bar_style, ScrollBarStyle::FluentOverlay);
+    }
+
+    #[test]
+    fn logs_window_config_overrides_the_identity_of_the_main_window() {
+        let logs = logs_window_config(&main_window());
+
+        assert_eq!(logs.label, LOGS_WINDOW_LABEL);
+        assert_eq!(logs.url, WebviewUrl::App(LOGS_WINDOW_LABEL.into()));
+        assert!(logs.visible, "a hidden log window would never be shown");
+    }
 }
