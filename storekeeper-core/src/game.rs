@@ -36,7 +36,6 @@ pub trait GameClient: Send + Sync {
     ///
     /// Returns an error if the API request fails or the response cannot be
     /// parsed.
-    #[must_use = "this performs an API call; the result should be used"]
     fn fetch_resources(
         &self,
     ) -> impl Future<Output = std::result::Result<Vec<Self::Resource>, Self::Error>> + Send;
@@ -46,7 +45,6 @@ pub trait GameClient: Send + Sync {
     /// # Errors
     ///
     /// Returns an error if the authentication check fails.
-    #[must_use = "this performs an API call; the result should be checked"]
     fn is_authenticated(
         &self,
     ) -> impl Future<Output = std::result::Result<bool, Self::Error>> + Send;

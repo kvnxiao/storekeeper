@@ -14,7 +14,7 @@ export interface DailyClaimBadgeProps {
 
 /** Daily-reward claim status for a game; unclaimed is clickable to claim. */
 export const DailyClaimBadge: VoidComponent<DailyClaimBadgeProps> = (props) => {
-  const claimStatus = createClaimStatus(props.gameId);
+  const claimStatus = createClaimStatus(() => props.gameId);
   const claim = useMutation(() => claimDailyRewardMutationOptions());
 
   return (

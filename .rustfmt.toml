@@ -14,6 +14,9 @@
 # silently ignored — i.e. running `cargo fmt` on stable will partially
 # format the code. Always use `cargo +nightly fmt` to match CI.
 
+edition = "2024"
+style_edition = "2024"
+
 unstable_features = true
 
 reorder_imports = true

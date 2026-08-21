@@ -17,32 +17,23 @@ mod tests {
     use jiff::Timestamp;
     use storekeeper_core::DisplayableResource;
 
-    // =========================================================================
-    // DisplayableResource trait tests
-    // =========================================================================
-
     #[test]
-    fn test_battery_display_name() {
+    fn battery_display_name() {
         let resource = ZzzResource::Battery(StaminaResource::new(200, 240, Timestamp::now(), 360));
         assert_eq!(resource.display_name(), "Battery");
     }
 
     #[test]
-    fn test_battery_icon() {
+    fn battery_icon() {
         let resource = ZzzResource::Battery(StaminaResource::new(200, 240, Timestamp::now(), 360));
         assert_eq!(resource.icon(), "battery");
     }
 
-    // =========================================================================
-    // Serde serialization tests (tagged format)
-    // =========================================================================
-
     #[test]
-    fn test_battery_serialization_format() {
+    fn battery_serialization_format() {
         let resource = ZzzResource::Battery(StaminaResource::new(200, 240, Timestamp::now(), 360));
         let json = serde_json::to_string(&resource).expect("should serialize");
 
-        // Verify tagged format
         assert!(
             json.contains(r#""type":"battery""#),
             "Should have type tag 'battery', got: {json}"
@@ -53,12 +44,8 @@ mod tests {
         );
     }
 
-    // =========================================================================
-    // Serde roundtrip tests
-    // =========================================================================
-
     #[test]
-    fn test_battery_serde_roundtrip() {
+    fn battery_serde_roundtrip() {
         let original = ZzzResource::Battery(StaminaResource::new(200, 240, Timestamp::now(), 360));
         let json = serde_json::to_string(&original).expect("should serialize");
         let deserialized: ZzzResource = serde_json::from_str(&json).expect("should deserialize");
@@ -70,9 +57,7 @@ mod tests {
     }
 
     #[test]
-    fn test_battery_serializes_full_at_as_utc_z() {
-        // Locks the JSON datetime contract consumed by the frontend: the nested
-        // `data.fullAt` is an RFC3339 string in UTC with a trailing `Z`.
+    fn battery_serializes_full_at_as_utc_z() {
         let ts = Timestamp::from_second(1_704_067_200).expect("valid timestamp");
         let resource = ZzzResource::Battery(StaminaResource::new(200, 240, ts, 360));
         let value = serde_json::to_value(&resource).expect("should serialize");
@@ -89,23 +74,15 @@ mod tests {
         );
     }
 
-    // =========================================================================
-    // Debug trait tests
-    // =========================================================================
-
     #[test]
-    fn test_resource_is_debug() {
+    fn resource_is_debug() {
         let resource = ZzzResource::Battery(StaminaResource::new(200, 240, Timestamp::now(), 360));
         let debug = format!("{resource:?}");
         assert!(debug.contains("Battery"));
     }
 
-    // =========================================================================
-    // Clone trait tests
-    // =========================================================================
-
     #[test]
-    fn test_resource_is_clone() {
+    fn resource_is_clone() {
         let resource = ZzzResource::Battery(StaminaResource::new(200, 240, Timestamp::now(), 360));
         let cloned = resource.clone();
 

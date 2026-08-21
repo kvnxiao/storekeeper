@@ -12,11 +12,11 @@ use std::time::Instant;
 use storekeeper_client_core::ApiResponse;
 use storekeeper_client_core::ClientError;
 use storekeeper_client_core::ClientWithMiddleware;
+use storekeeper_client_core::DEFAULT_MAX_DELAY_MS;
+use storekeeper_client_core::DEFAULT_MAX_RETRIES;
 use storekeeper_client_core::HttpClientBuilder;
 use storekeeper_client_core::KuroApiResponse;
 use storekeeper_client_core::RetryConfig;
-use storekeeper_client_core::retry::DEFAULT_MAX_DELAY_MS;
-use storekeeper_client_core::retry::DEFAULT_MAX_RETRIES;
 
 /// Base URL for the Kuro Games API.
 const KURO_API_BASE: &str = "https://pc-launcher-sdk-api.kurogame.net";
@@ -140,7 +140,6 @@ impl KuroClient {
         let timestamp = jiff::Timestamp::now().as_millisecond();
         let url = format!("{}/game/queryRole?_t={timestamp}", self.base_url);
 
-        // Send CORS preflight request first
         self.send_preflight(&url).await?;
 
         let body = QueryRoleRequest {
@@ -158,7 +157,6 @@ impl KuroClient {
         );
         let post_started = Instant::now();
 
-        // Make the POST request
         let response = self.client.post(&url).json(&body).send().await?;
 
         let status = response.status();
@@ -170,7 +168,7 @@ impl KuroClient {
 
         let api_response: KuroApiResponse<serde_json::Value> = response.json().await?;
 
-        // Check response code - Kuro uses code 1005 for retry requests
+        // Kuro signals a retryable failure with code 1005.
         match api_response.code {
             code if api_response.is_success() => {
                 tracing::debug!(code = code, "Kuro API request successful");
@@ -197,13 +195,11 @@ impl KuroClient {
             .into_data()
             .ok_or_else(|| Error::Client(ClientError::api_error(0, "Response data is null")))?;
 
-        // Extract the nested JSON string for the region
         let region_data = data
             .get(region)
             .and_then(|v| v.as_str())
             .ok_or_else(|| Error::NestedDataParseFailed(format!("No data for region: {region}")))?;
 
-        // Parse the nested JSON string
         serde_json::from_str(region_data)
             .map_err(|e| Error::NestedDataParseFailed(format!("Failed to parse region data: {e}")))
     }
@@ -227,7 +223,7 @@ impl KuroClient {
             KURO_API_DEFAULT_BASE_DELAY_MS,
             DEFAULT_MAX_DELAY_MS,
         );
-        storekeeper_client_core::retry::retry_with_backoff(
+        storekeeper_client_core::retry_with_backoff(
             &retry_config,
             || self.query_role_once(uid, region),
             |err| matches!(err, Error::RetryRequested),

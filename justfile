@@ -20,6 +20,9 @@ dev:
 test:
     cargo test --workspace
 
+audit:
+    cargo deny check advisories licenses sources
+
 bundle:
     cargo tauri build
 

@@ -13,6 +13,18 @@ use tauri::Emitter;
 use tauri::Manager;
 use tokio_util::sync::CancellationToken;
 
+/// A refresh was already in progress when the request arrived.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RefreshInProgress;
+
+impl std::fmt::Display for RefreshInProgress {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("a refresh is already in progress")
+    }
+}
+
+impl std::error::Error for RefreshInProgress {}
+
 /// RAII guard that resets the refresh-in-progress flag on drop.
 struct RefreshGuard<'a> {
     state: &'a AppState,
@@ -39,7 +51,6 @@ fn try_acquire_refresh(state: &AppState) -> Option<RefreshGuard<'_>> {
 /// configured game APIs and emits update events to the frontend.
 pub fn start_polling(app_handle: AppHandle, cancel_token: CancellationToken) {
     tauri::async_runtime::spawn(async move {
-        // Get poll interval from config
         let state = app_handle.state::<AppState>();
         let poll_interval_secs = state.poll_interval_secs().await;
         let poll_interval = Duration::from_secs(poll_interval_secs);
@@ -49,10 +60,8 @@ pub fn start_polling(app_handle: AppHandle, cancel_token: CancellationToken) {
             "Starting background polling task"
         );
 
-        // Initial fetch after short delay
         tokio::time::sleep(Duration::from_secs(2)).await;
 
-        // Do an initial fetch on startup
         tracing::debug!("Performing initial resource fetch");
         try_refresh(&app_handle).await;
 
@@ -124,17 +133,15 @@ async fn do_refresh(app_handle: &AppHandle) -> AllResources {
 /// Manually triggers a resource refresh.
 ///
 /// This is called by the refresh command and tray menu action.
-pub async fn refresh_now(app_handle: &AppHandle) -> Result<AllResources, String> {
+pub async fn refresh_now(app_handle: &AppHandle) -> Result<AllResources, RefreshInProgress> {
     tracing::info!("Manual refresh requested");
     let state = app_handle.state::<AppState>();
 
-    // Check if already refreshing
     let Some(_refresh_guard) = try_acquire_refresh(&state) else {
         tracing::debug!("Refresh already in progress, rejecting manual refresh");
-        return Err("Refresh already in progress".to_string());
+        return Err(RefreshInProgress);
     };
 
-    // If no clients configured, just return empty resources with timestamp
     if !state.has_clients().await {
         tracing::debug!("No game clients configured, returning empty resources");
         let mut resources = state.get_resources().await;
@@ -157,24 +164,22 @@ pub async fn refresh_now(app_handle: &AppHandle) -> Result<AllResources, String>
 pub async fn refresh_games(
     app_handle: &AppHandle,
     game_ids: &HashSet<GameId>,
-) -> Result<AllResources, String> {
+) -> Result<AllResources, RefreshInProgress> {
     tracing::info!(games = ?game_ids, "Selective refresh requested");
     let state = app_handle.state::<AppState>();
 
     let Some(_refresh_guard) = try_acquire_refresh(&state) else {
         tracing::debug!("Refresh already in progress, skipping selective refresh");
-        return Err("Refresh already in progress".to_string());
+        return Err(RefreshInProgress);
     };
 
     if let Err(e) = app_handle.emit(AppEvent::RefreshStarted.as_str(), ()) {
         tracing::warn!(error = %e, "Failed to emit RefreshStarted event");
     }
 
-    // Fetch only the specified games
     let new_resources = state.fetch_resources_for_games(game_ids, app_handle).await;
     let new_daily_status = state.fetch_daily_reward_status_for_games(game_ids).await;
 
-    // Merge into existing cached state
     let mut resources = state.get_resources().await;
     for (game_id, data) in new_resources {
         resources.games.insert(game_id, data);
@@ -189,7 +194,6 @@ pub async fn refresh_games(
     daily_status.last_checked = Some(Timestamp::now());
     state.set_daily_reward_status(daily_status).await;
 
-    // Emit full snapshot and run notification check
     if let Err(e) = app_handle.emit(AppEvent::ResourcesUpdated.as_str(), &resources) {
         tracing::warn!(error = %e, "Failed to emit ResourcesUpdated event");
     }

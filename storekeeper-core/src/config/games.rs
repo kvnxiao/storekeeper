@@ -243,8 +243,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_backward_compatibility_with_game_config() {
-        // Simulates old config files that users have
+    fn backward_compatibility_with_game_config() {
         let toml_str = r#"
             enabled = true
             uid = "123456789"
@@ -262,8 +261,7 @@ mod tests {
     }
 
     #[test]
-    fn test_game_config_without_claim_time() {
-        // Config without auto_claim_time should have None
+    fn game_config_without_claim_time() {
         let toml_str = r#"
             enabled = true
             uid = "123456789"
@@ -274,7 +272,7 @@ mod tests {
     }
 
     #[test]
-    fn test_game_config_with_notifications() {
+    fn game_config_with_notifications() {
         let toml_str = r#"
             enabled = true
             uid = "123456789"
@@ -310,8 +308,7 @@ mod tests {
     }
 
     #[test]
-    fn test_game_config_without_notifications_backward_compat() {
-        // Old config without notifications field should still parse
+    fn game_config_without_notifications_backward_compat() {
         let toml_str = r#"
             enabled = true
             uid = "123456789"
@@ -323,7 +320,7 @@ mod tests {
     }
 
     #[test]
-    fn test_unknown_tracked_resource_is_ignored() {
+    fn unknown_tracked_resource_is_ignored() {
         let toml_str = r#"
             enabled = true
             uid = "123456789"
@@ -345,7 +342,7 @@ mod tests {
     }
 
     #[test]
-    fn test_unknown_notification_resource_is_ignored() {
+    fn unknown_notification_resource_is_ignored() {
         let toml_str = r#"
             enabled = true
             uid = "123456789"

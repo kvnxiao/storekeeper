@@ -38,9 +38,7 @@ pub async fn get_all_resources(state: State<'_, AppState>) -> Result<AllResource
 /// Refreshes resources from all configured games.
 #[tauri::command]
 pub async fn refresh_resources(app_handle: AppHandle) -> Result<AllResources, CommandError> {
-    polling::refresh_now(&app_handle)
-        .await
-        .map_err(CommandError::internal)
+    Ok(polling::refresh_now(&app_handle).await?)
 }
 
 /// Gets the current application configuration.
@@ -77,18 +75,16 @@ pub async fn save_and_apply(
 ) -> Result<SaveResult, CommandError> {
     let state = app_handle.state::<AppState>();
 
-    // Snapshot old config + secrets from state
     let (old_config, old_secrets) = {
         let inner = state.inner.read().await;
         (inner.config.clone(), inner.secrets.clone())
     };
 
-    // Write both files to disk
     config.save()?;
     secrets.save()?;
     tracing::info!("Configuration and secrets saved to disk");
 
-    // Compute diff in-memory (no disk re-read)
+    // Diff against the in-memory snapshot rather than re-reading from disk.
     let diff = crate::config_diff::compute(&old_config, &config, &old_secrets, &secrets);
 
     if diff.is_empty() {
@@ -107,7 +103,6 @@ pub async fn save_and_apply(
         "Config diff computed"
     );
 
-    // Apply new config + secrets, optionally rebuilding registries
     state
         .apply_config(config, secrets, diff.needs_registry_rebuild)
         .await;
@@ -115,7 +110,6 @@ pub async fn save_and_apply(
     // Wake the scheduler so it re-evaluates auto-claim config immediately
     state.wake_scheduler();
 
-    // Update locale if changed
     if diff.locale_changed {
         let language = {
             let inner = state.inner.read().await;
@@ -130,7 +124,6 @@ pub async fn save_and_apply(
         }
     }
 
-    // Sync autostart if changed
     if diff.autostart_changed {
         let autostart_enabled = {
             let inner = state.inner.read().await;
@@ -147,7 +140,6 @@ pub async fn save_and_apply(
         }
     }
 
-    // Reset notification cooldowns for affected games only
     if !diff.games_to_reset_notifications.is_empty() {
         let mut inner = state.inner.write().await;
         for game_id in &diff.games_to_reset_notifications {
@@ -155,7 +147,6 @@ pub async fn save_and_apply(
         }
     }
 
-    // Selective refresh: only fetch games that actually changed
     if !diff.games_to_refresh.is_empty()
         && let Err(e) = polling::refresh_games(&app_handle, &diff.games_to_refresh).await
     {
@@ -173,12 +164,10 @@ pub async fn save_and_apply(
 pub fn open_config_folder() -> Result<(), CommandError> {
     let config_dir = storekeeper_core::AppConfig::config_dir()?;
 
-    // Create directory if it doesn't exist
     if !config_dir.exists() {
         fs_err::create_dir_all(&config_dir)?;
     }
 
-    // Open in file manager
     #[cfg(target_os = "windows")]
     {
         std::process::Command::new("explorer")
@@ -202,10 +191,6 @@ pub fn open_config_folder() -> Result<(), CommandError> {
 
     Ok(())
 }
-
-// ============================================================================
-// Daily Reward Commands
-// ============================================================================
 
 /// Gets the cached daily reward status for all games.
 #[tauri::command]
@@ -235,7 +220,6 @@ pub async fn claim_daily_reward_for_game(
     tracing::info!(game_id = ?game_id, "Manual daily reward claim requested for specific game");
     let result = state.claim_daily_reward_for_game(game_id).await?;
 
-    // Refresh status for this game after claiming
     if let Ok(game_status) = state.get_daily_reward_status_for_game(game_id).await {
         let mut current_status = state.get_daily_reward_status().await;
         current_status.games.insert(game_id, game_status);
@@ -260,10 +244,6 @@ pub async fn get_daily_reward_status_for_game(
     Ok(state.get_daily_reward_status_for_game(game_id).await?)
 }
 
-// ============================================================================
-// Notification Commands
-// ============================================================================
-
 /// Sends a preview notification for a specific game resource using cached data.
 #[tauri::command]
 pub async fn send_preview_notification(
@@ -276,7 +256,6 @@ pub async fn send_preview_notification(
     let game_name = notification::game_display_name(game_id);
     let resource_name = notification::resource_display_name(&resource_type);
 
-    // Try to find cached resource data and build a real notification body
     let body = resources
         .games
         .get(&game_id)
@@ -315,10 +294,6 @@ pub async fn send_preview_notification(
             message: e.to_string(),
         })
 }
-
-// ============================================================================
-// Locale Commands
-// ============================================================================
 
 /// Returns the list of supported locale codes.
 #[tauri::command]

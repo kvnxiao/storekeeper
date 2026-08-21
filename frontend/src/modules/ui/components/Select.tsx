@@ -48,7 +48,7 @@ export interface SelectProps<T extends string> {
 
 // Generic in the option id so config enums (log level, locale) survive the
 // round trip; a `VoidComponent<Props>` annotation cannot carry a type parameter.
-export const Select = <T extends string>(props: SelectProps<T>): JSX.Element => {
+export function Select<T extends string>(props: SelectProps<T>): JSX.Element {
   return (
     <SelectPrimitive.Root<SelectOption<T>>
       options={props.options}
@@ -93,4 +93,4 @@ export const Select = <T extends string>(props: SelectProps<T>): JSX.Element => 
       </SelectPrimitive.Portal>
     </SelectPrimitive.Root>
   );
-};
+}

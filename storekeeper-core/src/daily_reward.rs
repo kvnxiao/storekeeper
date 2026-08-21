@@ -26,7 +26,7 @@ pub struct DailyRewardInfo {
 
 impl DailyRewardInfo {
     /// Creates a new `DailyRewardInfo`.
-    #[must_use = "this returns a new DailyRewardInfo instance"]
+    #[must_use]
     pub const fn new(is_signed: bool, total_sign_day: u32) -> Self {
         Self {
             is_signed,
@@ -37,7 +37,7 @@ impl DailyRewardInfo {
     /// Returns the number of missed rewards this month.
     ///
     /// Calculates based on the current day of month in UTC+8 timezone.
-    #[must_use = "this returns the count of missed rewards"]
+    #[must_use]
     pub fn missed_rewards(&self) -> u32 {
         use jiff::Timestamp;
         use jiff::tz::Offset;
@@ -65,7 +65,7 @@ pub struct DailyReward {
 
 impl DailyReward {
     /// Creates a new `DailyReward`.
-    #[must_use = "this returns a new DailyReward instance"]
+    #[must_use]
     pub fn new(name: impl Into<String>, amount: u32, icon: impl Into<String>) -> Self {
         Self {
             name: name.into(),
@@ -90,7 +90,7 @@ pub struct ClaimResult {
 
 impl ClaimResult {
     /// Creates a successful claim result.
-    #[must_use = "this returns a new ClaimResult instance"]
+    #[must_use]
     pub fn success(reward: DailyReward, info: DailyRewardInfo) -> Self {
         Self {
             success: true,
@@ -101,7 +101,7 @@ impl ClaimResult {
     }
 
     /// Creates a failed claim result with a message.
-    #[must_use = "this returns a new ClaimResult instance"]
+    #[must_use]
     pub fn already_claimed(reward: Option<DailyReward>, info: DailyRewardInfo) -> Self {
         Self {
             success: false,
@@ -112,7 +112,7 @@ impl ClaimResult {
     }
 
     /// Creates an error claim result.
-    #[must_use = "this returns a new ClaimResult instance"]
+    #[must_use]
     pub fn error(message: impl Into<String>, info: DailyRewardInfo) -> Self {
         Self {
             success: false,
@@ -136,7 +136,7 @@ pub struct DailyRewardStatus {
 
 impl DailyRewardStatus {
     /// Creates a new `DailyRewardStatus`.
-    #[must_use = "this returns a new DailyRewardStatus instance"]
+    #[must_use]
     pub fn new(
         info: DailyRewardInfo,
         today_reward: Option<DailyReward>,
@@ -166,7 +166,6 @@ pub trait DailyRewardClient: Send + Sync {
     /// # Errors
     ///
     /// Returns an error if the API request fails.
-    #[must_use = "this performs an API call; the result should be used"]
     fn get_reward_info(
         &self,
     ) -> impl Future<Output = std::result::Result<DailyRewardInfo, Self::Error>> + Send;
@@ -176,7 +175,6 @@ pub trait DailyRewardClient: Send + Sync {
     /// # Errors
     ///
     /// Returns an error if the API request fails.
-    #[must_use = "this performs an API call; the result should be used"]
     fn get_monthly_rewards(
         &self,
     ) -> impl Future<Output = std::result::Result<Vec<DailyReward>, Self::Error>> + Send;
@@ -186,7 +184,6 @@ pub trait DailyRewardClient: Send + Sync {
     /// # Errors
     ///
     /// Returns an error if the API request fails.
-    #[must_use = "this performs an API call; the result should be used"]
     fn get_reward_status(
         &self,
     ) -> impl Future<Output = std::result::Result<DailyRewardStatus, Self::Error>> + Send;
@@ -201,7 +198,6 @@ pub trait DailyRewardClient: Send + Sync {
     /// Returns an error if the API request fails (network error, auth error,
     /// etc.). Note: "Already claimed" is not an error - it's returned as a
     /// failed `ClaimResult`.
-    #[must_use = "this performs an API call; the result should be used"]
     fn claim_daily_reward(
         &self,
     ) -> impl Future<Output = std::result::Result<ClaimResult, Self::Error>> + Send;
@@ -266,12 +262,8 @@ where
 mod tests {
     use super::*;
 
-    // =========================================================================
-    // DailyRewardInfo tests
-    // =========================================================================
-
     #[test]
-    fn test_daily_reward_info_new() {
+    fn daily_reward_info_new() {
         let info = DailyRewardInfo::new(true, 15);
 
         assert!(info.is_signed, "is_signed should be true");
@@ -279,7 +271,7 @@ mod tests {
     }
 
     #[test]
-    fn test_daily_reward_info_not_signed() {
+    fn daily_reward_info_not_signed() {
         let info = DailyRewardInfo::new(false, 10);
 
         assert!(!info.is_signed, "is_signed should be false");
@@ -287,17 +279,15 @@ mod tests {
     }
 
     #[test]
-    fn test_missed_rewards_calculation() {
+    fn missed_rewards_calculation() {
         use jiff::Timestamp;
         use jiff::tz::Offset;
         use jiff::tz::TimeZone;
 
-        // Get the current day in UTC+8
         let utc8 = TimeZone::fixed(Offset::constant(8));
         let current_day =
             u32::try_from(Timestamp::now().to_zoned(utc8).day()).expect("day in range");
 
-        // If we've signed every day, missed should be 0
         let info = DailyRewardInfo::new(true, current_day);
         assert_eq!(
             info.missed_rewards(),
@@ -305,7 +295,6 @@ mod tests {
             "Should have 0 missed rewards when signed all days"
         );
 
-        // If we've signed no days, missed should be current_day
         let info = DailyRewardInfo::new(false, 0);
         assert_eq!(
             info.missed_rewards(),
@@ -313,7 +302,6 @@ mod tests {
             "Should have {current_day} missed rewards when signed 0 days"
         );
 
-        // If we've missed half the days
         if current_day >= 2 {
             let half_days = current_day / 2;
             let info = DailyRewardInfo::new(true, half_days);
@@ -326,12 +314,8 @@ mod tests {
     }
 
     #[test]
-    fn test_missed_rewards_saturating_sub() {
-        // Edge case: total_sign_day > current day (shouldn't happen, but test
-        // saturation) This can't actually overflow because we use
-        // saturating_sub
+    fn missed_rewards_saturating_sub() {
         let info = DailyRewardInfo::new(true, 50);
-        // If current day is, say, 15, then missed_rewards should be 0 (saturating)
         let missed = info.missed_rewards();
         assert!(
             missed <= 31,
@@ -339,12 +323,8 @@ mod tests {
         );
     }
 
-    // =========================================================================
-    // DailyReward tests
-    // =========================================================================
-
     #[test]
-    fn test_daily_reward_new() {
+    fn daily_reward_new() {
         let reward = DailyReward::new("Primogems", 60, "https://example.com/primogem.png");
 
         assert_eq!(reward.name, "Primogems");
@@ -353,7 +333,7 @@ mod tests {
     }
 
     #[test]
-    fn test_daily_reward_new_with_string() {
+    fn daily_reward_new_with_string() {
         let name = String::from("Mora");
         let icon = String::from("https://example.com/mora.png");
         let reward = DailyReward::new(name, 10000, icon);
@@ -362,12 +342,8 @@ mod tests {
         assert_eq!(reward.amount, 10000);
     }
 
-    // =========================================================================
-    // ClaimResult tests
-    // =========================================================================
-
     #[test]
-    fn test_claim_result_success() {
+    fn claim_result_success() {
         let reward = DailyReward::new("Primogems", 60, "icon.png");
         let info = DailyRewardInfo::new(true, 15);
         let result = ClaimResult::success(reward, info);
@@ -382,7 +358,7 @@ mod tests {
     }
 
     #[test]
-    fn test_claim_result_already_claimed() {
+    fn claim_result_already_claimed() {
         let reward = DailyReward::new("Primogems", 60, "icon.png");
         let info = DailyRewardInfo::new(true, 15);
         let result = ClaimResult::already_claimed(Some(reward), info);
@@ -401,7 +377,7 @@ mod tests {
     }
 
     #[test]
-    fn test_claim_result_already_claimed_no_reward() {
+    fn claim_result_already_claimed_no_reward() {
         let info = DailyRewardInfo::new(true, 15);
         let result = ClaimResult::already_claimed(None, info);
 
@@ -411,7 +387,7 @@ mod tests {
     }
 
     #[test]
-    fn test_claim_result_error() {
+    fn claim_result_error() {
         let info = DailyRewardInfo::new(false, 10);
         let result = ClaimResult::error("API rate limited", info);
 
@@ -426,7 +402,7 @@ mod tests {
     }
 
     #[test]
-    fn test_claim_result_error_with_string() {
+    fn claim_result_error_with_string() {
         let info = DailyRewardInfo::new(false, 10);
         let error_msg = String::from("Network error");
         let result = ClaimResult::error(error_msg, info);
@@ -434,12 +410,8 @@ mod tests {
         assert_eq!(result.message.as_deref(), Some("Network error"));
     }
 
-    // =========================================================================
-    // DailyRewardStatus tests
-    // =========================================================================
-
     #[test]
-    fn test_daily_reward_status_new() {
+    fn daily_reward_status_new() {
         let info = DailyRewardInfo::new(false, 10);
         let today_reward = Some(DailyReward::new("Primogems", 60, "icon.png"));
         let monthly_rewards = vec![
@@ -456,7 +428,7 @@ mod tests {
     }
 
     #[test]
-    fn test_daily_reward_status_no_today_reward() {
+    fn daily_reward_status_no_today_reward() {
         let info = DailyRewardInfo::new(true, 15);
         let status = DailyRewardStatus::new(info, None, vec![]);
 
@@ -465,12 +437,8 @@ mod tests {
         assert!(status.monthly_rewards.is_empty());
     }
 
-    // =========================================================================
-    // Serde tests
-    // =========================================================================
-
     #[test]
-    fn test_daily_reward_info_serde_roundtrip() {
+    fn daily_reward_info_serde_roundtrip() {
         let info = DailyRewardInfo::new(true, 15);
 
         let json = serde_json::to_string(&info).expect("should serialize");
@@ -482,7 +450,7 @@ mod tests {
     }
 
     #[test]
-    fn test_daily_reward_serde_roundtrip() {
+    fn daily_reward_serde_roundtrip() {
         let reward = DailyReward::new("Primogems", 60, "https://example.com/icon.png");
 
         let json = serde_json::to_string(&reward).expect("should serialize");
@@ -494,7 +462,7 @@ mod tests {
     }
 
     #[test]
-    fn test_claim_result_serde_roundtrip() {
+    fn claim_result_serde_roundtrip() {
         let reward = DailyReward::new("Primogems", 60, "icon.png");
         let info = DailyRewardInfo::new(true, 15);
         let result = ClaimResult::success(reward, info);
@@ -507,7 +475,7 @@ mod tests {
     }
 
     #[test]
-    fn test_daily_reward_status_serde_roundtrip() {
+    fn daily_reward_status_serde_roundtrip() {
         let info = DailyRewardInfo::new(false, 10);
         let today_reward = Some(DailyReward::new("Primogems", 60, "icon.png"));
         let monthly_rewards = vec![
@@ -526,10 +494,6 @@ mod tests {
             deserialized.monthly_rewards.len()
         );
     }
-
-    // =========================================================================
-    // DynDailyRewardClient error-propagation tests
-    // =========================================================================
 
     /// Minimal error type for the failing stub client below.
     #[derive(Debug)]

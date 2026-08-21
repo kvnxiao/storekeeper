@@ -70,7 +70,7 @@ fn merge_game_resources(
     games
 }
 
-/// Inner state data protected by RwLock.
+/// Inner state data protected by `RwLock`.
 #[derive(Default)]
 pub struct StateData {
     /// Cached resources from all games.
@@ -98,7 +98,7 @@ pub struct StateData {
 /// Application state wrapper.
 #[derive(Clone)]
 pub struct AppState {
-    /// Inner state protected by async RwLock.
+    /// Inner state protected by async `RwLock`.
     pub inner: Arc<RwLock<StateData>>,
     refreshing: Arc<AtomicBool>,
     /// Notifier to wake the scheduler when config changes.
@@ -122,7 +122,6 @@ impl AppState {
     /// creates default config files first, then loads them.
     #[must_use]
     pub fn with_config() -> Self {
-        // Ensure config files exist, creating defaults if needed
         if let Err(e) = ensure_configs_exist() {
             tracing::warn!("Failed to ensure config files exist: {e}");
         }
@@ -227,10 +226,6 @@ impl AppState {
         };
         registry.has_any()
     }
-
-    // ========================================================================
-    // Daily Reward Methods
-    // ========================================================================
 
     /// Gets the cached daily reward status.
     pub async fn get_daily_reward_status(&self) -> AllDailyRewardStatus {
@@ -359,10 +354,6 @@ impl AppState {
             && state.daily_reward_registry.has_game(game_id)
     }
 
-    // ========================================================================
-    // Selective Fetch Methods
-    // ========================================================================
-
     /// Fetches resources from a subset of configured game clients.
     pub async fn fetch_resources_for_games(
         &self,
@@ -387,10 +378,6 @@ impl AppState {
         };
         daily_reward_registry.get_status_for_games(game_ids).await
     }
-
-    // ========================================================================
-    // Config Reload Methods
-    // ========================================================================
 
     /// Applies new config and secrets to state, optionally rebuilding
     /// registries.
@@ -431,10 +418,6 @@ impl Default for AppState {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // =========================================================================
-    // merge_game_resources tests
-    // =========================================================================
 
     fn resources(entries: &[(GameId, &str)]) -> HashMap<GameId, serde_json::Value> {
         entries
@@ -489,10 +472,6 @@ mod tests {
         assert_eq!(merged, resources(&[(GameId::ZenlessZoneZero, "fresh")]));
     }
 
-    // =========================================================================
-    // AllResources tests
-    // =========================================================================
-
     #[test]
     fn all_resources_default_is_empty() {
         let r = AllResources::default();
@@ -543,10 +522,6 @@ mod tests {
         );
     }
 
-    // =========================================================================
-    // AllDailyRewardStatus tests
-    // =========================================================================
-
     #[test]
     fn all_daily_reward_status_default_is_empty() {
         let s = AllDailyRewardStatus::default();
@@ -579,10 +554,6 @@ mod tests {
         assert!(v.get("lastChecked").is_some(), "should be camelCase");
         assert!(v.get("last_checked").is_none(), "should NOT be snake_case");
     }
-
-    // =========================================================================
-    // refill_missing_daily_reward_status tests
-    // =========================================================================
 
     struct StubDailyRewardClient {
         game_id: GameId,

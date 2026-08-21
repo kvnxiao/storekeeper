@@ -4,7 +4,7 @@ import { dailyRewardStatusQueryOptions } from "@/modules/daily-rewards/daily-rew
 import type { GameId } from "@/modules/games/games.types";
 
 /** Reactive daily-reward claim status for a game; `null` while unknown. */
-export function createClaimStatus(gameId: GameId): Accessor<boolean | null> {
+export function createClaimStatus(gameId: Accessor<GameId>): Accessor<boolean | null> {
   const query = useQuery(() => dailyRewardStatusQueryOptions());
-  return () => query.data?.get(gameId) ?? null;
+  return () => query.data?.get(gameId()) ?? null;
 }

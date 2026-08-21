@@ -102,13 +102,13 @@ const buttonStyle = tv({
 export type ButtonStyleProps = VariantProps<typeof buttonStyle>;
 
 /** Button classes for any element styled as a button (see ButtonLink). */
-export function buttonClass(props: ButtonStyleProps & { class?: string }): string {
+export function buttonClass(variants: ButtonStyleProps & { class?: string }): string {
   return buttonStyle({
-    variant: props.variant,
+    variant: variants.variant,
     // Color only applies to the solid variant
-    color: props.variant === "solid" || !props.variant ? props.color : undefined,
-    size: props.size,
-    class: props.class,
+    color: variants.variant === "solid" || !variants.variant ? variants.color : undefined,
+    size: variants.size,
+    class: variants.class,
   });
 }
 

@@ -14,28 +14,23 @@ export type StaminaGameSectionProps = {
   [G in GameId]: { gameId: G; resourceType: GameResourceTypeMap[G] };
 }[GameId];
 
-/**
- * Dashboard section for a game whose only tracked resource is stamina.
- *
- * Both props are read once at setup: the dashboard renders one component per
- * game, so an instance never changes which game it is showing.
- */
+/** Dashboard section for a game whose only tracked resource is stamina. */
 export const StaminaGameSection: VoidComponent<StaminaGameSectionProps> = (props) => {
   const query = useQuery(() => resourcesQueryOptions());
   const [stamina, staminaTime] = createStaminaResource(
     () => query.data,
-    props.gameId,
-    props.resourceType,
+    () => props.gameId,
+    () => props.resourceType,
   );
-  const game = GAME_REGISTRY[props.gameId];
+  const game = () => GAME_REGISTRY[props.gameId];
 
   return (
     <GameSection
       sectionId={props.gameId}
-      title={game.name()}
+      title={game().name()}
       badge={
-        <Show when={game.supportsDailyRewards}>
-          <DailyClaimBadge gameId={props.gameId} gameName={game.name()} />
+        <Show when={game().supportsDailyRewards}>
+          <DailyClaimBadge gameId={props.gameId} gameName={game().name()} />
         </Show>
       }
     >

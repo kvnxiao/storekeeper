@@ -59,10 +59,6 @@ mod tests {
         AppEvent::DailyRewardStatusUpdated,
     ];
 
-    // =========================================================================
-    // AppEvent::as_str - verify each variant
-    // =========================================================================
-
     #[test]
     fn event_resources_updated() {
         assert_eq!(AppEvent::ResourcesUpdated.as_str(), "resources-updated");
@@ -97,10 +93,6 @@ mod tests {
         );
     }
 
-    // =========================================================================
-    // AppEvent - all events use lowercase kebab-case
-    // =========================================================================
-
     #[test]
     fn all_events_are_kebab_case() {
         for event in EVENTS {
@@ -112,10 +104,6 @@ mod tests {
         }
     }
 
-    // =========================================================================
-    // AppEvent - frontend constants mirror every variant
-    // =========================================================================
-
     #[test]
     fn frontend_constants_declare_every_event() {
         for event in EVENTS {
@@ -126,10 +114,6 @@ mod tests {
             );
         }
     }
-
-    // =========================================================================
-    // GameResourcePayload serde - camelCase field names
-    // =========================================================================
 
     #[test]
     fn payload_serializes_camel_case() {

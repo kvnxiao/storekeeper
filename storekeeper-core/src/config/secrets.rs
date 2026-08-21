@@ -73,7 +73,6 @@ impl SecretsConfig {
     ///
     /// Returns an error if the secrets file cannot be written.
     pub fn save_to_path(&self, path: &Utf8Path) -> Result<()> {
-        // Ensure the directory exists
         if let Some(parent) = path.parent() {
             fs_err::create_dir_all(parent)?;
         }
@@ -100,16 +99,13 @@ impl SecretsConfig {
             return Ok(false);
         }
 
-        // Ensure the directory exists
         if let Some(parent) = path.parent() {
             fs_err::create_dir_all(parent)?;
         }
 
-        // Write empty secrets with helpful comments
         let content = Self::default_secrets_content();
         fs_err::write(&path, content)?;
 
-        // Verify it can be loaded
         let _ = Self::load_from_path(&path)?;
 
         tracing::info!("Created default secrets file at: {path}");
@@ -160,15 +156,15 @@ ltmid_v2 = ""
 /// Uses the v2 cookie format which is the current standard on HoYoLab.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HoyolabSecrets {
-    /// `HoYoLab` account ID v2 (ltuid_v2 cookie).
+    /// `HoYoLab` account ID v2 (`ltuid_v2` cookie).
     #[serde(default)]
     pub ltuid_v2: String,
 
-    /// `HoYoLab` token v2 (ltoken_v2 cookie).
+    /// `HoYoLab` token v2 (`ltoken_v2` cookie).
     #[serde(default)]
     pub ltoken_v2: String,
 
-    /// `HoYoLab` mid token v2 (ltmid_v2 cookie).
+    /// `HoYoLab` mid token v2 (`ltmid_v2` cookie).
     #[serde(default)]
     pub ltmid_v2: String,
 }

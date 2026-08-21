@@ -13,7 +13,7 @@
 ///
 /// # Example
 ///
-/// ```rust,ignore
+/// ```
 /// use storekeeper_core::{game_resource_enum, StaminaResource, CooldownResource};
 ///
 /// game_resource_enum! {

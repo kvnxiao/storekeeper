@@ -108,12 +108,8 @@ impl std::fmt::Display for GameId {
 mod tests {
     use super::*;
 
-    // =========================================================================
-    // ApiProvider tests
-    // =========================================================================
-
     #[test]
-    fn test_api_provider_for_hoyolab_games() {
+    fn api_provider_for_hoyolab_games() {
         assert_eq!(
             GameId::GenshinImpact.api_provider(),
             ApiProvider::HoYoLab,
@@ -132,7 +128,7 @@ mod tests {
     }
 
     #[test]
-    fn test_api_provider_for_kuro_games() {
+    fn api_provider_for_kuro_games() {
         assert_eq!(
             GameId::WutheringWaves.api_provider(),
             ApiProvider::Kuro,
@@ -140,42 +136,30 @@ mod tests {
         );
     }
 
-    // =========================================================================
-    // GameId::as_str tests
-    // =========================================================================
-
     #[test]
-    fn test_as_str_matches_serde_format() {
+    fn as_str_matches_serde_format() {
         assert_eq!(GameId::GenshinImpact.as_str(), "GENSHIN_IMPACT");
         assert_eq!(GameId::HonkaiStarRail.as_str(), "HONKAI_STAR_RAIL");
         assert_eq!(GameId::ZenlessZoneZero.as_str(), "ZENLESS_ZONE_ZERO");
         assert_eq!(GameId::WutheringWaves.as_str(), "WUTHERING_WAVES");
     }
 
-    // =========================================================================
-    // GameId::display_name tests
-    // =========================================================================
-
     #[test]
-    fn test_display_name_human_readable() {
+    fn display_name_human_readable() {
         assert_eq!(GameId::GenshinImpact.display_name(), "Genshin Impact");
         assert_eq!(GameId::HonkaiStarRail.display_name(), "Honkai: Star Rail");
         assert_eq!(GameId::ZenlessZoneZero.display_name(), "Zenless Zone Zero");
         assert_eq!(GameId::WutheringWaves.display_name(), "Wuthering Waves");
     }
 
-    // =========================================================================
-    // GameId::all tests
-    // =========================================================================
-
     #[test]
-    fn test_all_returns_four_games() {
+    fn all_returns_four_games() {
         let all = GameId::all();
         assert_eq!(all.len(), 4, "Should return exactly 4 games");
     }
 
     #[test]
-    fn test_all_contains_all_variants() {
+    fn all_contains_all_variants() {
         let all = GameId::all();
         assert!(
             all.contains(&GameId::GenshinImpact),
@@ -196,7 +180,7 @@ mod tests {
     }
 
     #[test]
-    fn test_all_is_in_expected_order() {
+    fn all_is_in_expected_order() {
         let all = GameId::all();
         assert_eq!(
             all,
@@ -210,24 +194,16 @@ mod tests {
         );
     }
 
-    // =========================================================================
-    // Display trait tests
-    // =========================================================================
-
     #[test]
-    fn test_display_uses_display_name() {
+    fn display_uses_display_name() {
         assert_eq!(format!("{}", GameId::GenshinImpact), "Genshin Impact");
         assert_eq!(format!("{}", GameId::HonkaiStarRail), "Honkai: Star Rail");
         assert_eq!(format!("{}", GameId::ZenlessZoneZero), "Zenless Zone Zero");
         assert_eq!(format!("{}", GameId::WutheringWaves), "Wuthering Waves");
     }
 
-    // =========================================================================
-    // Serde roundtrip tests
-    // =========================================================================
-
     #[test]
-    fn test_serde_serialization() {
+    fn serde_serialization() {
         let json =
             serde_json::to_string(&GameId::GenshinImpact).expect("should serialize Genshin Impact");
         assert_eq!(json, "\"GENSHIN_IMPACT\"");
@@ -246,7 +222,7 @@ mod tests {
     }
 
     #[test]
-    fn test_serde_deserialization() {
+    fn serde_deserialization() {
         let game: GameId =
             serde_json::from_str("\"GENSHIN_IMPACT\"").expect("should deserialize GENSHIN_IMPACT");
         assert_eq!(game, GameId::GenshinImpact);
@@ -265,7 +241,7 @@ mod tests {
     }
 
     #[test]
-    fn test_serde_roundtrip() {
+    fn serde_roundtrip() {
         for game in GameId::all() {
             let json = serde_json::to_string(game).expect("should serialize");
             let deserialized: GameId = serde_json::from_str(&json).expect("should deserialize");
@@ -274,7 +250,7 @@ mod tests {
     }
 
     #[test]
-    fn test_serde_invalid_value() {
+    fn serde_invalid_value() {
         let result: Result<GameId, _> = serde_json::from_str("\"invalid_game\"");
         assert!(
             result.is_err(),
@@ -282,32 +258,28 @@ mod tests {
         );
     }
 
-    // =========================================================================
-    // Trait implementation tests
-    // =========================================================================
-
     #[test]
-    fn test_game_id_is_copy() {
+    fn game_id_is_copy() {
         let game = GameId::GenshinImpact;
-        let game2 = game; // Copy
-        let game3 = game; // Copy again
+        let game2 = game;
+        let game3 = game;
         assert_eq!(game, game2);
         assert_eq!(game, game3);
     }
 
     #[test]
-    fn test_game_id_eq() {
+    fn game_id_eq() {
         assert_eq!(GameId::GenshinImpact, GameId::GenshinImpact);
         assert_ne!(GameId::GenshinImpact, GameId::HonkaiStarRail);
     }
 
     #[test]
-    fn test_game_id_hash() {
+    fn game_id_hash() {
         use std::collections::HashSet;
         let mut set = HashSet::new();
         set.insert(GameId::GenshinImpact);
         set.insert(GameId::HonkaiStarRail);
-        set.insert(GameId::GenshinImpact); // Duplicate
+        set.insert(GameId::GenshinImpact);
 
         assert_eq!(set.len(), 2, "HashSet should have 2 unique games");
         assert!(set.contains(&GameId::GenshinImpact));
@@ -315,19 +287,19 @@ mod tests {
     }
 
     #[test]
-    fn test_api_provider_eq() {
+    fn api_provider_eq() {
         assert_eq!(ApiProvider::HoYoLab, ApiProvider::HoYoLab);
         assert_eq!(ApiProvider::Kuro, ApiProvider::Kuro);
         assert_ne!(ApiProvider::HoYoLab, ApiProvider::Kuro);
     }
 
     #[test]
-    fn test_api_provider_hash() {
+    fn api_provider_hash() {
         use std::collections::HashSet;
         let mut set = HashSet::new();
         set.insert(ApiProvider::HoYoLab);
         set.insert(ApiProvider::Kuro);
-        set.insert(ApiProvider::HoYoLab); // Duplicate
+        set.insert(ApiProvider::HoYoLab);
 
         assert_eq!(set.len(), 2, "HashSet should have 2 unique providers");
     }

@@ -113,19 +113,14 @@ mod tests {
     use super::*;
     use serde::Deserialize;
 
-    // Test data structure for responses
     #[derive(Debug, Clone, PartialEq, Deserialize)]
     struct TestData {
         id: u32,
         name: String,
     }
 
-    // =========================================================================
-    // HoyolabApiResponse tests
-    // =========================================================================
-
     #[test]
-    fn test_hoyolab_response_success() {
+    fn hoyolab_response_success() {
         let json = r#"{
             "retcode": 0,
             "message": "OK",
@@ -145,7 +140,7 @@ mod tests {
     }
 
     #[test]
-    fn test_hoyolab_response_error() {
+    fn hoyolab_response_error() {
         let json = r#"{
             "retcode": -1,
             "message": "Invalid token",
@@ -162,7 +157,7 @@ mod tests {
     }
 
     #[test]
-    fn test_hoyolab_response_into_result_success() {
+    fn hoyolab_response_into_result_success() {
         let json = r#"{
             "retcode": 0,
             "message": "OK",
@@ -180,7 +175,7 @@ mod tests {
     }
 
     #[test]
-    fn test_hoyolab_response_into_result_api_error() {
+    fn hoyolab_response_into_result_api_error() {
         let json = r#"{
             "retcode": 10001,
             "message": "Rate limited",
@@ -198,8 +193,7 @@ mod tests {
     }
 
     #[test]
-    fn test_hoyolab_response_into_result_null_data() {
-        // Success code but null data should be an error
+    fn hoyolab_response_into_result_null_data() {
         let json = r#"{
             "retcode": 0,
             "message": "OK",
@@ -215,12 +209,8 @@ mod tests {
         assert!(matches!(err, ClientError::ApiError { code: 0, .. }));
     }
 
-    // =========================================================================
-    // KuroApiResponse tests
-    // =========================================================================
-
     #[test]
-    fn test_kuro_response_success_code_zero() {
+    fn kuro_response_success_code_zero() {
         let json = r#"{
             "code": 0,
             "message": "success",
@@ -235,7 +225,7 @@ mod tests {
     }
 
     #[test]
-    fn test_kuro_response_success_code_200() {
+    fn kuro_response_success_code_200() {
         let json = r#"{
             "code": 200,
             "message": "OK",
@@ -250,7 +240,7 @@ mod tests {
     }
 
     #[test]
-    fn test_kuro_response_error() {
+    fn kuro_response_error() {
         let json = r#"{
             "code": 1005,
             "message": "Retry requested",
@@ -266,7 +256,7 @@ mod tests {
     }
 
     #[test]
-    fn test_kuro_response_into_result_success() {
+    fn kuro_response_into_result_success() {
         let json = r#"{
             "code": 200,
             "message": "OK",
@@ -284,7 +274,7 @@ mod tests {
     }
 
     #[test]
-    fn test_kuro_response_into_result_error() {
+    fn kuro_response_into_result_error() {
         let json = r#"{
             "code": 500,
             "message": "Internal error",
@@ -300,13 +290,8 @@ mod tests {
         assert!(matches!(err, ClientError::ApiError { code: 500, .. }));
     }
 
-    // =========================================================================
-    // Default is_success behavior tests
-    // =========================================================================
-
     #[test]
-    fn test_default_is_success_checks_code_zero() {
-        // HoyolabApiResponse uses default is_success (code == 0)
+    fn default_is_success_checks_code_zero() {
         let response = HoyolabApiResponse {
             retcode: 0,
             message: "OK".to_string(),
@@ -325,12 +310,8 @@ mod tests {
         assert!(!response.is_success());
     }
 
-    // =========================================================================
-    // Edge case tests
-    // =========================================================================
-
     #[test]
-    fn test_response_with_empty_message() {
+    fn response_with_empty_message() {
         let json = r#"{
             "retcode": 0,
             "message": "",
@@ -345,7 +326,7 @@ mod tests {
     }
 
     #[test]
-    fn test_response_with_negative_code() {
+    fn response_with_negative_code() {
         let json = r#"{
             "retcode": -10,
             "message": "Negative error",
@@ -360,8 +341,7 @@ mod tests {
     }
 
     #[test]
-    fn test_kuro_code_1_is_not_success() {
-        // Kuro only accepts 0 and 200 as success
+    fn kuro_code_1_is_not_success() {
         let json = r#"{
             "code": 1,
             "message": "Unknown",
@@ -377,12 +357,8 @@ mod tests {
         );
     }
 
-    // =========================================================================
-    // Debug trait tests
-    // =========================================================================
-
     #[test]
-    fn test_hoyolab_response_debug() {
+    fn hoyolab_response_debug() {
         let response = HoyolabApiResponse {
             retcode: 0,
             message: "OK".to_string(),
@@ -398,7 +374,7 @@ mod tests {
     }
 
     #[test]
-    fn test_kuro_response_debug() {
+    fn kuro_response_debug() {
         let response = KuroApiResponse {
             code: 200,
             message: "OK".to_string(),

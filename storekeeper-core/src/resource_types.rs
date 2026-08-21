@@ -1,7 +1,7 @@
 //! Per-game resource type identifiers.
 //!
 //! These enums represent resource types as configuration keys (for tracked
-//! resources and notification settings). They serialize to snake_case strings
+//! resources and notification settings). They serialize to `snake_case` strings
 //! matching the serde format of the corresponding data enums in each game
 //! crate.
 
@@ -148,7 +148,6 @@ mod tests {
 
     #[test]
     fn genshin_resource_type_toml_deserialization() {
-        // Simulates TOML config key deserialization
         let toml_str = r#"key = "resin""#;
         let w: TomlKeyWrapper = toml::from_str(toml_str).expect("should parse");
         assert_eq!(w.key, GenshinResourceType::Resin);

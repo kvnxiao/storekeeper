@@ -23,10 +23,6 @@ const RESIN_REGEN_SECONDS: u32 = 480;
 /// "Fit for a King" which is 30 coins per hour.
 const REALM_REGEN_SECONDS: u32 = 120;
 
-// ============================================================================
-// Daily Note API Response Structures
-// ============================================================================
-
 /// API response structure for Genshin daily note.
 #[derive(Debug, Clone, Deserialize)]
 struct DailyNoteResponse {
@@ -167,7 +163,6 @@ impl GenshinClient {
 fn build_resources(note: &DailyNoteResponse, now: Timestamp) -> Vec<GenshinResource> {
     let mut resources = Vec::with_capacity(4);
 
-    // Resin
     resources.push(GenshinResource::Resin(StaminaResource::new(
         note.current_resin,
         note.max_resin,
@@ -175,7 +170,6 @@ fn build_resources(note: &DailyNoteResponse, now: Timestamp) -> Vec<GenshinResou
         RESIN_REGEN_SECONDS,
     )));
 
-    // Realm Currency
     resources.push(GenshinResource::RealmCurrency(StaminaResource::new(
         note.current_home_coin,
         note.max_home_coin,
@@ -183,7 +177,6 @@ fn build_resources(note: &DailyNoteResponse, now: Timestamp) -> Vec<GenshinResou
         REALM_REGEN_SECONDS,
     )));
 
-    // Parametric Transformer
     if let Some(ref transformer) = note.transformer
         && transformer.obtained
     {
@@ -191,7 +184,6 @@ fn build_resources(note: &DailyNoteResponse, now: Timestamp) -> Vec<GenshinResou
         resources.push(GenshinResource::ParametricTransformer(cooldown));
     }
 
-    // Expeditions - find the earliest finish time
     let earliest_finish = note
         .expeditions
         .iter()

@@ -8,8 +8,6 @@ mod message_builder;
 mod resource_extractor;
 mod tracker;
 
-// Re-export public/pub(crate) items so they remain accessible at
-// `notification::*`.
 use self::resource_extractor::ResourceInfo;
 use crate::state::AppState;
 use jiff::Timestamp;
@@ -18,8 +16,8 @@ pub(crate) use message_builder::game_display_name;
 pub(crate) use message_builder::resource_display_name;
 pub(crate) use resource_extractor::extract_resource_info;
 use storekeeper_core::GameId;
-use storekeeper_core::config::GamesConfig;
-use storekeeper_core::config::ResourceNotificationConfig;
+use storekeeper_core::GamesConfig;
+use storekeeper_core::ResourceNotificationConfig;
 use tauri::AppHandle;
 use tauri::Manager;
 use tokio_util::sync::CancellationToken;
@@ -81,7 +79,7 @@ pub(crate) async fn check_and_notify(app_handle: &AppHandle) {
         inner.config.games.clone()
     };
 
-    // Step 1: Resolve all notifiable resources (no lock needed).
+    // Resolve notifiable resources without holding a lock.
     let mut candidates = Vec::new();
     for (game_id, resources_json) in &resources.games {
         if !games_config.has_notification_configs(*game_id) {
@@ -100,7 +98,7 @@ pub(crate) async fn check_and_notify(app_handle: &AppHandle) {
         }
     }
 
-    // Step 2: Batch should_notify checks (single write lock).
+    // Batch the should_notify checks under one write lock.
     let mut to_notify = Vec::new();
     {
         let mut inner = state.inner.write().await;
@@ -117,7 +115,7 @@ pub(crate) async fn check_and_notify(app_handle: &AppHandle) {
         }
     }
 
-    // Step 3: Send notifications (no lock held).
+    // Send with no lock held; the OS call can block.
     let mut sent_keys = Vec::new();
     for (key, i) in to_notify {
         let Some(&(game_id, type_tag, _, ref resource_info)) = candidates.get(i) else {
@@ -128,7 +126,7 @@ pub(crate) async fn check_and_notify(app_handle: &AppHandle) {
         }
     }
 
-    // Step 4: Batch record sent notifications (single write lock).
+    // Record the sends under one write lock.
     if !sent_keys.is_empty() {
         let mut inner = state.inner.write().await;
         for key in sent_keys {

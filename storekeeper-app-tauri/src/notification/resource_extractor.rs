@@ -97,7 +97,7 @@ mod tests {
     use jiff::SignedDuration;
 
     #[test]
-    fn test_extract_stamina_resource() {
+    fn extract_stamina_resource() {
         let future = Timestamp::now() + SignedDuration::from_hours(2);
         let data = serde_json::json!({
             "current": 100,
@@ -112,7 +112,7 @@ mod tests {
     }
 
     #[test]
-    fn test_extract_stamina_resource_full() {
+    fn extract_stamina_resource_full() {
         let past = Timestamp::now() - SignedDuration::from_hours(1);
         let data = serde_json::json!({
             "current": 160,
@@ -127,7 +127,7 @@ mod tests {
     }
 
     #[test]
-    fn test_extract_cooldown_resource_ready() {
+    fn extract_cooldown_resource_ready() {
         let past = Timestamp::now() - SignedDuration::from_hours(1);
         let data = serde_json::json!({
             "isReady": true,
@@ -140,7 +140,7 @@ mod tests {
     }
 
     #[test]
-    fn test_extract_cooldown_resource_not_ready() {
+    fn extract_cooldown_resource_not_ready() {
         let future = Timestamp::now() + SignedDuration::from_hours(12);
         let data = serde_json::json!({
             "isReady": false,
@@ -153,7 +153,7 @@ mod tests {
     }
 
     #[test]
-    fn test_extract_expedition_resource_completed() {
+    fn extract_expedition_resource_completed() {
         let past = Timestamp::now() - SignedDuration::from_mins(30);
         let data = serde_json::json!({
             "currentExpeditions": 3,
@@ -167,7 +167,7 @@ mod tests {
     }
 
     #[test]
-    fn test_extract_expedition_resource_pending() {
+    fn extract_expedition_resource_pending() {
         let future = Timestamp::now() + SignedDuration::from_hours(6);
         let data = serde_json::json!({
             "currentExpeditions": 3,
@@ -181,17 +181,13 @@ mod tests {
     }
 
     #[test]
-    fn test_extract_unknown_resource_returns_none() {
+    fn extract_unknown_resource_returns_none() {
         let data = serde_json::json!({
             "someUnknownField": 42
         });
 
         assert!(extract_resource_info("unknown_resource", &data).is_none());
     }
-
-    // =========================================================================
-    // estimated_current tests
-    // =========================================================================
 
     fn stamina_info(
         completion_at: Timestamp,
@@ -210,7 +206,7 @@ mod tests {
     }
 
     #[test]
-    fn test_estimated_current_matches_threshold_exactly() {
+    fn estimated_current_matches_threshold_exactly() {
         // WuWa: max=240, rate=360s. At exactly 360 min to full → current=180.
         let now = Timestamp::now();
         let info = stamina_info(now + SignedDuration::from_mins(360), false, 179, 240, 360);
@@ -218,7 +214,7 @@ mod tests {
     }
 
     #[test]
-    fn test_estimated_current_one_second_before_tick() {
+    fn estimated_current_one_second_before_tick() {
         // 1 second before the 180th unit ticks: still 179.
         let now = Timestamp::now();
         let info = stamina_info(
@@ -232,7 +228,7 @@ mod tests {
     }
 
     #[test]
-    fn test_estimated_current_one_second_after_tick() {
+    fn estimated_current_one_second_after_tick() {
         // 1 second after the 180th unit ticked: 180.
         let now = Timestamp::now();
         let info = stamina_info(
@@ -246,14 +242,14 @@ mod tests {
     }
 
     #[test]
-    fn test_estimated_current_when_full() {
+    fn estimated_current_when_full() {
         let now = Timestamp::now();
         let info = stamina_info(now - SignedDuration::from_mins(5), true, 240, 240, 360);
         assert_eq!(info.estimated_current(now), Some(240));
     }
 
     #[test]
-    fn test_estimated_current_past_completion() {
+    fn estimated_current_past_completion() {
         // completion_at is in the past but is_complete not set (stale flag).
         let now = Timestamp::now();
         let info = stamina_info(now - SignedDuration::from_mins(1), false, 239, 240, 360);
@@ -261,7 +257,7 @@ mod tests {
     }
 
     #[test]
-    fn test_estimated_current_no_rate_falls_back() {
+    fn estimated_current_no_rate_falls_back() {
         let now = Timestamp::now();
         let info = ResourceInfo {
             completion_at: now + SignedDuration::from_hours(1),

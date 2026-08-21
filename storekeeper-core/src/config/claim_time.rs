@@ -59,8 +59,8 @@ impl ClaimTime {
             message: format!("Invalid claim_time '{time_str}': {e}"),
         })?;
 
-        // strptime tolerates unpadded hours and surrounding text; requiring the
-        // parse to round-trip is what makes the accepted format exactly HH:MM.
+        // strptime tolerates unpadded hours and surrounding text, so the
+        // round-trip check narrows the accepted format to exactly HH:MM.
         if parsed.strftime("%H:%M").to_string() != time_str {
             return Err(Error::ConfigParseFailed {
                 message: format!(
@@ -73,13 +73,13 @@ impl ClaimTime {
     }
 
     /// Returns midnight UTC+8, the default claim time when none is specified.
-    #[must_use = "this returns the default claim time, it doesn't modify anything"]
+    #[must_use]
     pub fn default_utc8_midnight() -> Self {
         Self(Time::midnight())
     }
 
     /// Returns the time of day, in UTC+8.
-    #[must_use = "this returns the time value, it doesn't modify anything"]
+    #[must_use]
     pub fn as_utc8_time(&self) -> Time {
         self.0
     }
@@ -87,7 +87,7 @@ impl ClaimTime {
     /// Returns this time formatted as a UTC+8 "HH:MM" string.
     ///
     /// This is the inverse of `from_utc8_str`.
-    #[must_use = "this returns the formatted string, it doesn't modify anything"]
+    #[must_use]
     pub fn to_utc8_string(&self) -> String {
         self.0.strftime("%H:%M").to_string()
     }
@@ -188,13 +188,8 @@ mod tests {
     use serde::Deserialize;
     use serde::Serialize;
 
-    // =========================================================================
-    // ClaimTime::from_utc8_str tests
-    // =========================================================================
-
     #[test]
-    fn test_claim_time_valid_formats() {
-        // Standard cases - all should parse successfully
+    fn claim_time_valid_formats() {
         assert!(
             ClaimTime::from_utc8_str("00:00").is_ok(),
             "00:00 should be valid (midnight UTC+8)"
@@ -222,15 +217,14 @@ mod tests {
     }
 
     #[test]
-    fn test_claim_time_parses_as_utc8_time_of_day() {
+    fn claim_time_parses_as_utc8_time_of_day() {
         let time = ClaimTime::from_utc8_str("08:30").expect("08:30 should be valid");
         assert_eq!(time.as_utc8_time().hour(), 8);
         assert_eq!(time.as_utc8_time().minute(), 30);
     }
 
     #[test]
-    fn test_claim_time_to_utc8_string_roundtrip() {
-        // Test that to_utc8_string() is the inverse of from_utc8_str()
+    fn claim_time_to_utc8_string_roundtrip() {
         let test_times = ["00:00", "00:10", "08:30", "12:00", "16:45", "23:59"];
 
         for time_str in test_times {
@@ -244,20 +238,19 @@ mod tests {
     }
 
     #[test]
-    fn test_claim_time_display() {
-        // Display should show UTC+8 time for human readability
+    fn claim_time_display() {
         let time = ClaimTime::from_utc8_str("08:30").expect("08:30 should be valid");
         assert_eq!(format!("{time}"), "08:30");
     }
 
     #[test]
-    fn test_claim_time_default_utc8_midnight() {
+    fn claim_time_default_utc8_midnight() {
         let default = ClaimTime::default_utc8_midnight();
         assert_eq!(default.to_utc8_string(), "00:00");
     }
 
     #[test]
-    fn test_claim_time_invalid_empty() {
+    fn claim_time_invalid_empty() {
         assert!(
             ClaimTime::from_utc8_str("").is_err(),
             "Empty string should be invalid"
@@ -265,7 +258,7 @@ mod tests {
     }
 
     #[test]
-    fn test_claim_time_invalid_missing_leading_zero() {
+    fn claim_time_invalid_missing_leading_zero() {
         assert!(
             ClaimTime::from_utc8_str("0:00").is_err(),
             "0:00 should be invalid (missing leading zero in hour)"
@@ -281,7 +274,7 @@ mod tests {
     }
 
     #[test]
-    fn test_claim_time_invalid_out_of_range() {
+    fn claim_time_invalid_out_of_range() {
         assert!(
             ClaimTime::from_utc8_str("24:00").is_err(),
             "24:00 should be invalid (hour out of range)"
@@ -301,7 +294,7 @@ mod tests {
     }
 
     #[test]
-    fn test_claim_time_invalid_format() {
+    fn claim_time_invalid_format() {
         assert!(
             ClaimTime::from_utc8_str("12:30:00").is_err(),
             "12:30:00 should be invalid (includes seconds)"
@@ -317,7 +310,7 @@ mod tests {
     }
 
     #[test]
-    fn test_claim_time_invalid_non_numeric() {
+    fn claim_time_invalid_non_numeric() {
         assert!(
             ClaimTime::from_utc8_str("abc").is_err(),
             "abc should be invalid (non-numeric)"
@@ -337,7 +330,7 @@ mod tests {
     }
 
     #[test]
-    fn test_claim_time_invalid_whitespace() {
+    fn claim_time_invalid_whitespace() {
         assert!(
             ClaimTime::from_utc8_str(" 00:10").is_err(),
             " 00:10 should be invalid (leading whitespace)"
@@ -352,32 +345,25 @@ mod tests {
         );
     }
 
-    // =========================================================================
-    // Serde tests
-    // =========================================================================
-
     #[test]
-    fn test_claim_time_serde_roundtrip() {
+    fn claim_time_serde_roundtrip() {
         #[derive(Debug, Serialize, Deserialize, PartialEq)]
         struct TestConfig {
             #[serde(default, with = "claim_time_serde")]
             time: Option<ClaimTime>,
         }
 
-        // Test with value
         let toml_str = r#"time = "08:30""#;
         let config: TestConfig = toml::from_str(toml_str).expect("should deserialize");
         let time = config.time.expect("should have time");
         assert_eq!(time.to_utc8_string(), "08:30");
 
-        // Serialize back
         let serialized = toml::to_string(&config).expect("should serialize");
         assert!(
             serialized.contains("time = \"08:30\""),
             "serialized should contain time = \"08:30\", got: {serialized}"
         );
 
-        // Test with None (missing field)
         let toml_str = "";
         let config: TestConfig = toml::from_str(toml_str).expect("should deserialize empty");
         assert!(
@@ -387,43 +373,34 @@ mod tests {
     }
 
     #[test]
-    fn test_claim_time_serde_invalid_format() {
+    fn claim_time_serde_invalid_format() {
         #[derive(Debug, Serialize, Deserialize)]
         struct TestConfig {
             #[serde(default, with = "claim_time_serde")]
             time: Option<ClaimTime>,
         }
 
-        // Invalid time format should fail
         let toml_str = r#"time = "invalid""#;
         let result: std::result::Result<TestConfig, _> = toml::from_str(toml_str);
         assert!(result.is_err(), "invalid time format should fail to parse");
     }
 
-    // =========================================================================
-    // next_claim_datetime_utc tests
-    // =========================================================================
-
     #[test]
-    fn test_default_auto_claim_time_constant() {
+    fn default_auto_claim_time_constant() {
         assert_eq!(DEFAULT_AUTO_CLAIM_TIME, "00:00");
     }
 
     #[test]
-    fn test_next_claim_datetime_utc_with_default() {
-        // Should successfully calculate next claim time with default (None)
+    fn next_claim_datetime_utc_with_default() {
         let result = next_claim_datetime_utc(None);
         assert!(
             result.is_ok(),
             "next_claim_datetime_utc should succeed with None (default)"
         );
 
-        // The result should be in the future or within seconds of now
         let next_claim = result.expect("should be valid");
         let now = Timestamp::now();
 
-        // The next claim should be within the next 24 hours + a few seconds of
-        // tolerance
         let diff = next_claim.duration_since(now);
         assert!(
             diff.as_secs() >= -5,
@@ -436,8 +413,7 @@ mod tests {
     }
 
     #[test]
-    fn test_next_claim_datetime_utc_with_custom_time() {
-        // Should successfully calculate next claim time with custom time
+    fn next_claim_datetime_utc_with_custom_time() {
         let claim_time =
             ClaimTime::from_utc8_str("08:30").expect("08:30 should be valid UTC+8 time");
         let result = next_claim_datetime_utc(Some(claim_time));
@@ -461,7 +437,7 @@ mod tests {
     }
 
     #[test]
-    fn test_next_claim_already_passed_today_rolls_to_tomorrow() {
+    fn next_claim_already_passed_today_rolls_to_tomorrow() {
         // 08:30 UTC+8 = 00:30 UTC. Pick a `now` of 12:00 UTC on a fixed date so
         // today's claim time (00:30 UTC) is firmly in the past.
         let claim_time = ClaimTime::from_utc8_str("08:30").expect("valid time");
@@ -479,7 +455,7 @@ mod tests {
     }
 
     #[test]
-    fn test_next_claim_default_midnight_utc8_lands_on_1600z() {
+    fn next_claim_default_midnight_utc8_lands_on_1600z() {
         // Midnight UTC+8 is 16:00 UTC on the previous UTC day, so the default
         // claim time crosses the UTC date boundary.
         let now = "2024-06-15T12:00:00Z"
@@ -495,7 +471,7 @@ mod tests {
     }
 
     #[test]
-    fn test_next_claim_still_upcoming_today_stays_today() {
+    fn next_claim_still_upcoming_today_stays_today() {
         // 08:30 UTC+8 = 00:30 UTC. Pick a `now` of 00:00 UTC so today's claim
         // time (00:30 UTC) is still ahead.
         let claim_time = ClaimTime::from_utc8_str("08:30").expect("valid time");
@@ -512,11 +488,10 @@ mod tests {
     }
 
     #[test]
-    fn test_claim_time_copy_semantics() {
-        // ClaimTime should be Copy, so we can use it without cloning
+    fn claim_time_copy_semantics() {
         let time = ClaimTime::from_utc8_str("08:30").expect("08:30 should be valid");
-        let time2 = time; // Copy
-        let time3 = time; // Copy again
+        let time2 = time;
+        let time3 = time;
 
         assert_eq!(time.to_utc8_string(), time2.to_utc8_string());
         assert_eq!(time.to_utc8_string(), time3.to_utc8_string());

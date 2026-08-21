@@ -36,7 +36,7 @@ pub enum ClientError {
 
 impl ClientError {
     /// Creates a new API error.
-    #[must_use = "this returns a new ClientError and does not modify self"]
+    #[must_use]
     pub fn api_error(code: i32, message: impl Into<String>) -> Self {
         Self::ApiError {
             code,
@@ -45,13 +45,13 @@ impl ClientError {
     }
 
     /// Creates a new authentication error.
-    #[must_use = "this returns a new ClientError and does not modify self"]
+    #[must_use]
     pub fn auth_failed(reason: impl Into<String>) -> Self {
         Self::AuthenticationFailed(reason.into())
     }
 
     /// Creates a new configuration error.
-    #[must_use = "this returns a new ClientError and does not modify self"]
+    #[must_use]
     pub fn invalid_config(reason: impl Into<String>) -> Self {
         Self::InvalidConfig(reason.into())
     }
@@ -77,3 +77,16 @@ impl From<reqwest_middleware::Error> for ClientError {
 
 /// Result type alias using the base `ClientError` type.
 pub type Result<T> = std::result::Result<T, ClientError>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn error_crosses_task_boundaries() {
+        const fn assert_send<T: Send>() {}
+        const fn assert_sync<T: Sync>() {}
+        assert_send::<ClientError>();
+        assert_sync::<ClientError>();
+    }
+}

@@ -25,75 +25,66 @@ mod tests {
     use jiff::Timestamp;
     use storekeeper_core::DisplayableResource;
 
-    // =========================================================================
-    // DisplayableResource trait tests
-    // =========================================================================
-
     #[test]
-    fn test_resin_display_name() {
+    fn resin_display_name() {
         let resource =
             GenshinResource::Resin(StaminaResource::new(120, 160, Timestamp::now(), 480));
         assert_eq!(resource.display_name(), "Original Resin");
     }
 
     #[test]
-    fn test_resin_icon() {
+    fn resin_icon() {
         let resource =
             GenshinResource::Resin(StaminaResource::new(120, 160, Timestamp::now(), 480));
         assert_eq!(resource.icon(), "resin");
     }
 
     #[test]
-    fn test_parametric_transformer_display_name() {
+    fn parametric_transformer_display_name() {
         let resource = GenshinResource::ParametricTransformer(CooldownResource::ready());
         assert_eq!(resource.display_name(), "Parametric Transformer");
     }
 
     #[test]
-    fn test_parametric_transformer_icon() {
+    fn parametric_transformer_icon() {
         let resource = GenshinResource::ParametricTransformer(CooldownResource::ready());
         assert_eq!(resource.icon(), "transformer");
     }
 
     #[test]
-    fn test_realm_currency_display_name() {
+    fn realm_currency_display_name() {
         let resource =
             GenshinResource::RealmCurrency(StaminaResource::new(1000, 2400, Timestamp::now(), 30));
         assert_eq!(resource.display_name(), "Realm Currency");
     }
 
     #[test]
-    fn test_realm_currency_icon() {
+    fn realm_currency_icon() {
         let resource =
             GenshinResource::RealmCurrency(StaminaResource::new(1000, 2400, Timestamp::now(), 30));
         assert_eq!(resource.icon(), "realm");
     }
 
     #[test]
-    fn test_expeditions_display_name() {
+    fn expeditions_display_name() {
         let resource =
             GenshinResource::Expeditions(ExpeditionResource::new(3, 5, Timestamp::now()));
         assert_eq!(resource.display_name(), "Expeditions");
     }
 
     #[test]
-    fn test_expeditions_icon() {
+    fn expeditions_icon() {
         let resource =
             GenshinResource::Expeditions(ExpeditionResource::new(3, 5, Timestamp::now()));
         assert_eq!(resource.icon(), "expedition");
     }
 
-    // =========================================================================
-    // Serde serialization tests (tagged format)
-    // =========================================================================
-
     #[test]
-    fn test_resin_serialization_format() {
+    fn resin_serialization_format() {
         let resource =
             GenshinResource::Resin(StaminaResource::new(120, 160, Timestamp::now(), 480));
         let json = serde_json::to_string(&resource).expect("should serialize");
 
-        // Verify tagged format
         assert!(
             json.contains(r#""type":"resin""#),
             "Should have type tag 'resin', got: {json}"
@@ -105,7 +96,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parametric_transformer_serialization_format() {
+    fn parametric_transformer_serialization_format() {
         let resource = GenshinResource::ParametricTransformer(CooldownResource::ready());
         let json = serde_json::to_string(&resource).expect("should serialize");
 
@@ -116,7 +107,7 @@ mod tests {
     }
 
     #[test]
-    fn test_realm_currency_serialization_format() {
+    fn realm_currency_serialization_format() {
         let resource =
             GenshinResource::RealmCurrency(StaminaResource::new(1000, 2400, Timestamp::now(), 30));
         let json = serde_json::to_string(&resource).expect("should serialize");
@@ -128,7 +119,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expeditions_serialization_format() {
+    fn expeditions_serialization_format() {
         let resource =
             GenshinResource::Expeditions(ExpeditionResource::new(3, 5, Timestamp::now()));
         let json = serde_json::to_string(&resource).expect("should serialize");
@@ -139,12 +130,8 @@ mod tests {
         );
     }
 
-    // =========================================================================
-    // Serde roundtrip tests
-    // =========================================================================
-
     #[test]
-    fn test_resin_serde_roundtrip() {
+    fn resin_serde_roundtrip() {
         let original =
             GenshinResource::Resin(StaminaResource::new(120, 160, Timestamp::now(), 480));
         let json = serde_json::to_string(&original).expect("should serialize");
@@ -158,7 +145,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parametric_transformer_serde_roundtrip() {
+    fn parametric_transformer_serde_roundtrip() {
         let original = GenshinResource::ParametricTransformer(CooldownResource::ready());
         let json = serde_json::to_string(&original).expect("should serialize");
         let deserialized: GenshinResource =
@@ -171,7 +158,7 @@ mod tests {
     }
 
     #[test]
-    fn test_realm_currency_serde_roundtrip() {
+    fn realm_currency_serde_roundtrip() {
         let original =
             GenshinResource::RealmCurrency(StaminaResource::new(1000, 2400, Timestamp::now(), 30));
         let json = serde_json::to_string(&original).expect("should serialize");
@@ -185,7 +172,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expeditions_serde_roundtrip() {
+    fn expeditions_serde_roundtrip() {
         let original =
             GenshinResource::Expeditions(ExpeditionResource::new(3, 5, Timestamp::now()));
         let json = serde_json::to_string(&original).expect("should serialize");
@@ -199,9 +186,7 @@ mod tests {
     }
 
     #[test]
-    fn test_resin_serializes_full_at_as_utc_z() {
-        // Locks the JSON datetime contract consumed by the frontend: the nested
-        // `data.fullAt` is an RFC3339 string in UTC with a trailing `Z`.
+    fn resin_serializes_full_at_as_utc_z() {
         let ts = Timestamp::from_second(1_704_067_200).expect("valid timestamp");
         let resource = GenshinResource::Resin(StaminaResource::new(120, 160, ts, 480));
         let value = serde_json::to_value(&resource).expect("should serialize");
@@ -218,24 +203,16 @@ mod tests {
         );
     }
 
-    // =========================================================================
-    // Debug trait tests
-    // =========================================================================
-
     #[test]
-    fn test_resource_is_debug() {
+    fn resource_is_debug() {
         let resource =
             GenshinResource::Resin(StaminaResource::new(120, 160, Timestamp::now(), 480));
         let debug = format!("{resource:?}");
         assert!(debug.contains("Resin"));
     }
 
-    // =========================================================================
-    // Clone trait tests
-    // =========================================================================
-
     #[test]
-    fn test_resource_is_clone() {
+    fn resource_is_clone() {
         let resource =
             GenshinResource::Resin(StaminaResource::new(120, 160, Timestamp::now(), 480));
         let cloned = resource.clone();

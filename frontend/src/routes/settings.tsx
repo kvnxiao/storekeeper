@@ -105,37 +105,42 @@ const SettingsForm: VoidComponent<SettingsFormProps> = (props) => {
               value type follows configKey, so a single field would widen it past
               what either section component accepts. */}
           <For each={GAMES}>
-            {(game) =>
-              game.provider === "hoyolab" ? (
-                <form.Field name={`config.games.${game.configKey}`}>
-                  {(field) => (
-                    <HoyolabGameSection
-                      title={game.name()}
-                      description={game.description()}
-                      gameId={game.gameId}
-                      resourceTypes={game.resourceTypes}
-                      config={field().state.value}
-                      resourceLimits={resourceLimits().get(game.gameId)}
-                      onChange={(value) => field().handleChange(value)}
-                    />
-                  )}
-                </form.Field>
-              ) : (
-                <form.Field name={`config.games.${game.configKey}`}>
-                  {(field) => (
-                    <WuwaGameSection
-                      title={game.name()}
-                      description={game.description()}
-                      gameId={game.gameId}
-                      resourceTypes={game.resourceTypes}
-                      config={field().state.value}
-                      resourceLimits={resourceLimits().get(game.gameId)}
-                      onChange={(wuwa) => field().handleChange(wuwa)}
-                    />
-                  )}
-                </form.Field>
-              )
-            }
+            {(game) => (
+              <Show
+                when={game.provider === "hoyolab" ? game : undefined}
+                fallback={
+                  <form.Field name="config.games.wuthering_waves">
+                    {(field) => (
+                      <WuwaGameSection
+                        title={game.name()}
+                        description={game.description()}
+                        gameId={game.gameId}
+                        resourceTypes={game.resourceTypes}
+                        config={field().state.value}
+                        resourceLimits={resourceLimits().get(game.gameId)}
+                        onChange={(wuwa) => field().handleChange(wuwa)}
+                      />
+                    )}
+                  </form.Field>
+                }
+              >
+                {(hoyolab) => (
+                  <form.Field name={`config.games.${hoyolab().configKey}`}>
+                    {(field) => (
+                      <HoyolabGameSection
+                        title={game.name()}
+                        description={game.description()}
+                        gameId={game.gameId}
+                        resourceTypes={game.resourceTypes}
+                        config={field().state.value}
+                        resourceLimits={resourceLimits().get(game.gameId)}
+                        onChange={(value) => field().handleChange(value)}
+                      />
+                    )}
+                  </form.Field>
+                )}
+              </Show>
+            )}
           </For>
 
           <form.Field name="secrets.hoyolab">
@@ -188,7 +193,7 @@ const SettingsForm: VoidComponent<SettingsFormProps> = (props) => {
   );
 };
 
-const SettingsPage: VoidComponent = () => {
+export const SettingsPage: VoidComponent = () => {
   const configQuery = useQuery(() => configQueryOptions());
   const secretsQuery = useQuery(() => secretsQueryOptions());
 

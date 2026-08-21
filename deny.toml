@@ -1,0 +1,67 @@
+# cargo-deny configuration. Run with `just audit`.
+# See: https://embarkstudios.github.io/cargo-deny/checks/cfg.html
+
+[graph]
+all-features = true
+targets = [
+    "x86_64-pc-windows-msvc",
+    "x86_64-unknown-linux-gnu",
+    "aarch64-apple-darwin",
+]
+
+[advisories]
+version = 2
+yanked = "deny"
+# Each ignored advisory is `unmaintained` on a transitive crate that no
+# first-party dependency selects. Re-check them when Tauri publishes a major
+# release; a vulnerability advisory is never ignored here.
+ignore = [
+    # gtk-rs GTK3 bindings, pulled in by the Tauri Linux backend.
+    { id = "RUSTSEC-2024-0411", reason = "gtk3 via tauri linux backend" },
+    { id = "RUSTSEC-2024-0412", reason = "gtk3 via tauri linux backend" },
+    { id = "RUSTSEC-2024-0413", reason = "gtk3 via tauri linux backend" },
+    { id = "RUSTSEC-2024-0414", reason = "gtk3 via tauri linux backend" },
+    { id = "RUSTSEC-2024-0415", reason = "gtk3 via tauri linux backend" },
+    { id = "RUSTSEC-2024-0416", reason = "gtk3 via tauri linux backend" },
+    { id = "RUSTSEC-2024-0417", reason = "gtk3 via tauri linux backend" },
+    { id = "RUSTSEC-2024-0418", reason = "gtk3 via tauri linux backend" },
+    { id = "RUSTSEC-2024-0419", reason = "gtk3 via tauri linux backend" },
+    { id = "RUSTSEC-2024-0420", reason = "gtk3 via tauri linux backend" },
+    # rust-unic crates, reached through tauri-utils -> urlpattern.
+    { id = "RUSTSEC-2025-0075", reason = "rust-unic via tauri-utils" },
+    { id = "RUSTSEC-2025-0080", reason = "rust-unic via tauri-utils" },
+    { id = "RUSTSEC-2025-0081", reason = "rust-unic via tauri-utils" },
+    { id = "RUSTSEC-2025-0098", reason = "rust-unic via tauri-utils" },
+    { id = "RUSTSEC-2025-0100", reason = "rust-unic via tauri-utils" },
+    # proc-macro-error, a build-time transitive of the gtk3 stack.
+    { id = "RUSTSEC-2024-0370", reason = "proc-macro-error, build-time transitive" },
+]
+
+[licenses]
+version = 2
+allow = [
+    "0BSD",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "CC0-1.0",
+    "ISC",
+    "MIT",
+    "MIT-0",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Zlib",
+]
+confidence-threshold = 0.93
+
+# The bans check is excluded from `just audit`: cargo-deny 0.20 cannot resolve
+# the git-sourced ICU4X entries in [workspace.dependencies] and aborts.
+[bans]
+multiple-versions = "allow"
+wildcards = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-git = ["https://github.com/unicode-org/icu4x"]

@@ -127,10 +127,6 @@ mod tests {
     use jiff::Timestamp;
     use serde::Deserialize;
 
-    // =========================================================================
-    // seconds_string_to_datetime tests
-    // =========================================================================
-
     #[derive(Debug, Deserialize)]
     struct TestSecondsString {
         #[serde(deserialize_with = "super::seconds_string_to_datetime::deserialize")]
@@ -138,14 +134,13 @@ mod tests {
     }
 
     #[test]
-    fn test_seconds_string_zero_returns_now() {
+    fn seconds_string_zero_returns_now() {
         let json = r#"{"value": "0"}"#;
         let before = Timestamp::now();
         let result: TestSecondsString =
             serde_json::from_str(json).expect("should deserialize zero");
         let after = Timestamp::now();
 
-        // The result should be between before and after (i.e., approximately now)
         assert!(
             result.value >= before && result.value <= after,
             "Zero seconds should return approximately Timestamp::now()"
@@ -153,14 +148,13 @@ mod tests {
     }
 
     #[test]
-    fn test_seconds_string_positive_adds_to_now() {
+    fn seconds_string_positive_adds_to_now() {
         let json = r#"{"value": "60"}"#;
         let before = Timestamp::now();
         let result: TestSecondsString =
             serde_json::from_str(json).expect("should deserialize 60 seconds");
         let after = Timestamp::now();
 
-        // Result should be approximately 60 seconds in the future
         let diff_from_before = result.value.duration_since(before).as_secs();
         let diff_from_after = result.value.duration_since(after).as_secs();
 
@@ -175,7 +169,7 @@ mod tests {
     }
 
     #[test]
-    fn test_seconds_string_negative_fails() {
+    fn seconds_string_negative_fails() {
         let json = r#"{"value": "-1"}"#;
         let result: Result<TestSecondsString, _> = serde_json::from_str(json);
         assert!(
@@ -185,7 +179,7 @@ mod tests {
     }
 
     #[test]
-    fn test_seconds_string_invalid_fails() {
+    fn seconds_string_invalid_fails() {
         let json = r#"{"value": "not_a_number"}"#;
         let result: Result<TestSecondsString, _> = serde_json::from_str(json);
         assert!(
@@ -194,10 +188,6 @@ mod tests {
         );
     }
 
-    // =========================================================================
-    // seconds_u64_to_datetime tests
-    // =========================================================================
-
     #[derive(Debug, Deserialize)]
     struct TestSecondsU64 {
         #[serde(deserialize_with = "super::seconds_u64_to_datetime::deserialize")]
@@ -205,7 +195,7 @@ mod tests {
     }
 
     #[test]
-    fn test_seconds_u64_zero_returns_now() {
+    fn seconds_u64_zero_returns_now() {
         let json = r#"{"value": 0}"#;
         let before = Timestamp::now();
         let result: TestSecondsU64 = serde_json::from_str(json).expect("should deserialize zero");
@@ -218,7 +208,7 @@ mod tests {
     }
 
     #[test]
-    fn test_seconds_u64_positive_adds_to_now() {
+    fn seconds_u64_positive_adds_to_now() {
         let json = r#"{"value": 120}"#;
         let before = Timestamp::now();
         let result: TestSecondsU64 =
@@ -232,7 +222,7 @@ mod tests {
     }
 
     #[test]
-    fn test_seconds_u64_overflow_fails() {
+    fn seconds_u64_overflow_fails() {
         // u64::MAX exceeds i64::MAX, so the conversion must reject it.
         let json = format!(r#"{{"value": {}}}"#, u64::MAX);
         let result: Result<TestSecondsU64, _> = serde_json::from_str(&json);
@@ -242,10 +232,6 @@ mod tests {
         );
     }
 
-    // =========================================================================
-    // timestamp_ms_to_datetime tests
-    // =========================================================================
-
     #[derive(Debug, Deserialize)]
     struct TestTimestampMs {
         #[serde(deserialize_with = "super::timestamp_ms_to_datetime::deserialize")]
@@ -253,7 +239,7 @@ mod tests {
     }
 
     #[test]
-    fn test_timestamp_ms_zero_returns_now() {
+    fn timestamp_ms_zero_returns_now() {
         let json = r#"{"value": 0}"#;
         let before = Timestamp::now();
         let result: TestTimestampMs = serde_json::from_str(json).expect("should deserialize zero");
@@ -266,7 +252,7 @@ mod tests {
     }
 
     #[test]
-    fn test_timestamp_ms_valid_converts_to_exact_instant() {
+    fn timestamp_ms_valid_converts_to_exact_instant() {
         // Use a known timestamp: 2024-01-01 00:00:00 UTC = 1704067200000 ms
         let json = r#"{"value": 1704067200000}"#;
         let result: TestTimestampMs =
@@ -277,7 +263,7 @@ mod tests {
     }
 
     #[test]
-    fn test_timestamp_ms_overflow_fails() {
+    fn timestamp_ms_overflow_fails() {
         // u64::MAX exceeds i64::MAX, so the conversion must reject it.
         let json = format!(r#"{{"value": {}}}"#, u64::MAX);
         let result: Result<TestTimestampMs, _> = serde_json::from_str(&json);
@@ -288,14 +274,12 @@ mod tests {
     }
 
     #[test]
-    fn test_timestamp_ms_future_works() {
-        // Use a future timestamp (current time + 1 hour in ms)
+    fn timestamp_ms_future_works() {
         let future_ms = Timestamp::now().as_millisecond() + 3_600_000;
         let json = format!(r#"{{"value": {future_ms}}}"#);
         let result: TestTimestampMs =
             serde_json::from_str(&json).expect("should deserialize future timestamp");
 
-        // Should be approximately 1 hour in the future
         let diff = result.value.duration_since(Timestamp::now()).as_secs();
         assert!(
             (3590..=3610).contains(&diff),
@@ -303,15 +287,8 @@ mod tests {
         );
     }
 
-    // =========================================================================
-    // Serialization contract - locks the JSON shape the TS frontend parses
-    // =========================================================================
-
     #[test]
-    fn test_timestamp_serializes_as_rfc3339_utc_z() {
-        // jiff::Timestamp serializes to RFC3339 with a trailing `Z` (UTC). The
-        // frontend parses this with `new Date(...)`; this test pins the shape so
-        // a future serde change can't silently break the contract.
+    fn timestamp_serializes_as_rfc3339_utc_z() {
         let ts = Timestamp::from_second(1_704_067_200).expect("valid timestamp");
         let json = serde_json::to_string(&ts).expect("serialize");
         assert_eq!(json, r#""2024-01-01T00:00:00Z""#);

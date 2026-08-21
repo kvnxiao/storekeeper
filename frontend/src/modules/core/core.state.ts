@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
-import { createMemo, createRoot, createSignal } from "solid-js";
+import { type EventCallback, type EventName, listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { createMemo, createRoot, createSignal, onCleanup } from "solid-js";
 import { AppEvent } from "@/modules/core/core.constants";
 import { queryClient } from "@/modules/core/core.queryClient";
 import { invalidateDailyRewardStatus } from "@/modules/daily-rewards/daily-rewards.query";
@@ -16,7 +16,7 @@ import { getLocale, isLocale, setLocale } from "@/paraglide/runtime";
  */
 const LOCALE_RESOLVE_TIMEOUT_MS = 3_000;
 
-function createCore() {
+export function createCore() {
   const [locale, setLocaleSignal] = createSignal<string>(getLocale());
 
   const [localeReady, setLocaleReady] = createSignal(false);
@@ -84,6 +84,24 @@ function createCore() {
   }
 
   let initialized = false;
+  let localeTimeout: ReturnType<typeof setTimeout> | undefined;
+  const unlisteners: Promise<UnlistenFn>[] = [];
+
+  function subscribe<T>(name: EventName, handler: EventCallback<T>): void {
+    unlisteners.push(listen<T>(name, handler));
+  }
+
+  // Because init runs from a component's onMount scope, that scope can dispose
+  // while the factory root remains alive. Register cleanup in the factory root
+  // and keep `initialized` in its closure so component disposal does not
+  // register listeners again.
+  onCleanup(() => {
+    clearInterval(tickInterval);
+    clearTimeout(localeTimeout);
+    for (const pending of unlisteners) {
+      pending.then((unlisten) => unlisten()).catch(console.error);
+    }
+  });
 
   /** Starts the tick and the backend listeners, which live for the app's lifetime. */
   function init(): void {
@@ -94,17 +112,17 @@ function createCore() {
 
     startTickInterval();
 
-    void listen(AppEvent.RefreshStarted, () => {
+    subscribe(AppEvent.RefreshStarted, () => {
       resourcesState.refreshStarted();
     });
 
-    void listen<AllResources>(AppEvent.ResourcesUpdated, (event) => {
+    subscribe<AllResources>(AppEvent.ResourcesUpdated, (event) => {
       resourcesState.refreshSettled();
       queryClient.setQueryData(resourcesQueryOptions().queryKey, event.payload);
       refreshTick();
     });
 
-    void listen<GameResourcePayload>(AppEvent.GameResourceUpdated, (event) => {
+    subscribe<GameResourcePayload>(AppEvent.GameResourceUpdated, (event) => {
       const { gameId, data } = event.payload;
       resourcesState.gameSettled(gameId);
       queryClient.setQueryData(
@@ -117,11 +135,11 @@ function createCore() {
       refreshTick();
     });
 
-    void listen(AppEvent.DailyRewardClaimed, () => {
+    subscribe(AppEvent.DailyRewardClaimed, () => {
       invalidateDailyRewardStatus().catch(console.error);
     });
 
-    void listen(AppEvent.DailyRewardStatusUpdated, () => {
+    subscribe(AppEvent.DailyRewardStatusUpdated, () => {
       invalidateDailyRewardStatus().catch(console.error);
     });
 
@@ -131,12 +149,12 @@ function createCore() {
     // localeReady so the first render already uses the resolved locale. The
     // timeout is what keeps a command that never settles from leaving the
     // window permanently blank; a rejection releases the views the same way.
-    const releaseOnTimeout = setTimeout(() => setLocaleReady(true), LOCALE_RESOLVE_TIMEOUT_MS);
+    localeTimeout = setTimeout(() => setLocaleReady(true), LOCALE_RESOLVE_TIMEOUT_MS);
     void invoke<string>("get_effective_locale")
       .then((effectiveLocale) => setAppLocale(effectiveLocale))
       .catch(console.error)
       .finally(() => {
-        clearTimeout(releaseOnTimeout);
+        clearTimeout(localeTimeout);
         setLocaleReady(true);
       });
   }

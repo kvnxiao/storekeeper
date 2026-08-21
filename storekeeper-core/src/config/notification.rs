@@ -45,7 +45,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_resource_notification_config_serde_roundtrip() {
+    fn resource_notification_config_serde_roundtrip() {
         let toml_str = r"
             enabled = true
             notify_minutes_before_full = 60
@@ -72,7 +72,7 @@ mod tests {
     }
 
     #[test]
-    fn test_resource_notification_config_notify_at_value_roundtrip() {
+    fn resource_notification_config_notify_at_value_roundtrip() {
         let toml_str = r"
             enabled = true
             notify_at_value = 180
@@ -103,7 +103,7 @@ mod tests {
     }
 
     #[test]
-    fn test_resource_notification_config_both_none_defaults() {
+    fn resource_notification_config_both_none_defaults() {
         let toml_str = r"
             enabled = true
             cooldown_minutes = 30

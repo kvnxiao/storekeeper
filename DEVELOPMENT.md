@@ -22,6 +22,7 @@ just dev      # Run tauri desktop app in dev mode
 just lint     # Run clippy and check formatting
 just fix      # Lint and apply fixes + formatting
 just test     # Run Rust tests
+just audit    # Check dependency advisories, licenses, and sources
 just lint-web # Lint, format check, and type check frontend code
 just fix-web  # Lint and apply fixes + formatting for frontend code
 just test-web # Run frontend tests

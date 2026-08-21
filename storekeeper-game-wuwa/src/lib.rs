@@ -3,9 +3,9 @@
 //! This crate provides the game client for fetching WuWa resources
 //! from the Kuro Games API.
 
-pub mod client;
-pub mod error;
-pub mod resource;
+mod client;
+mod error;
+mod resource;
 
 pub use client::WuwaClient;
 pub use error::Error;
