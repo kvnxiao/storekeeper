@@ -7,9 +7,12 @@ const tooltipStyle =
 
 const DEFAULT_PLACEMENT = "top";
 const DEFAULT_OPEN_DELAY_MS = 300;
-// Kobalte adds half the arrow's height to this value, so 0 already clears the
-// arrow and anything here is the gap between the trigger and the arrow tip.
-const DEFAULT_GUTTER_PX = 4;
+// Kobalte offsets the bubble by this value plus half the arrow's height, so 0
+// puts the arrow tip against the trigger.
+const DEFAULT_GUTTER_PX = 0;
+
+// Kobalte's arrow defaults to 30px, which alone offsets the bubble by 15px.
+const ARROW_SIZE_PX = 12;
 
 export interface TooltipBehaviorProps {
   /** Side of the trigger the bubble prefers. Defaults to `top`. */
@@ -40,7 +43,7 @@ export const Tooltip: ParentComponent<TooltipProps> = (props) => {
       </TooltipPrimitive.Trigger>
       <TooltipPrimitive.Portal>
         <TooltipPrimitive.Content class={tooltipStyle}>
-          <TooltipPrimitive.Arrow />
+          <TooltipPrimitive.Arrow size={ARROW_SIZE_PX} />
           {props.content}
         </TooltipPrimitive.Content>
       </TooltipPrimitive.Portal>
@@ -79,7 +82,7 @@ export const TooltipButton: ParentComponent<TooltipButtonProps> = (props) => {
       </TooltipPrimitive.Trigger>
       <TooltipPrimitive.Portal>
         <TooltipPrimitive.Content class={tooltipStyle}>
-          <TooltipPrimitive.Arrow />
+          <TooltipPrimitive.Arrow size={ARROW_SIZE_PX} />
           {local.tooltip}
         </TooltipPrimitive.Content>
       </TooltipPrimitive.Portal>

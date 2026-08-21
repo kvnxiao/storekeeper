@@ -115,6 +115,8 @@ export const LogsPage: VoidComponent = () => {
     overscan: ROW_OVERSCAN,
   });
 
+  const rows = createMemo(() => virtualizer.getVirtualItems().slice());
+
   const scrollToLatest = (): void => {
     const count = visible().length;
     if (count > 0) {
@@ -202,7 +204,7 @@ export const LogsPage: VoidComponent = () => {
                 class={cn("relative w-full", anchored() || "opacity-0")}
                 style={{ height: `${virtualizer.getTotalSize()}px` }}
               >
-                <For each={virtualizer.getVirtualItems()}>
+                <For each={rows()}>
                   {(item) => (
                     <Show when={visible()[item.index]}>
                       {(entry) => (
