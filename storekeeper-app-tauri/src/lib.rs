@@ -10,6 +10,7 @@ mod daily_reward_registry;
 mod error;
 mod events;
 mod i18n;
+mod logging;
 mod notification;
 mod polling;
 mod provider_batch;
@@ -17,22 +18,75 @@ mod registry;
 mod scheduled_claim;
 mod state;
 mod tray;
+mod window;
 
 use anyhow::Context;
 use anyhow::Result;
 use tauri::Manager;
 use tauri::RunEvent;
 use tauri_plugin_autostart::ManagerExt;
+use tauri_plugin_window_state::StateFlags;
 use tokio_util::sync::CancellationToken;
-use tracing_subscriber::EnvFilter;
+use window::MAIN_WINDOW_LABEL;
 
-/// Initializes the tracing subscriber for logging.
+/// Apply the loaded configuration, start background tasks, and build the tray
+/// icon.
 ///
-/// Uses `RUST_LOG` environment variable if set, otherwise defaults to "info".
-fn init_tracing() {
-    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+/// # Errors
+///
+/// Returns an error if the tray icon cannot be created.
+fn setup_app(
+    app: &mut tauri::App,
+    log_filter: logging::LogFilter,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let app_state = state::AppState::with_config();
 
-    tracing_subscriber::fmt().with_env_filter(filter).init();
+    let (language, log_level, should_autostart) = tauri::async_runtime::block_on(async {
+        let inner = app_state.inner.read().await;
+        (
+            inner.config.general.language.clone(),
+            inner.config.general.log_level.clone(),
+            inner.config.general.autostart,
+        )
+    });
+
+    log_filter.set_level(&log_level);
+    app.manage(log_filter);
+
+    let effective_locale = i18n::resolve_locale(language.as_deref());
+    if let Err(e) = i18n::init(effective_locale) {
+        tracing::warn!(error = %e, "Failed to initialize i18n, falling back to defaults");
+        if let Err(e) = i18n::init("en") {
+            tracing::error!(error = %e, "Failed to initialize i18n fallback locale");
+        }
+    }
+
+    app.manage(app_state);
+
+    let autolaunch = app.autolaunch();
+    let autostart_result = if should_autostart {
+        autolaunch.enable()
+    } else {
+        autolaunch.disable()
+    };
+    if let Err(e) = autostart_result {
+        tracing::warn!(error = %e, "Failed to sync autostart state");
+    }
+
+    let cancel_token = CancellationToken::new();
+    app.manage(cancel_token.clone());
+
+    polling::start_polling(app.handle().clone(), cancel_token.clone());
+
+    scheduled_claim::start_scheduled_claims(app.handle().clone(), cancel_token.clone());
+
+    notification::start_notification_checker(app.handle().clone(), cancel_token.clone());
+
+    setup_ctrlc_handler(app.handle().clone(), cancel_token);
+
+    tray::setup_tray(app)?;
+
+    Ok(())
 }
 
 /// Runs the Storekeeper application.
@@ -45,14 +99,18 @@ fn init_tracing() {
     reason = "tauri::generate_context! expands to a process::exit path"
 )]
 pub fn run() -> Result<()> {
-    init_tracing();
+    let log_filter = logging::init();
+    tracing::info!(
+        version = env!("CARGO_PKG_VERSION"),
+        log_dir = %logging::log_dir().unwrap_or_default(),
+        "Storekeeper starting"
+    );
 
     let app = tauri::Builder::default()
-        // Must be registered first so it runs before any other plugin. When a
-        // second instance is launched, this fires in the already-running
-        // instance and the new process exits; reveal the existing window.
+        // Register this plugin before the others. A second instance invokes the
+        // callback in the running process, then the new process exits.
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
-            if let Some(window) = app.get_webview_window("main") {
+            if let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) {
                 if let Err(e) = window.unminimize() {
                     tracing::debug!(error = %e, "Failed to unminimize window");
                 }
@@ -66,52 +124,15 @@ pub fn run() -> Result<()> {
         }))
         .plugin(tauri_plugin_autostart::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
-        .setup(|app| {
-            let app_state = state::AppState::with_config();
-
-            let (language, should_autostart) = tauri::async_runtime::block_on(async {
-                let inner = app_state.inner.read().await;
-                (
-                    inner.config.general.language.clone(),
-                    inner.config.general.autostart,
-                )
-            });
-
-            let effective_locale = i18n::resolve_locale(language.as_deref());
-            if let Err(e) = i18n::init(effective_locale) {
-                tracing::warn!(error = %e, "Failed to initialize i18n, falling back to defaults");
-                if let Err(e) = i18n::init("en") {
-                    tracing::error!(error = %e, "Failed to initialize i18n fallback locale");
-                }
-            }
-
-            app.manage(app_state);
-
-            let autolaunch = app.autolaunch();
-            let autostart_result = if should_autostart {
-                autolaunch.enable()
-            } else {
-                autolaunch.disable()
-            };
-            if let Err(e) = autostart_result {
-                tracing::warn!(error = %e, "Failed to sync autostart state");
-            }
-
-            let cancel_token = CancellationToken::new();
-            app.manage(cancel_token.clone());
-
-            polling::start_polling(app.handle().clone(), cancel_token.clone());
-
-            scheduled_claim::start_scheduled_claims(app.handle().clone(), cancel_token.clone());
-
-            notification::start_notification_checker(app.handle().clone(), cancel_token.clone());
-
-            setup_ctrlc_handler(app.handle().clone(), cancel_token);
-
-            tray::setup_tray(app)?;
-
-            Ok(())
-        })
+        // Preserve size and position for secondary windows; the main window is
+        // centered by its config and minimizes to the tray.
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED)
+                .with_denylist(&[MAIN_WINDOW_LABEL])
+                .build(),
+        )
+        .setup(move |app| setup_app(app, log_filter))
         .invoke_handler(tauri::generate_handler![
             commands::get_all_resources,
             commands::refresh_resources,
@@ -119,6 +140,9 @@ pub fn run() -> Result<()> {
             commands::get_secrets,
             commands::save_and_apply,
             commands::open_config_folder,
+            commands::open_log_folder,
+            commands::open_logs_window,
+            commands::read_log_tail,
             commands::send_preview_notification,
             commands::get_daily_reward_status,
             commands::refresh_daily_reward_status,
@@ -128,7 +152,11 @@ pub fn run() -> Result<()> {
             commands::get_effective_locale,
         ])
         .on_window_event(|window, event| {
-            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+            // Keep the main window in the tray; close secondary windows so they
+            // do not keep their own frontend work alive.
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event
+                && window.label() == MAIN_WINDOW_LABEL
+            {
                 api.prevent_close();
                 if let Err(e) = window.hide() {
                     tracing::debug!(error = %e, "Failed to hide window");

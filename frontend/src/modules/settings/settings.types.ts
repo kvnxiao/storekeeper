@@ -1,16 +1,8 @@
-/**
- * Hand-mirrored `AppConfig`/`SecretsConfig` from `storekeeper-core`. Field names
- * stay snake_case end to end so Rust serializes straight into these shapes with
- * no DTO layer (see `docs/architecture/04-data-flow.md`).
- */
+/** Match the configuration shapes serialized by the Rust backend. */
 
 import type { ResourceType } from "@/modules/games/games.constants";
 import type { Locale } from "@/modules/i18n/i18n.constants";
-
-/** Log levels the backend documents in the generated config.toml. */
-export const LOG_LEVELS = ["error", "warn", "info", "debug", "trace"] as const;
-
-export type LogLevel = (typeof LOG_LEVELS)[number];
+import type { LogLevel } from "@/modules/logs/logs.constants";
 
 /** General application settings */
 export interface GeneralConfig {

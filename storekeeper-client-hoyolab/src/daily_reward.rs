@@ -4,6 +4,7 @@
 //! all HoYoLab games (Genshin Impact, Honkai: Star Rail, Zenless Zone Zero).
 
 use crate::client::HoyolabClient;
+use crate::error::ClientError;
 use crate::error::Error;
 use crate::error::Result;
 use reqwest::Method;
@@ -73,6 +74,17 @@ struct RewardItem {
     count: u32,
     icon: String,
 }
+
+/// API response fields used to diagnose an unregistered sign attempt.
+#[derive(Debug, Deserialize)]
+struct SignResponse {
+    risk_code: Option<i32>,
+    gt: Option<String>,
+    challenge: Option<String>,
+}
+
+/// HoYoLab retcode for a sign request on a day already signed.
+const ALREADY_SIGNED_RETCODE: i32 = -5003;
 
 /// Generic HoYoLab daily reward client.
 pub struct HoyolabDailyRewardClient {
@@ -185,12 +197,39 @@ impl DailyRewardClient for HoyolabDailyRewardClient {
         let url = self.reward_url("sign");
         let headers = self.reward_headers();
 
-        let _ = self
+        let sign = match self
             .client
-            .request_with_headers::<serde_json::Value, ()>(Method::POST, &url, None, &headers)
-            .await?;
+            .request_with_headers::<SignResponse, ()>(Method::POST, &url, None, &headers)
+            .await
+        {
+            Ok(sign) => sign,
+            Err(Error::Client(ClientError::ApiError {
+                code: ALREADY_SIGNED_RETCODE,
+                ..
+            })) => {
+                tracing::debug!(game = game, "Sign endpoint reports today already signed");
+                let status = self.get_reward_status().await?;
+                return Ok(ClaimResult::already_claimed(
+                    status.today_reward,
+                    status.info,
+                ));
+            }
+            Err(e) => return Err(e),
+        };
 
         let status = self.get_reward_status().await?;
+
+        if !status.info.is_signed {
+            tracing::warn!(
+                game = game,
+                risk_code = ?sign.risk_code,
+                geetest = sign.gt.is_some() || sign.challenge.is_some(),
+                "Sign returned success but the reward is still unclaimed"
+            );
+            return Err(Error::ClaimNotRegistered {
+                risk_code: sign.risk_code,
+            });
+        }
 
         tracing::info!(
             game = game,
@@ -213,6 +252,8 @@ mod tests {
     use super::*;
     use std::collections::HashMap;
     use std::sync::Arc;
+    use std::sync::atomic::AtomicBool;
+    use std::sync::atomic::Ordering;
     use tokio::io::AsyncReadExt;
     use tokio::io::AsyncWriteExt;
     use tokio::net::TcpListener;
@@ -399,6 +440,31 @@ mod tests {
         }))
     }
 
+    /// Switch `/info` to signed after the POST so the successful path returns
+    /// the first award.
+    fn sign_flow_handler(
+        awards: &'static str,
+        sign_body: &'static str,
+    ) -> Arc<dyn Fn(&TestRequest) -> TestResponse + Send + Sync> {
+        let signed = AtomicBool::new(false);
+        Arc::new(move |request| {
+            if request.target.starts_with("/event/luna/test/info") {
+                if signed.load(Ordering::SeqCst) {
+                    ok(r#"{"retcode":0,"message":"OK","data":{"is_sign":true,"total_sign_day":1}}"#)
+                } else {
+                    ok(
+                        r#"{"retcode":0,"message":"OK","data":{"is_sign":false,"total_sign_day":0}}"#,
+                    )
+                }
+            } else if request.target.starts_with("/event/luna/test/home") {
+                ok(awards)
+            } else {
+                signed.store(true, Ordering::SeqCst);
+                ok(sign_body)
+            }
+        })
+    }
+
     fn test_client(
         server: &TestServer,
         config: &'static HoyolabDailyRewardConfig,
@@ -487,17 +553,10 @@ mod tests {
 
     #[tokio::test]
     async fn claim_daily_reward_reports_missing_reward_details() {
-        let server = TestServer::spawn(Arc::new(|request| {
-            if request.target.starts_with("/event/luna/test/info") {
-                ok(r#"{"retcode":0,"message":"OK","data":{"is_sign":false,"total_sign_day":99}}"#)
-            } else if request.target.starts_with("/event/luna/test/home") {
-                ok(
-                    r#"{"retcode":0,"message":"OK","data":{"awards":[{"name":"Mora","cnt":5000,"icon":"mora.png"}]}}"#,
-                )
-            } else {
-                ok(r#"{"retcode":0,"message":"OK","data":{}}"#)
-            }
-        }))
+        let server = TestServer::spawn(sign_flow_handler(
+            r#"{"retcode":0,"message":"OK","data":{"awards":[]}}"#,
+            r#"{"retcode":0,"message":"OK","data":{}}"#,
+        ))
         .await;
 
         let config = test_config(&server.base_url);
@@ -524,6 +583,83 @@ mod tests {
             })
             .count();
         assert_eq!(sign_calls, 1, "sign endpoint should be called exactly once");
+    }
+
+    #[tokio::test]
+    async fn claim_daily_reward_rejects_sign_that_never_registers() {
+        let server = TestServer::spawn(Arc::new(|request| {
+            if request.target.starts_with("/event/luna/test/info") {
+                ok(r#"{"retcode":0,"message":"OK","data":{"is_sign":false,"total_sign_day":0}}"#)
+            } else if request.target.starts_with("/event/luna/test/home") {
+                ok(
+                    r#"{"retcode":0,"message":"OK","data":{"awards":[{"name":"Day1","cnt":1,"icon":"1.png"},{"name":"Day2","cnt":1,"icon":"2.png"}]}}"#,
+                )
+            } else {
+                ok(
+                    r#"{"retcode":0,"message":"OK","data":{"risk_code":5001,"gt":"gt-token","challenge":"challenge-token"}}"#,
+                )
+            }
+        }))
+        .await;
+
+        let config = test_config(&server.base_url);
+        let client = test_client(&server, config);
+        let error = client
+            .claim_daily_reward()
+            .await
+            .expect_err("an unregistered sign must not report a claim");
+
+        assert!(
+            matches!(
+                error,
+                Error::ClaimNotRegistered {
+                    risk_code: Some(5001)
+                }
+            ),
+            "expected ClaimNotRegistered carrying the risk code, got {error:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn claim_daily_reward_succeeds_once_the_sign_registers() {
+        let server = TestServer::spawn(sign_flow_handler(
+            r#"{"retcode":0,"message":"OK","data":{"awards":[{"name":"Day1","cnt":1,"icon":"1.png"},{"name":"Day2","cnt":1,"icon":"2.png"}]}}"#,
+            r#"{"retcode":0,"message":"OK","data":{"code":"ok"}}"#,
+        ))
+        .await;
+
+        let config = test_config(&server.base_url);
+        let client = test_client(&server, config);
+        let claim = client
+            .claim_daily_reward()
+            .await
+            .expect("claim should succeed once the sign registers");
+
+        assert!(claim.success);
+        assert_eq!(
+            claim.reward.as_ref().map(|reward| reward.name.as_str()),
+            Some("Day1")
+        );
+        assert!(claim.info.is_signed);
+    }
+
+    #[tokio::test]
+    async fn claim_daily_reward_maps_already_signed_retcode_to_already_claimed() {
+        let server = TestServer::spawn(sign_flow_handler(
+            r#"{"retcode":0,"message":"OK","data":{"awards":[{"name":"Day1","cnt":1,"icon":"1.png"}]}}"#,
+            r#"{"retcode":-5003,"message":"Already signed in today","data":null}"#,
+        ))
+        .await;
+
+        let config = test_config(&server.base_url);
+        let client = test_client(&server, config);
+        let claim = client
+            .claim_daily_reward()
+            .await
+            .expect("retcode -5003 should resolve to an already-claimed result");
+
+        assert!(!claim.success);
+        assert_eq!(claim.message.as_deref(), Some("Already claimed today"));
     }
 
     #[tokio::test]

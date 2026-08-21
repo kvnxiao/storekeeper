@@ -1,7 +1,7 @@
 # Minimum release age (in minutes) before a published version is installable.
-# 10080 = 7 days. Mirrors the Dependabot `cooldown` so the pnpm/Vite+ side
+# 1440 = 1 day. Mirrors the Dependabot `cooldown` so the pnpm/Vite+ side
 # (incl. the catalog packages below) also waits out fresh releases.
-minimumReleaseAge: 10080
+minimumReleaseAge: 1440
 # The Vite+ toolchain is exempt: `vp migrate` pins these to the exact versions
 # bundled with the CLI release, so the cooldown would block the pinned set and
 # force a mismatched pairing instead.
@@ -17,8 +17,8 @@ minimumReleaseAgeExclude:
   - vitest
   - "@vitest/*"
 catalog:
-  vite: npm:@voidzero-dev/vite-plus-core@0.2.8
-  vite-plus: 0.2.8
+  vite: npm:@voidzero-dev/vite-plus-core@0.2.9
+  vite-plus: 0.2.9
 overrides:
   vite: "catalog:"
 peerDependencyRules:

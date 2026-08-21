@@ -61,6 +61,17 @@ Configuration files are loaded from:
 
 Config files (`config.toml` and `secrets.toml`) are auto-created with commented templates on first `just dev` run.
 
+## Logging
+
+Log lines go to stdout in a human-readable format and to `logs/` under the config
+directory as one JSON object per line, rotated daily with seven files retained.
+Settings offers two ways into the file: **View Logs** opens the in-app viewer on
+the current day's file, and **Open Log Folder** reveals the directory.
+
+The **Log Level** dropdown applies without a restart. When `RUST_LOG` is set it
+overrides the dropdown for the whole process, so a developer override survives a
+settings save.
+
 ## Continuous Integration
 
 GitHub Actions runs Rust linting, Rust tests, and frontend linting for pull requests and pushes to `main` (`.github/workflows/`). Run `just lint`, `just test`, and `just lint-web` locally for the checks CI runs. Run `just test-web` for frontend tests.

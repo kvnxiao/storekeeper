@@ -33,7 +33,7 @@ const RootDocument: ParentComponent = (props) => (
 );
 
 const RootComponent: Component = () => {
-  onMount(() => core.init());
+  onMount(() => core.initShell());
 
   // The shell's static lang="en" never re-renders; keep it on the real locale.
   createEffect(() => {

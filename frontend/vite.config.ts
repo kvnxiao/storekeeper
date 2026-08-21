@@ -34,6 +34,9 @@ export default defineConfig({
     tailwindcss(),
     tanstackStart({
       spa: spaWithPrerenderOptions,
+      // Prerender /logs explicitly because crawlLinks is disabled and
+      // WebviewUrl::App("logs") needs logs/index.html in a bundle.
+      pages: [{ path: "/logs", prerender: { enabled: true, outputPath: "/logs/index.html" } }],
     }),
     viteSolid({ ssr: true }),
   ],

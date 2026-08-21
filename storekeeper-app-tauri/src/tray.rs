@@ -1,6 +1,7 @@
 //! System tray setup and event handling.
 
 use crate::i18n;
+use crate::window::MAIN_WINDOW_LABEL;
 use anyhow::Context;
 use anyhow::Result;
 use tauri::App;
@@ -93,7 +94,7 @@ pub fn setup_tray(app: &App) -> Result<()> {
             button_state: MouseButtonState::Up,
             ..
         } => {
-            if let Some(window) = tray.app_handle().get_webview_window("main") {
+            if let Some(window) = tray.app_handle().get_webview_window(MAIN_WINDOW_LABEL) {
                 if window.is_visible().unwrap_or(false) {
                     if let Err(e) = window.hide() {
                         tracing::debug!(error = %e, "Failed to hide window");
@@ -112,7 +113,7 @@ pub fn setup_tray(app: &App) -> Result<()> {
             button: MouseButton::Left,
             ..
         } => {
-            if let Some(window) = tray.app_handle().get_webview_window("main") {
+            if let Some(window) = tray.app_handle().get_webview_window(MAIN_WINDOW_LABEL) {
                 if let Err(e) = window.show() {
                     tracing::debug!(error = %e, "Failed to show window");
                 }

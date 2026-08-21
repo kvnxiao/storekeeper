@@ -35,6 +35,8 @@ export interface TextFieldProps {
   type?: "text" | "password";
   value: string;
   onChange: (value: string) => void;
+  /** Merge classes onto the input so callers can override utilities such as height. */
+  inputClass?: string;
 }
 
 export const TextField: VoidComponent<TextFieldProps> = (props) => {
@@ -54,7 +56,7 @@ export const TextField: VoidComponent<TextFieldProps> = (props) => {
         <TextFieldPrimitive.Input
           type={isPassword() && !revealed() ? "password" : "text"}
           placeholder={props.placeholder}
-          class={inputStyle({ type: isPassword() ? "password" : "text" })}
+          class={inputStyle({ type: isPassword() ? "password" : "text", class: props.inputClass })}
         />
         <Show when={isPassword()}>
           <button

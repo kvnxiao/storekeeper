@@ -10,9 +10,9 @@ import {
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { queryClient } from "@/modules/core/core.queryClient";
 import type { AppConfig, SecretsConfig } from "@/modules/settings/settings.types";
-import { SettingsPage } from "@/routes/settings";
+import { SettingsPage } from "@/modules/settings/components/SettingsPage";
 
-/** A distinct UID per game, so a crossed form-field path shows up as a swap. */
+/** Use a distinct UID per game so a crossed field path is visible. */
 const CONFIG: AppConfig = {
   general: {
     poll_interval_secs: 300,
@@ -49,8 +49,11 @@ vi.mock("@tauri-apps/api/core", () => ({
   }),
 }));
 
-// The generated route tree renders the root shell's <html>, which cannot be
-// cloned into a test container, so the page mounts under a bare root instead.
+// Mock the event bridge because SettingsPage initializes dashboard listeners.
+vi.mock("@tauri-apps/api/event", () => ({ listen: vi.fn(async () => vi.fn()) }));
+
+// Mount under a bare root because the generated route tree includes the
+// document's <html> element.
 async function renderSettingsPage(): Promise<void> {
   const rootRoute = createRootRoute();
   const router = createRouter({
@@ -76,7 +79,7 @@ function gameSection(title: string): HTMLElement {
   return card;
 }
 
-describe("settings page", () => {
+describe("SettingsPage", () => {
   beforeEach(() => queryClient.clear());
 
   it("binds every game section to its own config entry", async () => {

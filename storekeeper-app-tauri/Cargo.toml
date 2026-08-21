@@ -60,12 +60,17 @@ sys-locale.workspace = true
 # Logging
 tracing.workspace = true
 tracing-subscriber.workspace = true
+tracing-appender.workspace = true
 
 # Time
 jiff.workspace = true
 
 # Filesystem IO (errors carry path context)
 fs-err.workspace = true
+
+# UTF-8 paths
+camino.workspace = true
+tauri-plugin-window-state = "2.4.1"
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["test-util"] }

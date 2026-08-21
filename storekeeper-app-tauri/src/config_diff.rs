@@ -8,13 +8,27 @@ use storekeeper_core::AppConfig;
 use storekeeper_core::GameId;
 use storekeeper_core::SecretsConfig;
 
-/// Describes what changed between two configurations.
-pub(crate) struct ConfigDiff {
-    /// Whether the locale/language setting changed (requires tray rebuild).
+/// Track general settings that `save_and_apply` applies independently.
+pub(crate) struct GeneralDiff {
+    /// Whether the locale or language changed and requires a tray rebuild.
     pub locale_changed: bool,
 
-    /// Whether the autostart setting changed (requires OS sync).
+    /// Whether autostart changed and requires OS synchronization.
     pub autostart_changed: bool,
+
+    /// Whether the log level changed and requires a filter swap.
+    pub log_level_changed: bool,
+}
+
+impl GeneralDiff {
+    fn is_empty(&self) -> bool {
+        !self.locale_changed && !self.autostart_changed && !self.log_level_changed
+    }
+}
+
+/// Track the configuration changes that determine selective application work.
+pub(crate) struct ConfigDiff {
+    pub general: GeneralDiff,
 
     /// Whether game client registries need to be rebuilt.
     ///
@@ -32,8 +46,7 @@ pub(crate) struct ConfigDiff {
 impl ConfigDiff {
     /// Returns true if nothing changed (no work needed).
     pub fn is_empty(&self) -> bool {
-        !self.locale_changed
-            && !self.autostart_changed
+        self.general.is_empty()
             && !self.needs_registry_rebuild
             && self.games_to_refresh.is_empty()
             && self.games_to_reset_notifications.is_empty()
@@ -47,8 +60,11 @@ pub(crate) fn compute(
     old_secrets: &SecretsConfig,
     new_secrets: &SecretsConfig,
 ) -> ConfigDiff {
-    let locale_changed = old_config.general.language != new_config.general.language;
-    let autostart_changed = old_config.general.autostart != new_config.general.autostart;
+    let general = GeneralDiff {
+        locale_changed: old_config.general.language != new_config.general.language,
+        autostart_changed: old_config.general.autostart != new_config.general.autostart,
+        log_level_changed: old_config.general.log_level != new_config.general.log_level,
+    };
 
     let mut needs_registry_rebuild = false;
     let mut games_to_refresh = HashSet::new();
@@ -103,8 +119,7 @@ pub(crate) fn compute(
     }
 
     ConfigDiff {
-        locale_changed,
-        autostart_changed,
+        general,
         needs_registry_rebuild,
         games_to_refresh,
         games_to_reset_notifications,
@@ -334,8 +349,8 @@ mod tests {
         let secrets = SecretsConfig::default();
         let diff = compute(&old, &new, &secrets, &secrets);
 
-        assert!(diff.locale_changed);
-        assert!(!diff.autostart_changed);
+        assert!(diff.general.locale_changed);
+        assert!(!diff.general.autostart_changed);
         assert!(!diff.needs_registry_rebuild);
         assert!(diff.games_to_refresh.is_empty());
     }
@@ -349,8 +364,23 @@ mod tests {
         let secrets = SecretsConfig::default();
         let diff = compute(&old, &new, &secrets, &secrets);
 
-        assert!(!diff.locale_changed);
-        assert!(diff.autostart_changed);
+        assert!(!diff.general.locale_changed);
+        assert!(diff.general.autostart_changed);
+        assert!(!diff.needs_registry_rebuild);
+        assert!(diff.games_to_refresh.is_empty());
+    }
+
+    #[test]
+    fn log_level_change_only() {
+        let old = AppConfig::default();
+        let mut new = old.clone();
+        new.general.log_level = "debug".to_string();
+
+        let secrets = SecretsConfig::default();
+        let diff = compute(&old, &new, &secrets, &secrets);
+
+        assert!(diff.general.log_level_changed);
+        assert!(!diff.is_empty(), "a level change must reach the apply step");
         assert!(!diff.needs_registry_rebuild);
         assert!(diff.games_to_refresh.is_empty());
     }

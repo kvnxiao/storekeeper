@@ -20,8 +20,8 @@ export interface WuwaGameSectionProps {
 }
 
 export const WuwaGameSection: VoidComponent<WuwaGameSectionProps> = (props) => {
-  // Normalizes the possibly-undefined config once so every onChange handler
-  // only states the field it changes.
+  // Normalize the optional config once; each onChange handler then updates one
+  // field.
   const current = (): WuwaConfig => ({ enabled: false, uid: "", ...props.config });
 
   return (

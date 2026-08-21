@@ -12,8 +12,8 @@ import { enabledGamesFromConfig } from "@/modules/settings/settings.utils";
 import { ErrorBanner } from "@/modules/ui/components/ErrorBanner";
 import * as m from "@/paraglide/messages";
 
-// Kept out of the registry so it does not have to import section components,
-// which import the games primitives it defines.
+// Keep section components out of the registry; their imports include game
+// primitives.
 const GAME_SECTIONS: Record<GameId, Component> = {
   [GameId.GenshinImpact]: GenshinSection,
   [GameId.HonkaiStarRail]: () => (
@@ -27,15 +27,15 @@ const GAME_SECTIONS: Record<GameId, Component> = {
   ),
 };
 
-/** The dashboard's data-driven body; the route owns the header around it. */
+/** The dashboard's data-driven body; the page owns the header around it. */
 export const DashboardContent: VoidComponent = () => {
   const resourcesQuery = useQuery(() => resourcesQueryOptions());
   const configQuery = useQuery(() => configQueryOptions());
 
   const enabledGames = createMemo(() => enabledGamesFromConfig(configQuery.data));
 
-  // Without the config there is no game list, so its failure has to surface as
-  // an error rather than as the "no games configured" empty state.
+  // Surface a config-load failure instead of treating missing config as the
+  // "no games configured" state.
   const loadError = () => configQuery.error ?? resourcesQuery.error;
 
   return (

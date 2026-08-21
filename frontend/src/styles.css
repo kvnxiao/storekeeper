@@ -9,6 +9,9 @@
 
 /* Semantic color tokens (light mode) - zinc scale */
 :root {
+  /* WebView2 uses this value for native scrollbars and form controls. */
+  color-scheme: light dark;
+
   --background: oklch(1 0 0); /* white */
   --foreground: oklch(0.141 0.005 285.75); /* zinc-950 */
 
