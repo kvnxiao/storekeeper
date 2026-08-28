@@ -4,6 +4,7 @@ use crate::provider_batch;
 use anyhow::Context;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use storekeeper_client_hoyolab::Error as HoyolabError;
 use storekeeper_core::DynDailyRewardClient;
 use storekeeper_core::GameId;
 
@@ -13,6 +14,13 @@ use storekeeper_core::GameId;
 /// that implement daily reward functionality in a single collection.
 pub struct DailyRewardRegistry {
     clients: HashMap<GameId, Box<dyn DynDailyRewardClient>>,
+}
+
+pub(crate) fn into_anyhow(error: Box<dyn std::error::Error + Send + Sync>) -> anyhow::Error {
+    match error.downcast::<HoyolabError>() {
+        Ok(hoyolab) => anyhow::Error::new(*hoyolab),
+        Err(other) => anyhow::anyhow!(other),
+    }
 }
 
 impl DailyRewardRegistry {
@@ -78,7 +86,7 @@ impl DailyRewardRegistry {
         client
             .get_reward_status_json()
             .await
-            .map_err(|e| anyhow::anyhow!(e))
+            .map_err(into_anyhow)
             .context("failed to fetch daily reward status")
     }
 
@@ -96,7 +104,7 @@ impl DailyRewardRegistry {
         client
             .claim_daily_reward_json()
             .await
-            .map_err(|e| anyhow::anyhow!(e))
+            .map_err(into_anyhow)
             .context("failed to claim daily reward")
     }
 

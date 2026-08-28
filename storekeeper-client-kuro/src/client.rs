@@ -180,7 +180,7 @@ impl KuroClient {
             _ => {
                 tracing::warn!(
                     code = api_response.code,
-                    message = %api_response.message,
+                    api_message = %api_response.message,
                     "Kuro API error response"
                 );
                 return Err(Error::Client(ClientError::api_error(

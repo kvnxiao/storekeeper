@@ -3,11 +3,13 @@
 use crate::events::AppEvent;
 use crate::state::AppState;
 use anyhow::Context;
+use jiff::SignedDuration;
 use jiff::Timestamp;
 use std::collections::HashMap;
 use std::ops::ControlFlow;
 use std::sync::Arc;
 use std::time::Duration;
+use storekeeper_client_hoyolab::Error as HoyolabError;
 use storekeeper_core::ClaimResult;
 use storekeeper_core::ClaimTime;
 use storekeeper_core::DailyRewardStatus;
@@ -55,6 +57,106 @@ enum ClaimOutcome {
     AlreadyClaimed,
 }
 
+const CLAIM_RETRY_DELAY: SignedDuration = SignedDuration::from_mins(10);
+
+const MAX_CLAIM_RETRIES: u32 = 3;
+
+fn is_recoverable(error: &anyhow::Error) -> bool {
+    error
+        .downcast_ref::<HoyolabError>()
+        .is_none_or(HoyolabError::is_recoverable)
+}
+
+#[derive(Debug, Default)]
+struct RetryQueue {
+    attempts: HashMap<GameId, u32>,
+    due: Option<Timestamp>,
+}
+
+#[derive(Debug, Default)]
+struct ClaimRound {
+    attempted: Vec<GameId>,
+    failed: Vec<GameId>,
+}
+
+impl RetryQueue {
+    fn record(&mut self, attempted: &[GameId], failed: &[GameId], now: Timestamp) {
+        for game_id in attempted {
+            let spent = failed
+                .contains(game_id)
+                .then(|| self.attempts.get(game_id).copied().unwrap_or(0) + 1)
+                .filter(|spent| *spent <= MAX_CLAIM_RETRIES);
+
+            match spent {
+                Some(spent) => self.attempts.insert(*game_id, spent),
+                None => self.attempts.remove(game_id),
+            };
+        }
+
+        // If adding the retry delay fails, leave `due` unchanged; an immediate
+        // fallback would consume every attempt.
+        if !failed.is_empty()
+            && let Ok(next) = now.saturating_add(CLAIM_RETRY_DELAY)
+        {
+            self.due = Some(self.due.map_or(next, |due| due.min(next)));
+        }
+
+        if self.attempts.is_empty() {
+            self.due = None;
+        }
+    }
+
+    fn clear_games(&mut self, games: &[GameId]) {
+        for game_id in games {
+            self.attempts.remove(game_id);
+        }
+
+        if self.attempts.is_empty() {
+            self.due = None;
+        }
+    }
+
+    fn pending(&self) -> Option<(Timestamp, Vec<GameId>)> {
+        let due = self.due?;
+        Some((due, self.attempts.keys().copied().collect()))
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum WakeKind {
+    Daily,
+    Retry,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct ClaimWake {
+    kind: WakeKind,
+    target: Timestamp,
+    games: Vec<GameId>,
+}
+
+fn select_wake(
+    daily: Option<(Timestamp, Vec<GameId>)>,
+    retry: Option<(Timestamp, Vec<GameId>)>,
+) -> Option<ClaimWake> {
+    let daily = daily.map(|(target, games)| ClaimWake {
+        kind: WakeKind::Daily,
+        target,
+        games,
+    });
+    let retry = retry.map(|(target, games)| ClaimWake {
+        kind: WakeKind::Retry,
+        target,
+        games,
+    });
+
+    match (daily, retry) {
+        (Some(daily), Some(retry)) if retry.target < daily.target => Some(retry),
+        (Some(daily), _) => Some(daily),
+        (None, retry) => retry,
+    }
+}
+
 /// Require the claim response to report a recorded reward.
 ///
 /// Use `info.is_signed` rather than `success`: a registered claim can lack
@@ -99,49 +201,55 @@ pub fn start_scheduled_claims(app_handle: AppHandle, cancel_token: CancellationT
         let state = app_handle.state::<AppState>();
         let notify = state.scheduler_notify();
 
-        run_startup_claims(&state, &app_handle).await;
+        let mut retry_queue = RetryQueue::default();
+        let round = run_startup_claims(&state, &app_handle).await;
+        retry_queue.record(&round.attempted, &round.failed, Timestamp::now());
 
         loop {
             let auto_claim_games = state.get_auto_claim_games().await;
+            let daily = calculate_next_claim(&auto_claim_games, &state).await;
 
-            if auto_claim_games.is_empty() {
-                tracing::debug!("No games with auto-claim enabled, idle sleeping");
-                match idle_wait(&cancel_token, &notify, &state, &app_handle).await {
-                    ControlFlow::Break(()) => break,
-                    ControlFlow::Continue(()) => continue,
-                }
-            }
-
-            let Some((target, games_to_claim)) =
-                calculate_next_claim(&auto_claim_games, &state).await
-            else {
+            let Some(wake) = select_wake(daily, retry_queue.pending()) else {
                 tracing::debug!("No games need claiming, idle sleeping");
                 match idle_wait(&cancel_token, &notify, &state, &app_handle).await {
                     ControlFlow::Break(()) => break,
-                    ControlFlow::Continue(()) => continue,
+                    ControlFlow::Continue(round) => {
+                        retry_queue.record(&round.attempted, &round.failed, Timestamp::now());
+                        continue;
+                    }
                 }
             };
 
             // Clamp to zero for display: a target in the past sleeps for no time.
-            let until_claim_secs = target.duration_since(Timestamp::now()).as_secs().max(0);
+            let until_claim_secs = wake
+                .target
+                .duration_since(Timestamp::now())
+                .as_secs()
+                .max(0);
 
             tracing::info!(
                 sleep_secs = until_claim_secs,
-                target = %target,
-                games = ?games_to_claim,
+                target = %wake.target,
+                games = ?wake.games,
+                kind = ?wake.kind,
                 "Waiting until next scheduled claim time"
             );
 
-            match handle_wake_reason(&sleep_until(target, &cancel_token, &notify).await) {
+            match handle_wake_reason(&sleep_until(wake.target, &cancel_token, &notify).await) {
                 ControlFlow::Break(()) => break,
                 ControlFlow::Continue(PostWake::Rerun) => {
                     tracing::info!(
                         "Config changed while waiting for claim, re-running startup claims"
                     );
-                    run_startup_claims(&state, &app_handle).await;
+                    let round = run_startup_claims(&state, &app_handle).await;
+                    retry_queue.record(&round.attempted, &round.failed, Timestamp::now());
                 }
                 ControlFlow::Continue(PostWake::Resume) => {
-                    claim_games_and_emit(&state, &app_handle, &games_to_claim).await;
+                    if wake.kind == WakeKind::Daily {
+                        retry_queue.clear_games(&wake.games);
+                    }
+                    let round = claim_games_and_emit(&state, &app_handle, &wake.games).await;
+                    retry_queue.record(&round.attempted, &round.failed, Timestamp::now());
                 }
             }
         }
@@ -158,15 +266,15 @@ async fn idle_wait(
     notify: &Arc<Notify>,
     state: &AppState,
     app_handle: &AppHandle,
-) -> ControlFlow<()> {
+) -> ControlFlow<(), ClaimRound> {
     match handle_wake_reason(&sleep_short(cancel_token, notify).await) {
         ControlFlow::Break(()) => ControlFlow::Break(()),
         ControlFlow::Continue(post) => {
             if post == PostWake::Rerun {
                 tracing::info!("Config changed while idle, re-running startup claims");
-                run_startup_claims(state, app_handle).await;
+                return ControlFlow::Continue(run_startup_claims(state, app_handle).await);
             }
-            ControlFlow::Continue(())
+            ControlFlow::Continue(ClaimRound::default())
         }
     }
 }
@@ -175,23 +283,28 @@ async fn idle_wait(
 ///
 /// For each game, checks the API status first - if not claimed today,
 /// attempts to claim.
-async fn run_startup_claims(state: &AppState, app_handle: &AppHandle) {
+async fn run_startup_claims(state: &AppState, app_handle: &AppHandle) -> ClaimRound {
     tracing::info!("Running startup auto-claim check");
 
     let auto_claim_games = state.get_auto_claim_games().await;
 
     if auto_claim_games.is_empty() {
         tracing::debug!("No games with auto-claim enabled");
-        return;
+        return ClaimRound::default();
     }
 
     let game_ids: Vec<GameId> = auto_claim_games.into_iter().map(|(id, _)| id).collect();
-    claim_games_and_emit(state, app_handle, &game_ids).await;
+    claim_games_and_emit(state, app_handle, &game_ids).await
 }
 
 /// Claims rewards for the given games and emits results to the frontend.
-async fn claim_games_and_emit(state: &AppState, app_handle: &AppHandle, game_ids: &[GameId]) {
-    let mut results = HashMap::new();
+async fn claim_games_and_emit(
+    state: &AppState,
+    app_handle: &AppHandle,
+    game_ids: &[GameId],
+) -> ClaimRound {
+    let mut claimed = Vec::new();
+    let mut failed = Vec::new();
 
     for &game_id in game_ids {
         if !state.should_auto_claim_game(game_id).await {
@@ -204,15 +317,22 @@ async fn claim_games_and_emit(state: &AppState, app_handle: &AppHandle, game_ids
         match claim_with_status_check(state, game_id).await {
             Ok(ClaimOutcome::Claimed) => {
                 tracing::info!(game_id = ?game_id, "Auto-claim successful");
-                if let Ok(status) = state.get_daily_reward_status_for_game(game_id).await {
-                    results.insert(game_id, status);
-                }
+                claimed.push(game_id);
             }
             Ok(ClaimOutcome::AlreadyClaimed) => {
                 tracing::debug!(game_id = ?game_id, "Already claimed today (per API)");
             }
             Err(e) => {
-                tracing::error!(game_id = ?game_id, error = %e, "Auto-claim failed");
+                let recoverable = is_recoverable(&e);
+                tracing::error!(
+                    game_id = ?game_id,
+                    error = %crate::logging::error_chain(&*e),
+                    recoverable = recoverable,
+                    "Auto-claim failed"
+                );
+                if recoverable {
+                    failed.push(game_id);
+                }
             }
         }
 
@@ -220,15 +340,29 @@ async fn claim_games_and_emit(state: &AppState, app_handle: &AppHandle, game_ids
         tokio::time::sleep(Duration::from_millis(500)).await;
     }
 
-    if !results.is_empty() {
+    if !claimed.is_empty() {
         let status = state.fetch_all_daily_reward_status().await;
+        let results: HashMap<GameId, serde_json::Value> = claimed
+            .iter()
+            .filter_map(|game_id| {
+                status
+                    .games
+                    .get(game_id)
+                    .map(|value| (*game_id, value.clone()))
+            })
+            .collect();
         state.set_daily_reward_status(status).await;
 
         if let Err(e) = app_handle.emit(AppEvent::DailyRewardClaimed.as_str(), &results) {
             tracing::warn!(error = %e, "Failed to emit daily reward claimed event");
         }
 
-        tracing::info!(games_claimed = results.len(), "Auto-claim complete");
+        tracing::info!(games_claimed = claimed.len(), "Auto-claim complete");
+    }
+
+    ClaimRound {
+        attempted: game_ids.to_vec(),
+        failed,
     }
 }
 
@@ -449,5 +583,198 @@ mod tests {
             handle_wake_reason(&WakeReason::TimerExpired),
             ControlFlow::Continue(PostWake::Resume)
         );
+    }
+
+    fn registry_error(cause: HoyolabError) -> anyhow::Error {
+        let boxed: Box<dyn std::error::Error + Send + Sync> = Box::new(cause);
+        crate::daily_reward_registry::into_anyhow(boxed)
+            .context("failed to fetch daily reward status")
+    }
+
+    #[test]
+    fn is_recoverable_reads_a_throttle_through_the_boxed_chain() {
+        let error = registry_error(HoyolabError::RateLimited {
+            retcode: -1004,
+            message: "Too many attempts. Please try again later.".to_string(),
+        });
+
+        assert!(is_recoverable(&error), "a wrapped throttle is recoverable");
+    }
+
+    #[test]
+    fn is_recoverable_rejects_a_bad_cookie_through_the_boxed_chain() {
+        let error = registry_error(HoyolabError::Client(
+            storekeeper_client_hoyolab::ClientError::api_error(-100, "not logged in"),
+        ));
+
+        assert!(
+            !is_recoverable(&error),
+            "a wrapped cookie error is not recoverable"
+        );
+    }
+
+    #[test]
+    fn is_recoverable_requeues_a_failure_carrying_no_client_error() {
+        let error = anyhow::anyhow!("the scheduler could not reach the registry");
+
+        assert!(
+            is_recoverable(&error),
+            "a failure without a HoYoLab error is recoverable"
+        );
+    }
+
+    fn instant(rfc3339: &str) -> Timestamp {
+        rfc3339.parse().expect("a valid RFC 3339 instant")
+    }
+
+    const GENSHIN: GameId = GameId::GenshinImpact;
+    const HSR: GameId = GameId::HonkaiStarRail;
+
+    #[test]
+    fn record_schedules_the_failed_games_after_the_retry_delay() {
+        let now = instant("2026-08-27T22:00:10Z");
+        let mut queue = RetryQueue::default();
+
+        queue.record(&[GENSHIN, HSR], &[GENSHIN], now);
+
+        let (due, games) = queue.pending().expect("a recorded failure is pending");
+        assert_eq!(due, instant("2026-08-27T22:10:10Z"));
+        assert_eq!(games, vec![GENSHIN]);
+    }
+
+    #[test]
+    fn record_drops_a_game_that_spent_every_retry() {
+        let mut now = instant("2026-08-27T22:00:10Z");
+        let mut queue = RetryQueue::default();
+
+        for _ in 0..=MAX_CLAIM_RETRIES {
+            queue.record(&[GENSHIN], &[GENSHIN], now);
+            now = now
+                .saturating_add(CLAIM_RETRY_DELAY)
+                .expect("the retry delay stays in range");
+        }
+
+        assert!(
+            queue.pending().is_none(),
+            "a game must stop retrying after {MAX_CLAIM_RETRIES} attempts"
+        );
+    }
+
+    #[test]
+    fn record_leaves_a_game_the_round_did_not_attempt() {
+        let now = instant("2026-08-27T22:00:10Z");
+        let mut queue = RetryQueue::default();
+        queue.record(&[GENSHIN], &[GENSHIN], now);
+
+        queue.record(&[HSR], &[], now);
+
+        let (_, games) = queue
+            .pending()
+            .expect("a game outside the round stays queued");
+        assert_eq!(games, vec![GENSHIN]);
+    }
+
+    #[test]
+    fn record_keeps_the_earliest_due_instant() {
+        let first = instant("2026-08-27T22:00:10Z");
+        let mut queue = RetryQueue::default();
+        queue.record(&[GENSHIN], &[GENSHIN], first);
+
+        queue.record(&[HSR], &[HSR], instant("2026-08-27T22:05:10Z"));
+
+        let (due, _) = queue.pending().expect("both games are queued");
+        assert_eq!(
+            due,
+            instant("2026-08-27T22:10:10Z"),
+            "a later failure must not push an already-queued game back"
+        );
+    }
+
+    #[test]
+    fn record_drops_an_attempted_game_that_stopped_failing() {
+        let now = instant("2026-08-27T22:00:10Z");
+        let mut queue = RetryQueue::default();
+
+        queue.record(&[GENSHIN, HSR], &[GENSHIN, HSR], now);
+        queue.record(&[GENSHIN, HSR], &[GENSHIN], now);
+
+        let (_, games) = queue.pending().expect("the still-failing game is pending");
+        assert_eq!(games, vec![GENSHIN]);
+    }
+
+    #[test]
+    fn clear_games_restores_the_full_retry_budget() {
+        let now = instant("2026-08-27T22:00:10Z");
+        let mut queue = RetryQueue::default();
+        for _ in 0..MAX_CLAIM_RETRIES {
+            queue.record(&[GENSHIN], &[GENSHIN], now);
+        }
+
+        queue.clear_games(&[GENSHIN]);
+        for _ in 0..MAX_CLAIM_RETRIES {
+            queue.record(&[GENSHIN], &[GENSHIN], now);
+        }
+
+        assert!(
+            queue.pending().is_some(),
+            "a daily claim must restore the game's full retry budget"
+        );
+    }
+
+    #[test]
+    fn clear_games_leaves_a_game_the_daily_claim_does_not_cover() {
+        let now = instant("2026-08-27T22:00:10Z");
+        let mut queue = RetryQueue::default();
+        queue.record(&[GENSHIN, HSR], &[GENSHIN, HSR], now);
+
+        queue.clear_games(&[HSR]);
+
+        let (_, games) = queue
+            .pending()
+            .expect("a game outside the cleared set stays queued");
+        assert_eq!(games, vec![GENSHIN]);
+    }
+
+    #[test]
+    fn select_wake_prefers_whichever_claim_comes_first() {
+        let early = instant("2026-08-27T22:10:00Z");
+        let late = instant("2026-08-28T16:00:00Z");
+        let daily_games = vec![HSR];
+        let retry_games = vec![GENSHIN];
+
+        for (daily_at, retry_at, expected_kind, expected_target) in [
+            (Some(late), Some(early), Some(WakeKind::Retry), Some(early)),
+            (Some(early), Some(late), Some(WakeKind::Daily), Some(early)),
+            (Some(late), None, Some(WakeKind::Daily), Some(late)),
+            (None, Some(early), Some(WakeKind::Retry), Some(early)),
+            (None, None, None, None),
+        ] {
+            let selected = select_wake(
+                daily_at.map(|target| (target, daily_games.clone())),
+                retry_at.map(|target| (target, retry_games.clone())),
+            );
+
+            assert_eq!(
+                selected.as_ref().map(|wake| &wake.kind),
+                expected_kind.as_ref(),
+                "daily at {daily_at:?} against retry at {retry_at:?}"
+            );
+            assert_eq!(
+                selected.map(|wake| wake.target),
+                expected_target,
+                "daily at {daily_at:?} against retry at {retry_at:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn select_wake_breaks_a_tie_in_favour_of_the_daily_claim() {
+        let target = instant("2026-08-27T22:10:00Z");
+
+        let selected = select_wake(Some((target, vec![HSR])), Some((target, vec![GENSHIN])))
+            .expect("a tie selects the daily claim");
+
+        assert_eq!(selected.kind, WakeKind::Daily);
+        assert_eq!(selected.games, vec![HSR]);
     }
 }

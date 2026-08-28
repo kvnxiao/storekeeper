@@ -7,6 +7,8 @@ use crate::client::HoyolabClient;
 use crate::error::ClientError;
 use crate::error::Error;
 use crate::error::Result;
+use crate::retcode;
+use crate::retcode::RetcodeKind;
 use reqwest::Method;
 use serde::Deserialize;
 use storekeeper_core::ClaimResult;
@@ -82,9 +84,6 @@ struct SignResponse {
     gt: Option<String>,
     challenge: Option<String>,
 }
-
-/// HoYoLab retcode for a sign request on a day already signed.
-const ALREADY_SIGNED_RETCODE: i32 = -5003;
 
 /// Generic HoYoLab daily reward client.
 pub struct HoyolabDailyRewardClient {
@@ -167,7 +166,10 @@ impl DailyRewardClient for HoyolabDailyRewardClient {
         let game = self.config.game_id.display_name();
         tracing::debug!(game = game, "Fetching daily reward status");
 
-        let (info, rewards) = tokio::try_join!(self.get_reward_info(), self.get_monthly_rewards())?;
+        // HoYoLab throttles parallel daily-reward reads on one account with
+        // retcode -1004.
+        let info = self.get_reward_info().await?;
+        let rewards = self.get_monthly_rewards().await?;
 
         let today_index = if info.is_signed {
             info.total_sign_day.saturating_sub(1) as usize
@@ -203,10 +205,9 @@ impl DailyRewardClient for HoyolabDailyRewardClient {
             .await
         {
             Ok(sign) => sign,
-            Err(Error::Client(ClientError::ApiError {
-                code: ALREADY_SIGNED_RETCODE,
-                ..
-            })) => {
+            Err(Error::Client(ClientError::ApiError { code, .. }))
+                if retcode::has_kind(code, RetcodeKind::AlreadyClaimed) =>
+            {
                 tracing::debug!(game = game, "Sign endpoint reports today already signed");
                 let status = self.get_reward_status().await?;
                 return Ok(ClaimResult::already_claimed(
@@ -253,6 +254,7 @@ mod tests {
     use std::collections::HashMap;
     use std::sync::Arc;
     use std::sync::atomic::AtomicBool;
+    use std::sync::atomic::AtomicUsize;
     use std::sync::atomic::Ordering;
     use tokio::io::AsyncReadExt;
     use tokio::io::AsyncWriteExt;
@@ -663,6 +665,49 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn a_sign_throttled_after_it_registered_resolves_to_already_claimed() {
+        let signed = AtomicBool::new(false);
+        let sign_attempts = AtomicUsize::new(0);
+        let server = TestServer::spawn(Arc::new(move |request| {
+            if request.target.starts_with("/event/luna/test/info") {
+                if signed.load(Ordering::SeqCst) {
+                    ok(r#"{"retcode":0,"message":"OK","data":{"is_sign":true,"total_sign_day":1}}"#)
+                } else {
+                    ok(
+                        r#"{"retcode":0,"message":"OK","data":{"is_sign":false,"total_sign_day":0}}"#,
+                    )
+                }
+            } else if request.target.starts_with("/event/luna/test/home") {
+                ok(
+                    r#"{"retcode":0,"message":"OK","data":{"awards":[{"name":"Day1","cnt":1,"icon":"1.png"}]}}"#,
+                )
+            } else {
+                // The first sign registers, then reports a throttle. The retry
+                // sees the day already signed.
+                signed.store(true, Ordering::SeqCst);
+                if sign_attempts.fetch_add(1, Ordering::SeqCst) == 0 {
+                    ok(
+                        r#"{"retcode":-110,"message":"Visits too frequently.","data":null}"#,
+                    )
+                } else {
+                    ok(r#"{"retcode":-5003,"message":"Already signed in today","data":null}"#)
+                }
+            }
+        }))
+        .await;
+
+        let config = test_config(&server.base_url);
+        let client = test_client(&server, config);
+        let claim = client
+            .claim_daily_reward()
+            .await
+            .expect("a registered sign followed by a throttle resolves as already claimed");
+
+        assert!(!claim.success);
+        assert_eq!(claim.message.as_deref(), Some("Already claimed today"));
+    }
+
+    #[tokio::test]
     async fn reward_status_selects_signed_day_reward_by_index() {
         let server = TestServer::spawn(Arc::new(|request| {
             if request.target.starts_with("/event/luna/test/info") {
@@ -692,5 +737,75 @@ mod tests {
             Some("Day2"),
             "signed day 2 should map to index 1"
         );
+    }
+
+    #[tokio::test]
+    async fn reward_status_reads_info_before_home() {
+        let server = TestServer::spawn(Arc::new(|request| {
+            if request.target.starts_with("/event/luna/test/info") {
+                ok(r#"{"retcode":0,"message":"OK","data":{"is_sign":true,"total_sign_day":1}}"#)
+            } else {
+                ok(r#"{"retcode":0,"message":"OK","data":{"awards":[]}}"#)
+            }
+        }))
+        .await;
+
+        let config = test_config(&server.base_url);
+        let client = test_client(&server, config);
+        client
+            .get_reward_status()
+            .await
+            .expect("fetch reward status");
+
+        let order: Vec<&str> = server
+            .requests()
+            .await
+            .iter()
+            .map(|request| {
+                if request.target.starts_with("/event/luna/test/info") {
+                    "info"
+                } else if request.target.starts_with("/event/luna/test/home") {
+                    "home"
+                } else {
+                    "other"
+                }
+            })
+            .collect();
+
+        assert_eq!(
+            order,
+            vec!["info", "home"],
+            "the daily-reward reads must not run concurrently"
+        );
+    }
+
+    #[tokio::test]
+    async fn rate_limited_info_retries_and_resolves_status() {
+        let info_attempts = AtomicUsize::new(0);
+        let server = TestServer::spawn(Arc::new(move |request| {
+            if request.target.starts_with("/event/luna/test/info") {
+                if info_attempts.fetch_add(1, Ordering::SeqCst) == 0 {
+                    ok(
+                        r#"{"retcode":-1004,"message":"Too many attempts. Please try again later.","data":null}"#,
+                    )
+                } else {
+                    ok(r#"{"retcode":0,"message":"OK","data":{"is_sign":true,"total_sign_day":1}}"#)
+                }
+            } else {
+                ok(
+                    r#"{"retcode":0,"message":"OK","data":{"awards":[{"name":"Day1","cnt":1,"icon":"1.png"}]}}"#,
+                )
+            }
+        }))
+        .await;
+
+        let config = test_config(&server.base_url);
+        let client = test_client(&server, config);
+        let status = client
+            .get_reward_status()
+            .await
+            .expect("a retry returns the reward status");
+
+        assert!(status.info.is_signed);
     }
 }

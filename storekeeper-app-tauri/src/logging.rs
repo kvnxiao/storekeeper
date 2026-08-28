@@ -1,4 +1,4 @@
-//! Tracing setup and log-file reads.
+//! Tracing setup, error rendering, and log-file reads.
 //!
 //! Log lines go to stdout in the human-readable format and to a daily rolling
 //! file as one JSON object per line, which the in-app viewer parses.
@@ -184,6 +184,30 @@ pub fn read_tail(lines: usize) -> Result<Vec<String>> {
     read_tail_from(&log_dir()?, TAIL_READ_BYTES, lines)
 }
 
+/// Render an error and its causes as one line for a `tracing` field.
+///
+/// Consecutive identical messages collapse to one, so an
+/// `#[error(transparent)]` wrapper does not repeat its source.
+pub fn error_chain(error: &(dyn std::error::Error + 'static)) -> String {
+    let mut rendered = String::new();
+    let mut previous = String::new();
+    let mut cause = Some(error);
+
+    while let Some(current) = cause {
+        let text = current.to_string();
+        if text != previous {
+            if !rendered.is_empty() {
+                rendered.push_str(": ");
+            }
+            rendered.push_str(&text);
+            previous = text;
+        }
+        cause = current.source();
+    }
+
+    rendered
+}
+
 /// Read at most `window_bytes` from the end of the newest log file in `dir`.
 fn read_tail_from(dir: &Utf8Path, window_bytes: u64, lines: usize) -> Result<Vec<String>> {
     let Some(path) = newest_log_file(dir)? else {
@@ -346,5 +370,34 @@ mod tests {
         let window = "one\ntwo\n";
 
         assert_eq!(tail_lines(window, false, 100), vec!["one", "two"]);
+    }
+
+    #[test]
+    fn error_chain_joins_a_context_with_its_cause() {
+        let cause: Box<dyn std::error::Error + Send + Sync> =
+            Box::new(storekeeper_client_hoyolab::Error::RateLimited {
+                retcode: -1004,
+                message: "Too many attempts. Please try again later.".to_string(),
+            });
+        let error = anyhow::anyhow!(cause).context("failed to fetch daily reward status");
+
+        assert_eq!(
+            error_chain(&*error),
+            "failed to fetch daily reward status: HoYoLab rate limit (retcode -1004): Too many attempts. Please try again later."
+        );
+    }
+
+    #[test]
+    fn error_chain_collapses_a_transparent_wrapper_that_repeats_its_source() {
+        let cause: Box<dyn std::error::Error + Send + Sync> =
+            Box::new(storekeeper_client_hoyolab::Error::Client(
+                storekeeper_client_hoyolab::ClientError::api_error(-100, "not logged in"),
+            ));
+        let error = anyhow::anyhow!(cause).context("failed to fetch daily reward status");
+
+        assert_eq!(
+            error_chain(&*error),
+            "failed to fetch daily reward status: API error (code -100): not logged in"
+        );
     }
 }
