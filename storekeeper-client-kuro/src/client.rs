@@ -126,8 +126,8 @@ impl KuroClient {
 
         if !status.is_success() {
             tracing::warn!(status = %status, "Preflight request failed");
-            return Err(Error::Client(ClientError::api_error(
-                i32::from(status.as_u16()),
+            return Err(Error::Client(ClientError::http_status(
+                status.as_u16(),
                 format!("Preflight request failed with status: {status}"),
             )));
         }
@@ -180,7 +180,7 @@ impl KuroClient {
             _ => {
                 tracing::warn!(
                     code = api_response.code,
-                    message = %api_response.message,
+                    api_message = %api_response.message,
                     "Kuro API error response"
                 );
                 return Err(Error::Client(ClientError::api_error(
@@ -191,9 +191,10 @@ impl KuroClient {
         }
 
         // The data field contains a map with region as key and JSON string as value
+        let code = api_response.code;
         let data = api_response
             .into_data()
-            .ok_or_else(|| Error::Client(ClientError::api_error(0, "Response data is null")))?;
+            .ok_or_else(|| Error::Client(ClientError::api_error(code, "Response data is null")))?;
 
         let region_data = data
             .get(region)
@@ -433,7 +434,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn preflight_failure_returns_api_error() {
+    async fn preflight_failure_returns_a_transport_error() {
         let server = TestServer::spawn(Arc::new(|request| {
             if request.method == "OPTIONS" && request.target.starts_with("/game/queryRole") {
                 TestResponse {
@@ -454,9 +455,9 @@ mod tests {
         assert!(
             matches!(
                 result,
-                Err(Error::Client(ClientError::ApiError { code: 500, .. }))
+                Err(Error::Client(ClientError::HttpStatus { status: 500, .. }))
             ),
-            "Expected preflight HTTP 500 to map to API error, got: {result:?}"
+            "An HTTP status must not be classified as an API code, got: {result:?}"
         );
 
         let requests = server.requests().await;
@@ -611,6 +612,31 @@ mod tests {
             seen_headers.load(Ordering::SeqCst),
             1,
             "Expected preflight headers to match browser semantics"
+        );
+    }
+    #[tokio::test]
+    async fn check_auth_propagates_a_transport_failure_rather_than_denying_credentials() {
+        let server = TestServer::spawn(Arc::new(|request| {
+            if request.method == "OPTIONS" {
+                TestResponse {
+                    status: 400,
+                    body: String::new(),
+                }
+            } else {
+                ok_json(r#"{"code":0,"message":"ok","data":{}}"#)
+            }
+        }))
+        .await;
+
+        let client = KuroClient::with_base_url("oauth", &server.base_url).expect("create client");
+        let result = client.check_auth("12345", "prod_gf_us").await;
+
+        assert!(
+            matches!(
+                result,
+                Err(Error::Client(ClientError::HttpStatus { status: 400, .. }))
+            ),
+            "A transport failure must not produce a credential verdict, got: {result:?}"
         );
     }
 }

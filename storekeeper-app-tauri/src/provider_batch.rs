@@ -89,7 +89,11 @@ fn collect_results(all_results: Vec<Vec<OperationResult>>) -> HashMap<GameId, se
                     map.insert(game_id, data);
                 }
                 Err(e) => {
-                    tracing::warn!(game_id = ?game_id, error = %e, "Batch operation failed");
+                    tracing::warn!(
+                        game_id = ?game_id,
+                        error = %crate::logging::error_chain(e.as_ref()),
+                        "Batch operation failed"
+                    );
                 }
             }
         }

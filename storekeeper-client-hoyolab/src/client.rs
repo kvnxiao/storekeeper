@@ -3,6 +3,8 @@
 use crate::ds::generate_dynamic_secret_overseas;
 use crate::error::Error;
 use crate::error::Result;
+use crate::retcode;
+use crate::retcode::RetcodeKind;
 use reqwest::Method;
 use reqwest::header::COOKIE;
 use serde::Serialize;
@@ -10,9 +12,11 @@ use serde::de::DeserializeOwned;
 use storekeeper_client_core::ApiResponse;
 use storekeeper_client_core::ClientError;
 use storekeeper_client_core::ClientWithMiddleware;
+use storekeeper_client_core::DEFAULT_MAX_DELAY_MS;
 use storekeeper_client_core::DEFAULT_MAX_RETRIES;
 use storekeeper_client_core::HoyolabApiResponse;
 use storekeeper_client_core::HttpClientBuilder;
+use storekeeper_client_core::RetryConfig;
 
 /// HoYoLab API client.
 #[derive(Debug, Clone)]
@@ -24,6 +28,11 @@ pub struct HoyolabClient {
 
 const HOYOLAB_AUTH_CHECK_URL: &str =
     "https://bbs-api-os.hoyolab.com/community/user/wapi/getUserFullInfo";
+
+#[cfg(not(test))]
+const HOYOLAB_API_BASE_DELAY_MS: u64 = 2000;
+#[cfg(test)]
+const HOYOLAB_API_BASE_DELAY_MS: u64 = 1;
 
 impl HoyolabClient {
     /// Creates a new HoYoLab client with the given credentials.
@@ -83,7 +92,11 @@ impl HoyolabClient {
     pub async fn check_auth(&self) -> Result<bool> {
         match self.get::<serde_json::Value>(&self.auth_check_url).await {
             Ok(_) => Ok(true),
-            Err(Error::Client(ClientError::ApiError { code: -100, .. })) => Ok(false), /* Not logged in */
+            Err(Error::Client(ClientError::ApiError { code, .. }))
+                if retcode::has_kind(code, RetcodeKind::Cookie) =>
+            {
+                Ok(false)
+            }
             Err(e) => Err(e),
         }
     }
@@ -103,10 +116,37 @@ impl HoyolabClient {
     /// This is useful for endpoints like daily rewards that require additional
     /// headers such as `x-rpc-signgame`.
     ///
+    /// Retries a temporary throttle up to [`DEFAULT_MAX_RETRIES`] times with
+    /// exponential backoff and jitter.
+    ///
     /// # Errors
     ///
     /// Returns an error if the request fails or the response cannot be parsed.
+    /// Returns [`Error::RateLimited`] when the throttle persists through every
+    /// retry.
     pub async fn request_with_headers<T: DeserializeOwned, B: Serialize>(
+        &self,
+        method: Method,
+        url: &str,
+        body: Option<&B>,
+        extra_headers: &[(&str, &str)],
+    ) -> Result<T> {
+        let retry_config = RetryConfig::new(
+            DEFAULT_MAX_RETRIES,
+            HOYOLAB_API_BASE_DELAY_MS,
+            DEFAULT_MAX_DELAY_MS,
+        );
+
+        storekeeper_client_core::retry_with_backoff(
+            &retry_config,
+            || self.request_once(method.clone(), url, body, extra_headers),
+            |err| matches!(err, Error::RateLimited { .. }),
+        )
+        .await
+    }
+
+    /// Regenerates the timestamp-bound dynamic secret on every attempt.
+    async fn request_once<T: DeserializeOwned, B: Serialize>(
         &self,
         method: Method,
         url: &str,
@@ -140,8 +180,8 @@ impl HoyolabClient {
             let body_preview: String = body.chars().take(300).collect();
             let message = format!("HTTP {status} from HoYoLab API: {}", body_preview.trim());
             tracing::warn!(url = %url, status = %status, body_preview = %body_preview, "HoYoLab HTTP error");
-            return Err(Error::Client(ClientError::api_error(
-                i32::from(status.as_u16()),
+            return Err(Error::Client(ClientError::http_status(
+                status.as_u16(),
                 message,
             )));
         }
@@ -149,12 +189,22 @@ impl HoyolabClient {
         let api_response: HoyolabApiResponse<T> = response.json().await?;
 
         if !api_response.is_success() {
+            let known = retcode::lookup(api_response.retcode);
             tracing::warn!(
                 retcode = api_response.retcode,
-                message = %api_response.message,
+                kind = ?known.map(|entry| entry.kind),
+                meaning = ?known.map(|entry| entry.meaning),
+                api_message = %api_response.message,
                 url = %url,
                 "HoYoLab API error response"
             );
+
+            if retcode::is_transient_throttle(api_response.retcode) {
+                return Err(Error::RateLimited {
+                    retcode: api_response.retcode,
+                    message: api_response.message,
+                });
+            }
         }
 
         tracing::debug!(url = %url, "HoYoLab API request successful");
@@ -169,6 +219,8 @@ mod tests {
     use reqwest::Method;
     use std::collections::HashMap;
     use std::sync::Arc;
+    use std::sync::atomic::AtomicUsize;
+    use std::sync::atomic::Ordering;
     use tokio::io::AsyncReadExt;
     use tokio::io::AsyncWriteExt;
     use tokio::net::TcpListener;
@@ -420,7 +472,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn non_success_http_status_maps_to_api_error() {
+    async fn non_success_http_status_maps_to_a_transport_error() {
         let server = TestServer::spawn(Arc::new(|_| text_response(429, "rate limited"))).await;
 
         let auth_url = format!("{}/auth", server.base_url);
@@ -432,15 +484,15 @@ mod tests {
         assert!(
             matches!(
                 result,
-                Err(Error::Client(ClientError::ApiError { code: 429, ref message }))
+                Err(Error::Client(ClientError::HttpStatus { status: 429, ref message }))
                     if message.contains("HTTP 429")
             ),
-            "Expected HTTP 429 to map to ApiError with status in message, got: {result:?}"
+            "An HTTP status must not be classified as an API retcode, got: {result:?}"
         );
     }
 
     #[tokio::test]
-    async fn api_retcode_failure_maps_to_api_error() {
+    async fn non_rate_limit_retcode_maps_to_api_error_without_retrying() {
         let server = TestServer::spawn(Arc::new(|_| {
             json_response(
                 200,
@@ -462,6 +514,75 @@ mod tests {
                     if message == "invalid request"
             ),
             "Expected retcode failure to map to ApiError, got: {result:?}"
+        );
+        assert_eq!(
+            server.requests().await.len(),
+            1,
+            "a non-rate-limit retcode fails on the first attempt"
+        );
+    }
+
+    #[tokio::test]
+    async fn a_throttling_retcode_retries_then_succeeds() {
+        for body in [
+            r#"{"retcode":-1004,"message":"Too many attempts. Please try again later.","data":null}"#,
+            r#"{"retcode":-110,"message":"Visits too frequently.","data":null}"#,
+        ] {
+            let attempts = AtomicUsize::new(0);
+            let server = TestServer::spawn(Arc::new(move |_| {
+                if attempts.fetch_add(1, Ordering::SeqCst) == 0 {
+                    json_response(200, body)
+                } else {
+                    json_response(200, r#"{"retcode":0,"message":"OK","data":{"ok":true}}"#)
+                }
+            }))
+            .await;
+
+            let auth_url = format!("{}/auth", server.base_url);
+            let client =
+                HoyolabClient::with_auth_check_url("123", "456", auth_url).expect("create client");
+            let url = format!("{}/throttled", server.base_url);
+
+            let result = client
+                .get::<serde_json::Value>(&url)
+                .await
+                .expect("a retry returns the successful response");
+
+            assert_eq!(result.get("ok"), Some(&serde_json::json!(true)));
+            assert_eq!(
+                server.requests().await.len(),
+                2,
+                "a throttling response produces one retry: {body}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn rate_limit_retcode_retries_until_exhausted() {
+        let server = TestServer::spawn(Arc::new(|_| {
+            json_response(
+                200,
+                r#"{"retcode":-1004,"message":"Too many attempts. Please try again later.","data":null}"#,
+            )
+        }))
+        .await;
+
+        let auth_url = format!("{}/auth", server.base_url);
+        let client =
+            HoyolabClient::with_auth_check_url("123", "456", auth_url).expect("create client");
+        let url = format!("{}/throttled", server.base_url);
+
+        let result = client.get::<serde_json::Value>(&url).await;
+        assert!(
+            matches!(result, Err(Error::RateLimited { retcode: -1004, .. })),
+            "retry exhaustion returns RateLimited, got: {result:?}"
+        );
+
+        let expected_attempts = usize::try_from(DEFAULT_MAX_RETRIES + 1).expect("u32 to usize");
+        assert_eq!(
+            server.requests().await.len(),
+            expected_attempts,
+            "one request is sent per attempt"
         );
     }
 
