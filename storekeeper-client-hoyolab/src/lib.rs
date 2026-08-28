@@ -7,6 +7,7 @@ mod client;
 mod daily_reward;
 mod ds;
 mod error;
+mod retcode;
 
 pub use client::HoyolabClient;
 pub use daily_reward::GENSHIN_DAILY_REWARD;
