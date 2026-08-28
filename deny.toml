@@ -55,8 +55,6 @@ allow = [
 ]
 confidence-threshold = 0.93
 
-# The bans check is excluded from `just audit`: cargo-deny 0.20 cannot resolve
-# the git-sourced ICU4X entries in [workspace.dependencies] and aborts.
 [bans]
 multiple-versions = "allow"
 wildcards = "deny"
@@ -64,4 +62,3 @@ wildcards = "deny"
 [sources]
 unknown-registry = "deny"
 unknown-git = "deny"
-allow-git = ["https://github.com/unicode-org/icu4x"]

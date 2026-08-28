@@ -21,7 +21,7 @@ test:
     cargo test --workspace
 
 audit:
-    cargo deny check advisories licenses sources
+    cargo deny check advisories bans licenses sources
 
 bundle:
     cargo tauri build
