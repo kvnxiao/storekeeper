@@ -17,6 +17,10 @@ pub enum ClientError {
     Deserialize(#[from] serde_json::Error),
 
     /// API returned an error response.
+    ///
+    /// `code` is the API code from the response body. API codes and HTTP status
+    /// codes use separate numeric ranges; non-success HTTP responses map to
+    /// [`ClientError::HttpStatus`].
     #[error("API error (code {code}): {message}")]
     ApiError {
         /// Error code from the API.
@@ -24,6 +28,19 @@ pub enum ClientError {
         /// Error message from the API.
         message: String,
     },
+
+    /// HTTP response has a non-success status.
+    #[error("HTTP {status}: {message}")]
+    HttpStatus {
+        /// HTTP status code from the response.
+        status: u16,
+        /// Description of the HTTP failure.
+        message: String,
+    },
+
+    /// Request middleware failed.
+    #[error("Request middleware failed: {0}")]
+    Middleware(String),
 
     /// Authentication failed or expired.
     #[error("Authentication failed: {0}")]
@@ -40,6 +57,15 @@ impl ClientError {
     pub fn api_error(code: i32, message: impl Into<String>) -> Self {
         Self::ApiError {
             code,
+            message: message.into(),
+        }
+    }
+
+    /// Creates a new HTTP status error.
+    #[must_use]
+    pub fn http_status(status: u16, message: impl Into<String>) -> Self {
+        Self::HttpStatus {
+            status,
             message: message.into(),
         }
     }
@@ -70,7 +96,7 @@ impl From<reqwest_middleware::Error> for ClientError {
     fn from(err: reqwest_middleware::Error) -> Self {
         match err {
             reqwest_middleware::Error::Reqwest(e) => Self::HttpRequest(e),
-            reqwest_middleware::Error::Middleware(e) => Self::api_error(0, e.to_string()),
+            reqwest_middleware::Error::Middleware(e) => Self::Middleware(e.to_string()),
         }
     }
 }

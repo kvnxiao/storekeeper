@@ -180,8 +180,8 @@ impl HoyolabClient {
             let body_preview: String = body.chars().take(300).collect();
             let message = format!("HTTP {status} from HoYoLab API: {}", body_preview.trim());
             tracing::warn!(url = %url, status = %status, body_preview = %body_preview, "HoYoLab HTTP error");
-            return Err(Error::Client(ClientError::api_error(
-                i32::from(status.as_u16()),
+            return Err(Error::Client(ClientError::http_status(
+                status.as_u16(),
                 message,
             )));
         }
@@ -472,7 +472,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn non_success_http_status_maps_to_api_error() {
+    async fn non_success_http_status_maps_to_a_transport_error() {
         let server = TestServer::spawn(Arc::new(|_| text_response(429, "rate limited"))).await;
 
         let auth_url = format!("{}/auth", server.base_url);
@@ -484,10 +484,10 @@ mod tests {
         assert!(
             matches!(
                 result,
-                Err(Error::Client(ClientError::ApiError { code: 429, ref message }))
+                Err(Error::Client(ClientError::HttpStatus { status: 429, ref message }))
                     if message.contains("HTTP 429")
             ),
-            "Expected HTTP 429 to map to ApiError with status in message, got: {result:?}"
+            "An HTTP status must not be classified as an API retcode, got: {result:?}"
         );
     }
 

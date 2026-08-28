@@ -41,18 +41,22 @@ impl Error {
     /// API retcodes.
     #[must_use]
     pub fn is_recoverable(&self) -> bool {
-        let Self::Client(ClientError::ApiError { code, .. }) = self else {
-            return true;
-        };
-
-        retcode::lookup(*code).is_none_or(|entry| match entry.kind {
-            RetcodeKind::Cooldown | RetcodeKind::Geetest | RetcodeKind::Request => true,
-            RetcodeKind::RateLimited
-            | RetcodeKind::Cookie
-            | RetcodeKind::Account
-            | RetcodeKind::AlreadyClaimed
-            | RetcodeKind::Redemption => false,
-        })
+        match self {
+            Self::Client(ClientError::ApiError { code, .. }) => {
+                retcode::lookup(*code).is_none_or(|entry| match entry.kind {
+                    RetcodeKind::Cooldown | RetcodeKind::Geetest | RetcodeKind::Request => true,
+                    RetcodeKind::RateLimited
+                    | RetcodeKind::Cookie
+                    | RetcodeKind::Account
+                    | RetcodeKind::AlreadyClaimed
+                    | RetcodeKind::Redemption => false,
+                })
+            }
+            Self::Client(ClientError::HttpStatus { status, .. }) => {
+                matches!(status, 408 | 429 | 500..=599)
+            }
+            _ => true,
+        }
     }
 }
 
@@ -90,7 +94,7 @@ mod tests {
 
     #[test]
     fn a_self_clearing_failure_is_recoverable() {
-        let recoverable: [Error; 5] = [
+        let recoverable: [Error; 7] = [
             Error::RateLimited {
                 retcode: -1004,
                 message: "Too many attempts. Please try again later.".to_string(),
@@ -99,6 +103,8 @@ mod tests {
             Error::Client(ClientError::api_error(-3102, "geetest")),
             Error::Client(ClientError::api_error(-10001, "malformed")),
             Error::Client(ClientError::api_error(-1002, "unrecognized")),
+            Error::Client(ClientError::http_status(503, "service unavailable")),
+            Error::Client(ClientError::Middleware("connector failed".to_string())),
         ];
 
         for error in recoverable {
@@ -108,12 +114,13 @@ mod tests {
 
     #[test]
     fn a_failure_needing_the_user_or_the_next_day_is_not_recoverable() {
-        let permanent: [Error; 5] = [
+        let permanent: [Error; 6] = [
             Error::Client(ClientError::api_error(-100, "not logged in")),
             Error::Client(ClientError::api_error(-10002, "no game account")),
             Error::Client(ClientError::api_error(-5003, "already signed")),
             Error::Client(ClientError::api_error(10101, "30 accounts per day")),
             Error::Client(ClientError::api_error(-2016, "redemption cooldown")),
+            Error::Client(ClientError::http_status(403, "forbidden")),
         ];
 
         for error in permanent {
