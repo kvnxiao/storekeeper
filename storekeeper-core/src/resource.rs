@@ -29,19 +29,34 @@ pub struct StaminaResource {
     pub max: u32,
     /// Instant when the resource will be fully recovered.
     pub full_at: Timestamp,
-    /// How many seconds it takes to regenerate one unit.
+    /// How many seconds pass between accrual steps.
     pub regen_rate_seconds: u32,
+    /// How many units each accrual step credits at once.
+    pub regen_step_units: u32,
 }
 
 impl StaminaResource {
-    /// Creates a new stamina resource.
+    /// Creates a stamina resource that accrues one unit per step.
     #[must_use]
     pub fn new(current: u32, max: u32, full_at: Timestamp, regen_rate_seconds: u32) -> Self {
+        Self::stepped(current, max, full_at, regen_rate_seconds, 1)
+    }
+
+    /// Creates a stamina resource that accrues `regen_step_units` at a time.
+    #[must_use]
+    pub fn stepped(
+        current: u32,
+        max: u32,
+        full_at: Timestamp,
+        regen_rate_seconds: u32,
+        regen_step_units: u32,
+    ) -> Self {
         Self {
             current,
             max,
             full_at,
             regen_rate_seconds,
+            regen_step_units,
         }
     }
 
@@ -151,6 +166,7 @@ mod tests {
         assert_eq!(resource.max, 160);
         assert_eq!(resource.full_at, now);
         assert_eq!(resource.regen_rate_seconds, 480);
+        assert_eq!(resource.regen_step_units, 1);
     }
 
     #[test]

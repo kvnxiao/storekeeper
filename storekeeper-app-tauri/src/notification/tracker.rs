@@ -50,14 +50,16 @@ impl NotificationTracker {
         now: Timestamp,
     ) -> NotifyAction {
         let in_window = match (config.notify_at_value, config.notify_minutes_before_full) {
-            // Value-threshold mode: a regen rate converts the remaining units
-            // into minutes; absent a rate, the comparison uses the raw value.
+            // In value-threshold mode, floor the step count to avoid opening
+            // the window before `estimated_current` reaches the threshold; a
+            // ceiling opens it one step early.
             (Some(threshold), _) => {
-                if let (Some(max), Some(rate)) = (info.max, info.regen_rate_seconds) {
-                    let units_remaining = max.saturating_sub(threshold);
+                if let (Some(max), Some(step_seconds)) = (info.max, info.regen_rate_seconds) {
+                    let step_units = info.regen_step_units.unwrap_or(1).max(1);
+                    let steps_remaining = max.saturating_sub(threshold) / step_units;
                     let effective_minutes = i64::try_from(
-                        units_remaining
-                            .checked_mul(rate)
+                        steps_remaining
+                            .checked_mul(step_seconds)
                             .map_or(u64::MAX, |v| v / 60),
                     )
                     .unwrap_or(i64::MAX);
@@ -146,6 +148,7 @@ mod tests {
             current: None,
             max: None,
             regen_rate_seconds: None,
+            regen_step_units: None,
         }
     }
 
@@ -339,11 +342,60 @@ mod tests {
             current: Some(120),
             max: Some(160),
             regen_rate_seconds: Some(480),
+            regen_step_units: Some(1),
         };
 
         assert!(
             tracker
                 .should_notify(GameId::GenshinImpact, "resin", &config, &info, now)
+                .is_notify()
+        );
+    }
+
+    #[test]
+    fn value_threshold_window_never_fires_below_the_threshold() {
+        let mut tracker = NotificationTracker::default();
+        let now = Timestamp::now();
+        let config = ResourceNotificationConfig {
+            enabled: true,
+            notify_minutes_before_full: None,
+            notify_at_value: Some(2000),
+            cooldown_minutes: 10,
+        };
+        let realm = |secs_to_full: i64| ResourceInfo {
+            completion_at: now + SignedDuration::from_secs(secs_to_full),
+            is_complete: false,
+            current: Some(1980),
+            max: Some(2400),
+            regen_rate_seconds: Some(3600),
+            regen_step_units: Some(30),
+        };
+
+        let early = realm(14 * 3600);
+        assert_eq!(early.estimated_current(now), Some(1980));
+        assert!(
+            !tracker
+                .should_notify(
+                    GameId::GenshinImpact,
+                    "realm_currency",
+                    &config,
+                    &early,
+                    now
+                )
+                .is_notify()
+        );
+
+        let at_threshold = realm(13 * 3600);
+        assert_eq!(at_threshold.estimated_current(now), Some(2010));
+        assert!(
+            tracker
+                .should_notify(
+                    GameId::GenshinImpact,
+                    "realm_currency",
+                    &config,
+                    &at_threshold,
+                    now
+                )
                 .is_notify()
         );
     }
@@ -367,6 +419,7 @@ mod tests {
             current: Some(100),
             max: Some(160),
             regen_rate_seconds: Some(480),
+            regen_step_units: Some(1),
         };
 
         assert!(
@@ -395,6 +448,7 @@ mod tests {
             current: Some(120),
             max: Some(160),
             regen_rate_seconds: Some(480),
+            regen_step_units: Some(1),
         };
         assert!(
             tracker
@@ -412,6 +466,7 @@ mod tests {
             current: Some(119),
             max: Some(160),
             regen_rate_seconds: Some(480),
+            regen_step_units: Some(1),
         };
         assert!(
             !tracker
@@ -443,6 +498,7 @@ mod tests {
             current: Some(145),
             max: Some(160),
             regen_rate_seconds: None,
+            regen_step_units: None,
         };
 
         assert!(
@@ -469,6 +525,7 @@ mod tests {
             current: Some(100),
             max: Some(160),
             regen_rate_seconds: None,
+            regen_step_units: None,
         };
 
         assert!(

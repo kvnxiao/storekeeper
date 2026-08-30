@@ -18,7 +18,8 @@ const RESPONSE_RESIN = 180;
 /** Interval used to keep the snapshot-to-render time gap non-zero. */
 const FETCH_LEAD_MS = 1_000;
 
-const FULL_IN_MS = 3_600_000;
+const MAX_RESIN = 200;
+const RESIN_REGEN_SECONDS = 480;
 const COOLDOWN_MS = 5 * 86_400_000;
 const WAIT_TIMEOUT_MS = 3_000;
 
@@ -26,6 +27,9 @@ function snapshot(resin: number): AllResources {
   // Backdate the snapshot so its fetch-to-render interval stays non-zero when
   // render and snapshot creation share a millisecond.
   const now = Temporal.Now.instant().subtract({ milliseconds: FETCH_LEAD_MS });
+  // The dashboard derives `current` from `fullAt`; keep both fields consistent
+  // in this fixture.
+  const fullIn = (MAX_RESIN - resin) * RESIN_REGEN_SECONDS;
   return {
     games: {
       [GameId.GenshinImpact]: [
@@ -33,9 +37,10 @@ function snapshot(resin: number): AllResources {
           type: "resin",
           data: {
             current: resin,
-            max: 200,
-            fullAt: now.add({ milliseconds: FULL_IN_MS }).toString(),
-            regenRateSeconds: 480,
+            max: MAX_RESIN,
+            fullAt: now.add({ seconds: fullIn }).toString(),
+            regenRateSeconds: RESIN_REGEN_SECONDS,
+            regenStepUnits: 1,
           },
         },
         {

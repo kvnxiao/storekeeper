@@ -75,6 +75,12 @@ export function formatAbsoluteDateTime(
   return isToday ? timeOnlyFmt.format(target) : weekdayTimeFmt.format(target);
 }
 
+/** Returns the fill duration at the accrual step, rounded down to whole minutes. */
+export function minutesToFull(limits: ResourceLimits): number {
+  const stepUnits = Math.max(limits.regenStepUnits, 1);
+  return Math.floor((Math.ceil(limits.maxValue / stepUnits) * limits.regenRateSeconds) / 60);
+}
+
 /** Extracts per-resource stamina input constraints for a game. */
 export function getResourceLimitsForGame(
   resources: AllResources | undefined,
@@ -86,6 +92,7 @@ export function getResourceLimitsForGame(
       limits[resource.type] = {
         maxValue: resource.data.max,
         regenRateSeconds: resource.data.regenRateSeconds,
+        regenStepUnits: resource.data.regenStepUnits,
       };
     }
   }

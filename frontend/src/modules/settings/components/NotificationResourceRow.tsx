@@ -5,6 +5,7 @@ import { Show, type VoidComponent } from "solid-js";
 import type { ResourceType } from "@/modules/games/games.constants";
 import type { GameId } from "@/modules/games/games.types";
 import type { ResourceLimits } from "@/modules/resources/resources.types";
+import { minutesToFull } from "@/modules/resources/resources.utils";
 import { previewNotificationMutationOptions } from "@/modules/settings/settings.query";
 import type { ResourceNotificationConfig } from "@/modules/settings/settings.types";
 import {
@@ -126,11 +127,7 @@ export const NotificationResourceRow: VoidComponent<NotificationResourceRowProps
                     value={config().notify_minutes_before_full ?? 0}
                     onChange={(value) => props.onChange(withNotifyMinutes(config(), value))}
                     minValue={0}
-                    maxValue={
-                      props.limits
-                        ? Math.floor((props.limits.maxValue * props.limits.regenRateSeconds) / 60)
-                        : 999
-                    }
+                    maxValue={props.limits ? minutesToFull(props.limits) : 999}
                     step={5}
                   />
                 </Show>

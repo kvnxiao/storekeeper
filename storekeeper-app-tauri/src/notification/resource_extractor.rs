@@ -15,19 +15,22 @@ pub(crate) struct ResourceInfo {
     pub(crate) current: Option<u64>,
     /// Maximum resource value (stamina resources only).
     pub(crate) max: Option<u64>,
-    /// Seconds per unit of regeneration (stamina resources only).
+    /// Seconds between accrual steps (stamina resources only).
     pub(crate) regen_rate_seconds: Option<u64>,
+    /// Units credited per accrual step (stamina resources only).
+    pub(crate) regen_step_units: Option<u64>,
 }
 
 impl ResourceInfo {
-    /// Estimates the current resource value from `completion_at` and regen
-    /// rate.
+    /// Estimates the current resource value from `completion_at` and the
+    /// accrual step.
     ///
-    /// The cached `current` field can be stale (set at API-fetch time), so this
-    /// computes the value from elapsed time instead.  Falls back to the cached
-    /// `current` when max/rate are unavailable.
+    /// Uses elapsed time instead of the cached `current` field, which is set at
+    /// API-fetch time. Falls back to `current` when max or rate is unavailable.
+    /// While an incomplete resource is recovering, clamps the estimate to
+    /// `current` when `max - current` is not divisible by the step size.
     pub(crate) fn estimated_current(&self, now: Timestamp) -> Option<u64> {
-        let (max, rate) = match (self.max, self.regen_rate_seconds) {
+        let (max, step_seconds) = match (self.max, self.regen_rate_seconds) {
             (Some(m), Some(r)) if r > 0 => (m, r),
             _ => return self.current,
         };
@@ -41,12 +44,15 @@ impl ResourceInfo {
             return Some(max);
         }
 
-        // Ceiling division: partial progress toward the next unit hasn't ticked
-        // yet. secs_to_full is guaranteed positive by the check above,
-        // so the conversion never falls back to 0 in practice.
         let secs = u64::try_from(secs_to_full).unwrap_or(0);
-        let remaining_units = secs.div_ceil(rate);
-        Some(max.saturating_sub(remaining_units))
+        let step_units = self.regen_step_units.unwrap_or(1);
+        let remaining_steps = secs.div_ceil(step_seconds);
+        let remaining_units = remaining_steps.saturating_mul(step_units);
+        let estimated = max.saturating_sub(remaining_units);
+        Some(
+            self.current
+                .map_or(estimated, |cached| estimated.max(cached)),
+        )
     }
 }
 
@@ -66,6 +72,7 @@ pub(crate) fn extract_resource_info(
                 current: None,
                 max: None,
                 regen_rate_seconds: None,
+                regen_step_units: None,
             }),
         "expeditions" => serde_json::from_value::<ExpeditionResource>(data.clone())
             .ok()
@@ -77,6 +84,7 @@ pub(crate) fn extract_resource_info(
                     current: None,
                     max: None,
                     regen_rate_seconds: None,
+                    regen_step_units: None,
                 }
             }),
         _ => serde_json::from_value::<StaminaResource>(data.clone())
@@ -87,6 +95,7 @@ pub(crate) fn extract_resource_info(
                 current: Some(u64::from(stamina.current)),
                 max: Some(u64::from(stamina.max)),
                 regen_rate_seconds: Some(u64::from(stamina.regen_rate_seconds)),
+                regen_step_units: Some(u64::from(stamina.regen_step_units)),
             }),
     }
 }
@@ -103,7 +112,8 @@ mod tests {
             "current": 100,
             "max": 160,
             "fullAt": future.to_string(),
-            "regenRateSeconds": 480
+            "regenRateSeconds": 480,
+            "regenStepUnits": 1
         });
 
         let info = extract_resource_info("resin", &data).expect("should extract stamina resource");
@@ -118,7 +128,8 @@ mod tests {
             "current": 160,
             "max": 160,
             "fullAt": past.to_string(),
-            "regenRateSeconds": 480
+            "regenRateSeconds": 480,
+            "regenStepUnits": 1
         });
 
         let info =
@@ -202,6 +213,7 @@ mod tests {
             current: Some(current),
             max: Some(max),
             regen_rate_seconds: Some(rate),
+            regen_step_units: Some(1),
         }
     }
 
@@ -256,6 +268,53 @@ mod tests {
         assert_eq!(info.estimated_current(now), Some(240));
     }
 
+    fn realm_info(now: Timestamp, secs_to_full: i64) -> ResourceInfo {
+        ResourceInfo {
+            completion_at: now + SignedDuration::from_secs(secs_to_full),
+            is_complete: false,
+            current: Some(1980),
+            max: Some(2400),
+            regen_rate_seconds: Some(3600),
+            regen_step_units: Some(30),
+        }
+    }
+
+    #[test]
+    fn estimated_current_holds_flat_between_hourly_credits() {
+        let now = Timestamp::now();
+        assert_eq!(
+            realm_info(now, 14 * 3600).estimated_current(now),
+            Some(1980)
+        );
+        assert_eq!(
+            realm_info(now, 13 * 3600 + 1).estimated_current(now),
+            Some(1980)
+        );
+    }
+
+    #[test]
+    fn estimated_current_never_reads_below_the_polled_value() {
+        let now = Timestamp::now();
+        let info = ResourceInfo {
+            completion_at: now + SignedDuration::from_secs(47 * 3600),
+            is_complete: false,
+            current: Some(1000),
+            max: Some(2400),
+            regen_rate_seconds: Some(3600),
+            regen_step_units: Some(30),
+        };
+        assert_eq!(info.estimated_current(now), Some(1000));
+    }
+
+    #[test]
+    fn estimated_current_advances_one_step_per_hour() {
+        let now = Timestamp::now();
+        assert_eq!(
+            realm_info(now, 13 * 3600).estimated_current(now),
+            Some(2010)
+        );
+    }
+
     #[test]
     fn estimated_current_no_rate_falls_back() {
         let now = Timestamp::now();
@@ -265,6 +324,7 @@ mod tests {
             current: Some(100),
             max: Some(160),
             regen_rate_seconds: None,
+            regen_step_units: None,
         };
         assert_eq!(info.estimated_current(now), Some(100));
     }

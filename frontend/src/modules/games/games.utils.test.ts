@@ -2,7 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { GenshinResource, type ResourceType } from "@/modules/games/games.constants";
 import { GameId } from "@/modules/games/games.types";
 import {
-  fillStaminaWhenDue,
+  estimateStaminaCurrent,
   readyCooldownWhenDue,
   selectResource,
 } from "@/modules/games/games.utils";
@@ -19,7 +19,14 @@ const PAST = NOW.subtract({ minutes: 1 }).toString();
 const FUTURE = NOW.add({ minutes: 1 }).toString();
 
 function stamina(overrides: Partial<StaminaResource> = {}): StaminaResource {
-  return { current: 100, max: 160, fullAt: FUTURE, regenRateSeconds: 480, ...overrides };
+  return {
+    current: 100,
+    max: 160,
+    fullAt: FUTURE,
+    regenRateSeconds: 480,
+    regenStepUnits: 1,
+    ...overrides,
+  };
 }
 
 function cooldown(overrides: Partial<CooldownResource> = {}): CooldownResource {
@@ -71,26 +78,60 @@ describe("selectResource", () => {
   });
 });
 
-describe("fillStaminaWhenDue", () => {
+describe("estimateStaminaCurrent", () => {
+  const realm = (secondsToFull: number): StaminaResource =>
+    stamina({
+      current: 1980,
+      max: 2400,
+      fullAt: NOW.add({ seconds: secondsToFull }).toString(),
+      regenRateSeconds: 3600,
+      regenStepUnits: 30,
+    });
+
   it("fills to max once fullAt has passed", () => {
-    expect(fillStaminaWhenDue(stamina({ fullAt: PAST }), NOW)?.current).toBe(160);
+    expect(estimateStaminaCurrent(stamina({ fullAt: PAST }), NOW)?.current).toBe(160);
   });
 
-  it("leaves the backend value alone while fullAt is still ahead", () => {
-    expect(fillStaminaWhenDue(stamina(), NOW)?.current).toBe(100);
+  it("counts a part-way unit as still owed", () => {
+    const oneUnitLeft = stamina({ fullAt: NOW.add({ minutes: 3 }).toString() });
+    expect(estimateStaminaCurrent(oneUnitLeft, NOW)?.current).toBe(159);
+  });
+
+  it("advances past the backend value as units tick", () => {
+    const twoUnitsLeft = stamina({ fullAt: NOW.add({ minutes: 9 }).toString() });
+    expect(estimateStaminaCurrent(twoUnitsLeft, NOW)?.current).toBe(158);
+  });
+
+  it("holds flat across a multi-unit step", () => {
+    expect(estimateStaminaCurrent(realm(14 * 3600), NOW)?.current).toBe(1980);
+    expect(estimateStaminaCurrent(realm(13 * 3600 + 1), NOW)?.current).toBe(1980);
+  });
+
+  it("jumps a whole step at the step boundary", () => {
+    expect(estimateStaminaCurrent(realm(13 * 3600), NOW)?.current).toBe(2010);
   });
 
   it("returns the same object when already full", () => {
     const full = stamina({ current: 160, fullAt: PAST });
-    expect(fillStaminaWhenDue(full, NOW)).toBe(full);
+    expect(estimateStaminaCurrent(full, NOW)).toBe(full);
   });
 
-  it("treats a missing resource as nothing to fill", () => {
-    expect(fillStaminaWhenDue(null, NOW)).toBeNull();
+  it("treats a missing resource as nothing to estimate", () => {
+    expect(estimateStaminaCurrent(null, NOW)).toBeNull();
   });
 
   it("fills when fullAt is unparseable, matching the countdown's fallback", () => {
-    expect(fillStaminaWhenDue(stamina({ fullAt: "not a date" }), NOW)?.current).toBe(160);
+    expect(estimateStaminaCurrent(stamina({ fullAt: "not a date" }), NOW)?.current).toBe(160);
+  });
+
+  it("keeps the backend value when the step interval is zero", () => {
+    const noRate = stamina({ regenRateSeconds: 0 });
+    expect(estimateStaminaCurrent(noRate, NOW)).toBe(noRate);
+  });
+
+  it("never reads below the polled value when a step is clipped short at max", () => {
+    const clipped = realm(47 * 3600);
+    expect(estimateStaminaCurrent({ ...clipped, current: 1000 }, NOW)?.current).toBe(1000);
   });
 });
 

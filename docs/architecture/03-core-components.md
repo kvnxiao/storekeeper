@@ -14,6 +14,10 @@ Three shared resource shapes cover every game: regenerating resources, one-time 
 
 Resource kinds appear twice on purpose: as data (what was fetched) and as identifiers (config keys for tracked resources and notification settings). Both serialize to the same strings, so a config key always names a real resource.
 
+A regenerating resource accrues in steps: each step credits a fixed number of units at a fixed interval. Resin, waveplates, trailblaze power, and battery credit one unit per step. The HoYoLab daily-note API updates Realm Currency hourly, so Genshin's teapot uses thirty coins per step at the "Fit for a King" adeptal energy tier. A lower tier credits fewer coins, so the estimate reads low.
+
+Between polls, the notification body and dashboard card derive the current value from the completion timestamp and step size. When `max - current` is not divisible by the step size, the ceiling-based estimate can fall below the last polled value, so both views clamp it to that value. The value-threshold notification window uses the corresponding floor-based step count, so it does not fire while the displayed value is below the threshold.
+
 ## HTTP and Authentication
 
 The infrastructure crate owns client construction and the retry policy so no game or provider crate reimplements backoff. Retries apply only to transient failures; an API-level rejection is a real error and surfaces immediately.

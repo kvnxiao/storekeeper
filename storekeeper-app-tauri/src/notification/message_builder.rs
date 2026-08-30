@@ -129,6 +129,7 @@ mod tests {
             current: Some(160),
             max: Some(160),
             regen_rate_seconds: Some(480),
+            regen_step_units: Some(1),
         };
         let body = build_notification_body(&info, now);
         assert_eq!(body, "Full!");
@@ -145,6 +146,7 @@ mod tests {
             current: Some(140),
             max: Some(160),
             regen_rate_seconds: Some(480),
+            regen_step_units: Some(1),
         };
         let body = build_notification_body(&info, now);
         assert!(body.contains("/160"));
@@ -160,6 +162,7 @@ mod tests {
             current: None,
             max: None,
             regen_rate_seconds: None,
+            regen_step_units: None,
         };
         let body = build_notification_body(&info, now);
         assert_eq!(body, "Ready!");
@@ -176,6 +179,7 @@ mod tests {
             current: None,
             max: None,
             regen_rate_seconds: None,
+            regen_step_units: None,
         };
         let body = build_notification_body(&info, now);
         assert!(body.contains("Ready in"));
@@ -193,6 +197,7 @@ mod tests {
             current: Some(10),
             max: Some(160),
             regen_rate_seconds: Some(480),
+            regen_step_units: Some(1),
         };
         let body = build_notification_body(&info, now);
         assert!(body.contains("2d"), "Expected '2d' in: {body}");
@@ -210,6 +215,7 @@ mod tests {
             current: None,
             max: None,
             regen_rate_seconds: None,
+            regen_step_units: None,
         };
         let body = build_notification_body(&info, now);
         assert!(body.contains("2d"), "Expected '2d' in: {body}");
@@ -226,6 +232,7 @@ mod tests {
             current: None,
             max: None,
             regen_rate_seconds: None,
+            regen_step_units: None,
         };
         let body = build_notification_body(&info, now);
         let has_weekday = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
