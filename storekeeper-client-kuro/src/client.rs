@@ -190,7 +190,8 @@ impl KuroClient {
             }
         }
 
-        // The data field contains a map with region as key and JSON string as value
+        // The data field contains a map with region as key and JSON string as
+        // value
         let code = api_response.code;
         let data = api_response
             .into_data()

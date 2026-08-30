@@ -21,6 +21,10 @@ pub enum Error {
     /// An XOR-5 payload contains a byte outside ASCII.
     #[error("XOR-5 payload is not ASCII")]
     NonAsciiXor5Payload,
+
+    /// Error from the storekeeper-core crate.
+    #[error(transparent)]
+    Core(#[from] storekeeper_core::Error),
 }
 
 /// Result type alias using the Kuro Error type.

@@ -24,7 +24,6 @@ type HoyolabGameFactory = fn(HoyolabClient, &str, Region) -> Box<dyn DynGameClie
 
 struct EnabledHoyolabGame<'a> {
     uid: &'a str,
-    region_override: Option<Region>,
     detect_region: RegionDetector,
     create_client: HoyolabGameFactory,
     game_name: &'static str,
@@ -42,7 +41,6 @@ fn enabled_hoyolab_games(config: &AppConfig) -> Vec<EnabledHoyolabGame<'_>> {
     if let Some(c) = config.games.genshin_impact.as_ref().filter(|c| c.enabled) {
         games.push(EnabledHoyolabGame {
             uid: &c.uid,
-            region_override: c.region,
             detect_region: Region::from_genshin_uid,
             create_client: |h, uid, region| Box::new(GenshinClient::new(h, uid, region)),
             game_name: "Genshin Impact",
@@ -52,7 +50,6 @@ fn enabled_hoyolab_games(config: &AppConfig) -> Vec<EnabledHoyolabGame<'_>> {
     if let Some(c) = config.games.honkai_star_rail.as_ref().filter(|c| c.enabled) {
         games.push(EnabledHoyolabGame {
             uid: &c.uid,
-            region_override: c.region,
             detect_region: Region::from_hsr_uid,
             create_client: |h, uid, region| Box::new(HsrClient::new(h, uid, region)),
             game_name: "Honkai: Star Rail",
@@ -67,7 +64,6 @@ fn enabled_hoyolab_games(config: &AppConfig) -> Vec<EnabledHoyolabGame<'_>> {
     {
         games.push(EnabledHoyolabGame {
             uid: &c.uid,
-            region_override: c.region,
             detect_region: Region::from_zzz_uid,
             create_client: |h, uid, region| Box::new(ZzzClient::new(h, uid, region)),
             game_name: "Zenless Zone Zero",
@@ -109,21 +105,32 @@ fn daily_reward_specs(config: &AppConfig) -> [DailyRewardSpec; 3] {
     ]
 }
 
-/// Registers a HoYoLab-based game client if enabled and region can be resolved.
 fn register_hoyolab_game(
     registry: &mut GameClientRegistry,
     hoyolab: &HoyolabClient,
     uid: &str,
-    region_override: Option<Region>,
     detect_region: impl FnOnce(&str) -> std::result::Result<Region, storekeeper_core::Error>,
     create_client: impl FnOnce(HoyolabClient, &str, Region) -> Box<dyn DynGameClient>,
     game_name: &str,
 ) {
-    let region = region_override.or_else(|| detect_region(uid).ok());
-    if let Some(region) = region {
-        let client = create_client(hoyolab.clone(), uid, region);
-        tracing::info!(uid = %uid, region = ?region, "{game_name} client registered");
-        registry.register(client);
+    if uid.is_empty() {
+        tracing::debug!("{game_name} is enabled but has no UID yet");
+        return;
+    }
+
+    match detect_region(uid) {
+        Ok(region) => {
+            let client = create_client(hoyolab.clone(), uid, region);
+            tracing::info!(uid = %uid, region = ?region, "{game_name} client registered");
+            registry.register(client);
+        }
+        Err(e) => {
+            tracing::error!(
+                uid = %uid,
+                error = %e,
+                "The UID for {game_name} does not identify a supported server; the game is not tracked"
+            );
+        }
     }
 }
 
@@ -148,7 +155,6 @@ pub fn create_registry(config: &AppConfig, secrets: &SecretsConfig) -> GameClien
                         &mut registry,
                         &hoyolab,
                         game.uid,
-                        game.region_override,
                         game.detect_region,
                         game.create_client,
                         game.game_name,
@@ -179,18 +185,31 @@ pub fn create_registry(config: &AppConfig, secrets: &SecretsConfig) -> GameClien
             });
 
         if let Some(oauth_code) = oauth_code {
-            let region = wuwa_config
-                .region
-                .or_else(|| Region::from_wuwa_uid(&wuwa_config.uid).ok());
-            if let Some(region) = region
-                && let Ok(client) = WuwaClient::new(&oauth_code, &wuwa_config.uid, region)
-            {
-                tracing::info!(
-                    uid = %wuwa_config.uid,
-                    region = ?region,
-                    "Wuthering Waves client registered"
-                );
-                registry.register(Box::new(client) as Box<dyn DynGameClient>);
+            if wuwa_config.uid.is_empty() {
+                tracing::debug!("Wuthering Waves is enabled but has no UID yet");
+            } else {
+                match Region::from_wuwa_uid(&wuwa_config.uid) {
+                    Ok(region) => match WuwaClient::new(&oauth_code, &wuwa_config.uid, region) {
+                        Ok(client) => {
+                            tracing::info!(
+                                uid = %wuwa_config.uid,
+                                region = ?region,
+                                "Wuthering Waves client registered"
+                            );
+                            registry.register(Box::new(client) as Box<dyn DynGameClient>);
+                        }
+                        Err(e) => tracing::error!(
+                            uid = %wuwa_config.uid,
+                            error = %e,
+                            "Failed to create the Wuthering Waves client; the game is not tracked"
+                        ),
+                    },
+                    Err(e) => tracing::error!(
+                        uid = %wuwa_config.uid,
+                        error = %e,
+                        "The UID for Wuthering Waves does not identify a supported server; the game is not tracked"
+                    ),
+                }
             }
         } else {
             tracing::warn!(

@@ -10,6 +10,7 @@ import {
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { queryClient } from "@/modules/core/core.queryClient";
 import type { AppConfig, SecretsConfig } from "@/modules/settings/settings.types";
+import { emptyHoyolabConfig, emptyWuwaConfig } from "@/modules/settings/settings.utils";
 import { SettingsPage } from "@/modules/settings/components/SettingsPage";
 
 /** Use a distinct UID per game so a crossed field path is visible. */
@@ -22,10 +23,10 @@ const CONFIG: AppConfig = {
     autostart: false,
   },
   games: {
-    genshin_impact: { enabled: true, uid: "genshin-uid", auto_claim_daily_rewards: false },
-    honkai_star_rail: { enabled: true, uid: "hsr-uid", auto_claim_daily_rewards: false },
-    zenless_zone_zero: { enabled: true, uid: "zzz-uid", auto_claim_daily_rewards: false },
-    wuthering_waves: { enabled: true, uid: "wuwa-uid" },
+    genshin_impact: { ...emptyHoyolabConfig([]), enabled: true, uid: "genshin-uid" },
+    honkai_star_rail: { ...emptyHoyolabConfig([]), enabled: true, uid: "hsr-uid" },
+    zenless_zone_zero: { ...emptyHoyolabConfig([]), enabled: true, uid: "zzz-uid" },
+    wuthering_waves: { ...emptyWuwaConfig([]), enabled: true, uid: "wuwa-uid" },
   },
 };
 

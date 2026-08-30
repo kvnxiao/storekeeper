@@ -200,6 +200,8 @@ autostart = false
 # 2. Your UID/Player ID
 # 3. Credentials in secrets.toml
 #
+# The server region is derived from the UID or player ID and is not configurable.
+#
 # HoYoLab games (Genshin, HSR, ZZZ) support auto-claiming daily rewards:
 #   auto_claim_daily_rewards = true/false
 #   auto_claim_time = "HH:MM"  # Optional, in UTC+8. Defaults to "00:00" (midnight)
@@ -215,7 +217,6 @@ autostart = false
 [games.genshin_impact]
 enabled = false
 uid = ""
-# region = "os_usa"  # Optional: auto-detected from UID
 # auto_claim_daily_rewards = false
 # auto_claim_time = "00:00"  # Optional: HH:MM in UTC+8 (China Standard Time)
 #
@@ -228,7 +229,6 @@ uid = ""
 [games.honkai_star_rail]
 enabled = false
 uid = ""
-# region = "prod_official_usa"  # Optional: auto-detected from UID
 # auto_claim_daily_rewards = false
 # auto_claim_time = "00:00"  # Optional: HH:MM in UTC+8 (China Standard Time)
 #
@@ -241,7 +241,6 @@ uid = ""
 [games.zenless_zone_zero]
 enabled = false
 uid = ""
-# region = "prod_gf_us"  # Optional: auto-detected from UID
 # auto_claim_daily_rewards = false
 # auto_claim_time = "00:00"  # Optional: HH:MM in UTC+8 (China Standard Time)
 #
@@ -254,7 +253,6 @@ uid = ""
 [games.wuthering_waves]
 enabled = false
 uid = ""
-# region = "na"  # Optional: auto-detected from player ID
 #
 # [games.wuthering_waves.notifications.waveplates]
 # enabled = true

@@ -74,6 +74,8 @@
   "settings_logs_open_folder": "ログフォルダを開く",
 
   "settings_game_enable_tracking": "{title}のトラッキングを有効化",
+  "settings_game_region_detected": "リージョン: {region}",
+  "settings_game_region_unknown": "このUIDからリージョンを判別できません",
   "settings_game_uid": "UID",
   "settings_game_uid_placeholder": "UIDを入力",
   "settings_game_auto_claim": "デイリー報酬を自動受取",

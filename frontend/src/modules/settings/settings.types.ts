@@ -1,15 +1,15 @@
 /** Match the configuration shapes serialized by the Rust backend. */
 
 import type { ResourceType } from "@/modules/games/games.constants";
-import type { Locale } from "@/modules/i18n/i18n.constants";
-import type { LogLevel } from "@/modules/logs/logs.constants";
 
 /** General application settings */
 export interface GeneralConfig {
   poll_interval_secs: number;
   start_minimized: boolean;
-  log_level: LogLevel;
-  language: Locale | null;
+  /** Accept a `tracing_subscriber::EnvFilter` directive, not only a log level. */
+  log_level: string;
+  /** Store an optional locale override; the backend omits it when unset. */
+  language?: string | null;
   autostart: boolean;
 }
 
@@ -21,32 +21,31 @@ export interface ResourceNotificationConfig {
   cooldown_minutes: number;
 }
 
-/** Common configuration for HoYoLab games */
+/** Common HoYoLab configuration; `GAME_REGISTRY` supplies each game's resource set. */
 export interface HoyolabGameConfig {
   enabled: boolean;
   uid: string;
-  region?: string;
-  tracked_resources?: string[];
+  tracked_resources: ResourceType[];
   auto_claim_daily_rewards: boolean;
-  auto_claim_time?: string;
-  notifications?: Partial<Record<ResourceType, ResourceNotificationConfig>>;
+  /** Use "HH:MM" in UTC+8. */
+  auto_claim_time: string | null;
+  notifications: Partial<Record<ResourceType, ResourceNotificationConfig>>;
 }
 
 /** Wuthering Waves configuration */
 export interface WuwaConfig {
   enabled: boolean;
   uid: string;
-  region?: string;
-  tracked_resources?: string[];
-  notifications?: Partial<Record<ResourceType, ResourceNotificationConfig>>;
+  tracked_resources: ResourceType[];
+  notifications: Partial<Record<ResourceType, ResourceNotificationConfig>>;
 }
 
 /** Per-game configuration */
 export interface GamesConfig {
-  genshin_impact?: HoyolabGameConfig;
-  honkai_star_rail?: HoyolabGameConfig;
-  zenless_zone_zero?: HoyolabGameConfig;
-  wuthering_waves?: WuwaConfig;
+  genshin_impact: HoyolabGameConfig | null;
+  honkai_star_rail: HoyolabGameConfig | null;
+  zenless_zone_zero: HoyolabGameConfig | null;
+  wuthering_waves: WuwaConfig | null;
 }
 
 /** Config keys for HoYoLab games only */

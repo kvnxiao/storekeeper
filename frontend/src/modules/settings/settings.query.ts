@@ -47,6 +47,19 @@ export function saveSettingsMutationOptions(queryClient: QueryClient) {
   });
 }
 
+/** Query options for the server region derived from a game's UID. */
+const SHORTEST_UID = 8;
+
+export function detectedRegionQueryOptions(gameId: GameId, uid: string) {
+  return queryOptions({
+    queryKey: ["detected-region", gameId, uid],
+    queryFn: async () => invoke<string>("detect_region", { gameId, uid }),
+    enabled: uid.length >= SHORTEST_UID,
+    retry: false,
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+}
+
 /** Opens the config directory in the OS file explorer. */
 export function openConfigFolder(): void {
   invoke("open_config_folder").catch(console.error);

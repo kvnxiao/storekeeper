@@ -74,6 +74,8 @@
   "settings_logs_open_folder": "打开日志文件夹",
 
   "settings_game_enable_tracking": "启用{title}追踪",
+  "settings_game_region_detected": "区域：{region}",
+  "settings_game_region_unknown": "无法从此 UID 判断区域",
   "settings_game_uid": "UID",
   "settings_game_uid_placeholder": "输入您的 UID",
   "settings_game_auto_claim": "自动领取每日奖励",

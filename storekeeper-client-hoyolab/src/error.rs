@@ -29,16 +29,20 @@ pub enum Error {
         /// Risk-control code returned by the sign endpoint, when present.
         risk_code: Option<i32>,
     },
+
+    /// Error from the storekeeper-core crate.
+    #[error(transparent)]
+    Core(#[from] storekeeper_core::Error),
 }
 
 impl Error {
     /// Return whether retrying the error can succeed.
     ///
-    /// Return `false` for API errors classified as rate-limited, cookie,
-    /// account, already-claimed, or redemption failures. Return `true` for
-    /// other errors, including the `RateLimited` variant, transport and
-    /// deserialization failures, geetest and request errors, and unknown
-    /// API retcodes.
+    /// Return `false` for core errors and API errors classified as
+    /// rate-limited, cookie, account, already-claimed, or redemption
+    /// failures. Return `true` for other errors, including the
+    /// `RateLimited` variant, transport and deserialization failures,
+    /// geetest and request errors, and unknown API retcodes.
     #[must_use]
     pub fn is_recoverable(&self) -> bool {
         match self {
@@ -55,6 +59,7 @@ impl Error {
             Self::Client(ClientError::HttpStatus { status, .. }) => {
                 matches!(status, 408 | 429 | 500..=599)
             }
+            Self::Core(_) => false,
             _ => true,
         }
     }

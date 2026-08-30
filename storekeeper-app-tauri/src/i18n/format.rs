@@ -105,14 +105,15 @@ pub fn format_duration(total_minutes: i64) -> String {
 
     with_messages(|m| {
         let mut opts = DurationFormatterOptions::default();
-        // Narrow style only works correctly for English; use Short for all other
-        // locales.
+        // Narrow style only works correctly for English; use Short for all
+        // other locales.
         opts.base = if m.locale.id.language == icu_locale::subtags::language!("en") {
             BaseStyle::Narrow
         } else {
             BaseStyle::Short
         };
-        // Always show the minute unit so 0-duration doesn't produce an empty string.
+        // Always show the minute unit so 0-duration doesn't produce an empty
+        // string.
         opts.minute_visibility = Some(FieldDisplay::Always);
         let Ok(validated) = ValidatedDurationFormatterOptions::validate(opts) else {
             return fallback();

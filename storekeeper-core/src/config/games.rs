@@ -4,7 +4,6 @@ use super::claim_time::ClaimTime;
 use super::claim_time::claim_time_serde;
 use super::default_true;
 use super::notification::ResourceNotificationConfig;
-use crate::region::Region;
 use crate::resource_types::GenshinResourceType;
 use crate::resource_types::HsrResourceType;
 use crate::resource_types::WuwaResourceType;
@@ -25,9 +24,6 @@ pub struct GenshinConfig {
 
     /// Player UID.
     pub uid: String,
-
-    /// Optional region override.
-    pub region: Option<Region>,
 
     /// Resources to track.
     #[serde(
@@ -65,9 +61,6 @@ pub struct HsrConfig {
     /// Player UID.
     pub uid: String,
 
-    /// Optional region override.
-    pub region: Option<Region>,
-
     /// Resources to track.
     #[serde(
         default = "default_hsr_resources",
@@ -104,9 +97,6 @@ pub struct ZzzConfig {
     /// Player UID.
     pub uid: String,
 
-    /// Optional region override.
-    pub region: Option<Region>,
-
     /// Resources to track.
     #[serde(
         default = "default_zzz_resources",
@@ -142,9 +132,6 @@ pub struct WuwaConfig {
 
     /// UID.
     pub uid: String,
-
-    /// Optional region override.
-    pub region: Option<Region>,
 
     /// Resources to track.
     #[serde(

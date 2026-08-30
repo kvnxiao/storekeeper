@@ -111,8 +111,8 @@ impl<'de> Deserialize<'de> for TransformerInfo {
                 + i64::from(raw.recovery_time.second);
 
             if total_seconds > 0 {
-                // `total_seconds` comes from the API; clamp overflow back to now
-                // rather than panicking.
+                // `total_seconds` comes from the API; clamp overflow back to
+                // now rather than panicking.
                 Timestamp::now()
                     .checked_add(SignedDuration::from_secs(total_seconds))
                     .unwrap_or_else(|_| Timestamp::now())
@@ -152,7 +152,7 @@ impl GenshinClient {
         tracing::debug!(uid = %self.uid, region = ?self.region, "Fetching Genshin daily note");
         let url = format!(
             "https://sg-public-api.hoyolab.com/event/game_record/genshin/api/dailyNote?server={}&role_id={}",
-            self.region.genshin_region(),
+            self.region.genshin_region()?,
             self.uid
         );
 

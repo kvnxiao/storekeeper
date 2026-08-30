@@ -61,8 +61,9 @@ impl NotificationTracker {
                             .map_or(u64::MAX, |v| v / 60),
                     )
                     .unwrap_or(i64::MAX);
-                    // Build the window in seconds with saturating arithmetic so an
-                    // extreme `effective_minutes` can't overflow the duration.
+                    // Build the window in seconds with saturating arithmetic so
+                    // an extreme `effective_minutes` can't
+                    // overflow the duration.
                     let window = SignedDuration::from_secs(effective_minutes.saturating_mul(60));
                     info.is_complete || info.completion_at.duration_since(now) <= window
                 } else {
@@ -358,7 +359,8 @@ mod tests {
             cooldown_minutes: 10,
         };
 
-        // threshold=140, remaining=20 units, 20*480/60=160 min. time_to_full=200 > 160
+        // threshold=140, remaining=20 units, 20*480/60=160 min.
+        // time_to_full=200 > 160
         let info = ResourceInfo {
             completion_at: now + SignedDuration::from_mins(200),
             is_complete: false,

@@ -74,6 +74,8 @@
   "settings_logs_open_folder": "로그 폴더 열기",
 
   "settings_game_enable_tracking": "{title} 추적 활성화",
+  "settings_game_region_detected": "지역: {region}",
+  "settings_game_region_unknown": "이 UID에서 지역을 확인할 수 없습니다",
   "settings_game_uid": "UID",
   "settings_game_uid_placeholder": "UID를 입력하세요",
   "settings_game_auto_claim": "일일 보상 자동 수령",

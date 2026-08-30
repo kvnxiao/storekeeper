@@ -66,7 +66,7 @@ impl WuwaClient {
             "Fetching WuWa role data"
         );
         self.kuro
-            .query_role(&self.uid, self.region.wuwa_region())
+            .query_role(&self.uid, self.region.wuwa_region()?)
             .await
     }
 }
@@ -99,7 +99,7 @@ impl GameClient for WuwaClient {
 
     async fn is_authenticated(&self) -> Result<bool> {
         self.kuro
-            .check_auth(&self.uid, self.region.wuwa_region())
+            .check_auth(&self.uid, self.region.wuwa_region()?)
             .await
     }
 }

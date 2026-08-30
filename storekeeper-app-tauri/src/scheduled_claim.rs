@@ -220,7 +220,8 @@ pub fn start_scheduled_claims(app_handle: AppHandle, cancel_token: CancellationT
                 }
             };
 
-            // Clamp to zero for display: a target in the past sleeps for no time.
+            // Clamp to zero for display: a target in the past sleeps for no
+            // time.
             let until_claim_secs = wake
                 .target
                 .duration_since(Timestamp::now())

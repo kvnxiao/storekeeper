@@ -148,6 +148,7 @@ pub fn run() -> Result<()> {
             commands::refresh_daily_reward_status,
             commands::claim_daily_reward_for_game,
             commands::get_daily_reward_status_for_game,
+            commands::detect_region,
             commands::get_supported_locales,
             commands::get_effective_locale,
         ])

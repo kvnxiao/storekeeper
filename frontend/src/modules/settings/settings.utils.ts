@@ -1,12 +1,39 @@
+import type { ResourceType } from "@/modules/games/games.constants";
 import { GAMES } from "@/modules/games/games.registry";
 import type { GameId } from "@/modules/games/games.types";
-import type { AppConfig, ResourceNotificationConfig } from "@/modules/settings/settings.types";
+import type {
+  AppConfig,
+  HoyolabGameConfig,
+  ResourceNotificationConfig,
+  WuwaConfig,
+} from "@/modules/settings/settings.types";
 
 /** Returns the set of games enabled in config; empty while config is unloaded. */
 export function enabledGamesFromConfig(config: AppConfig | undefined): Set<GameId> {
   return new Set(
     GAMES.filter((game) => config?.games[game.configKey]?.enabled).map((game) => game.gameId),
   );
+}
+
+/** Copy the full resource set because an empty array overrides the backend default. */
+export function emptyHoyolabConfig(resourceTypes: readonly ResourceType[]): HoyolabGameConfig {
+  return {
+    enabled: false,
+    uid: "",
+    tracked_resources: [...resourceTypes],
+    auto_claim_daily_rewards: false,
+    auto_claim_time: null,
+    notifications: {},
+  };
+}
+
+export function emptyWuwaConfig(resourceTypes: readonly ResourceType[]): WuwaConfig {
+  return {
+    enabled: false,
+    uid: "",
+    tracked_resources: [...resourceTypes],
+    notifications: {},
+  };
 }
 
 export type NotifyMode = "minutes" | "value";

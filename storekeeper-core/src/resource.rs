@@ -361,7 +361,8 @@ mod tests {
         assert_eq!(resource.current, deserialized.current);
         assert_eq!(resource.max, deserialized.max);
         assert_eq!(resource.regen_rate_seconds, deserialized.regen_rate_seconds);
-        // jiff::Timestamp roundtrips losslessly through RFC3339, so the value is exact.
+        // jiff::Timestamp roundtrips losslessly through RFC3339, so the value
+        // is exact.
         assert_eq!(
             resource.full_at, deserialized.full_at,
             "full_at should roundtrip exactly"

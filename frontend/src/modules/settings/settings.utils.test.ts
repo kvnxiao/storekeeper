@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vite-plus/test";
+import { GAME_REGISTRY } from "@/modules/games/games.registry";
 import { GameId } from "@/modules/games/games.types";
 import type { AppConfig, ResourceNotificationConfig } from "@/modules/settings/settings.types";
 import {
   DEFAULT_NOTIFICATION_CONFIG,
+  emptyHoyolabConfig,
+  emptyWuwaConfig,
   enabledGamesFromConfig,
   enabledNotificationConfig,
   getNotifyMode,
@@ -18,7 +21,14 @@ const base: ResourceNotificationConfig = {
   cooldown_minutes: 15,
 };
 
-function config(games: AppConfig["games"]): AppConfig {
+const NO_GAMES: AppConfig["games"] = {
+  genshin_impact: null,
+  honkai_star_rail: null,
+  zenless_zone_zero: null,
+  wuthering_waves: null,
+};
+
+function config(games: Partial<AppConfig["games"]>): AppConfig {
   return {
     general: {
       poll_interval_secs: 600,
@@ -27,7 +37,7 @@ function config(games: AppConfig["games"]): AppConfig {
       language: null,
       autostart: false,
     },
-    games,
+    games: { ...NO_GAMES, ...games },
   };
 }
 
@@ -39,17 +49,63 @@ describe("enabledGamesFromConfig", () => {
   it("returns only the games whose config is enabled", () => {
     const enabled = enabledGamesFromConfig(
       config({
-        genshin_impact: { enabled: true, uid: "1", auto_claim_daily_rewards: false },
-        honkai_star_rail: { enabled: false, uid: "2", auto_claim_daily_rewards: false },
-        wuthering_waves: { enabled: true, uid: "3" },
+        genshin_impact: { ...emptyHoyolabConfig([]), enabled: true, uid: "1" },
+        honkai_star_rail: { ...emptyHoyolabConfig([]), enabled: false, uid: "2" },
+        wuthering_waves: { ...emptyWuwaConfig([]), enabled: true, uid: "3" },
       }),
     );
 
     expect([...enabled]).toEqual([GameId.GenshinImpact, GameId.WutheringWaves]);
   });
 
-  it("treats a game missing from the config as disabled", () => {
+  it("treats an unconfigured game as disabled", () => {
     expect(enabledGamesFromConfig(config({})).size).toBe(0);
+  });
+});
+
+describe("emptyHoyolabConfig", () => {
+  it("tracks the game's full resource set, matching the backend default", () => {
+    const genshin = GAME_REGISTRY[GameId.GenshinImpact].resourceTypes;
+
+    expect(emptyHoyolabConfig(genshin).tracked_resources).toEqual([
+      "resin",
+      "parametric_transformer",
+      "realm_currency",
+      "expeditions",
+    ]);
+  });
+
+  it("copies the resource types instead of aliasing the registry", () => {
+    const genshin = GAME_REGISTRY[GameId.GenshinImpact].resourceTypes;
+    const config = emptyHoyolabConfig(genshin);
+
+    config.tracked_resources.pop();
+
+    expect(genshin).toHaveLength(4);
+  });
+
+  it("leaves every nullable field null so the payload matches the wire shape", () => {
+    expect(emptyHoyolabConfig([])).toEqual({
+      enabled: false,
+      uid: "",
+      tracked_resources: [],
+      auto_claim_daily_rewards: false,
+      auto_claim_time: null,
+      notifications: {},
+    });
+  });
+});
+
+describe("emptyWuwaConfig", () => {
+  it("tracks the game's full resource set and omits the daily-claim fields", () => {
+    const wuwa = GAME_REGISTRY[GameId.WutheringWaves].resourceTypes;
+
+    expect(emptyWuwaConfig(wuwa)).toEqual({
+      enabled: false,
+      uid: "",
+      tracked_resources: ["waveplates"],
+      notifications: {},
+    });
   });
 });
 
