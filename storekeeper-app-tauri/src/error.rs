@@ -58,7 +58,8 @@ impl From<storekeeper_core::Error> for CommandError {
             | storekeeper_core::Error::TomlDeserialize(_)
             | storekeeper_core::Error::ValidationError { .. }
             | storekeeper_core::Error::InvalidRegion(_)
-            | storekeeper_core::Error::UnknownUidRegion(_) => ErrorCode::ConfigInvalid,
+            | storekeeper_core::Error::UnknownUidRegion(_)
+            | storekeeper_core::Error::UnsupportedRegion { .. } => ErrorCode::ConfigInvalid,
             storekeeper_core::Error::ConfigReadFailed(_) => ErrorCode::IoError,
         };
         Self {

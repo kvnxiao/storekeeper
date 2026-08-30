@@ -4,7 +4,9 @@ import type { GameId } from "@/modules/games/games.types";
 import type { ResourceLimits } from "@/modules/resources/resources.types";
 import { NotificationSection } from "@/modules/settings/components/NotificationSection";
 import { SettingsCard } from "@/modules/settings/components/SettingsCard";
+import { DetectedRegion } from "@/modules/settings/components/DetectedRegion";
 import type { HoyolabGameConfig } from "@/modules/settings/settings.types";
+import { emptyHoyolabConfig } from "@/modules/settings/settings.utils";
 import { Switch } from "@/modules/ui/components/Switch";
 import { TextField } from "@/modules/ui/components/TextField";
 import * as m from "@/paraglide/messages";
@@ -14,18 +16,14 @@ export interface HoyolabGameSectionProps {
   description: string;
   gameId: GameId;
   resourceTypes: readonly ResourceType[];
-  config: HoyolabGameConfig | undefined;
+  config: HoyolabGameConfig | null;
   resourceLimits?: Partial<Record<ResourceType, ResourceLimits>>;
   onChange: (config: HoyolabGameConfig) => void;
 }
 
 export const HoyolabGameSection: VoidComponent<HoyolabGameSectionProps> = (props) => {
-  // Normalize the optional config once; each onChange handler then updates one
-  // field.
   const current = (): HoyolabGameConfig => ({
-    enabled: false,
-    uid: "",
-    auto_claim_daily_rewards: false,
+    ...emptyHoyolabConfig(props.resourceTypes),
     ...props.config,
   });
 
@@ -44,6 +42,7 @@ export const HoyolabGameSection: VoidComponent<HoyolabGameSectionProps> = (props
           onChange={(value) => props.onChange({ ...current(), uid: value })}
           placeholder={m.settings_game_uid_placeholder()}
         />
+        <DetectedRegion gameId={props.gameId} uid={current().uid} />
         <Switch
           checked={current().auto_claim_daily_rewards}
           onChange={(checked) =>

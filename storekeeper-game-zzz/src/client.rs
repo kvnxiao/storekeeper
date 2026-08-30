@@ -58,7 +58,7 @@ impl ZzzClient {
         tracing::debug!(uid = %self.uid, region = ?self.region, "Fetching ZZZ note");
         let url = format!(
             "https://sg-public-api.hoyolab.com/event/game_record_zzz/api/zzz/note?server={}&role_id={}",
-            self.region.zzz_region(),
+            self.region.zzz_region()?,
             self.uid
         );
 

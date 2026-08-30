@@ -24,6 +24,7 @@ use jiff::Timestamp;
 use serde::Serialize;
 use storekeeper_core::AppConfig;
 use storekeeper_core::GameId;
+use storekeeper_core::Region;
 use storekeeper_core::SecretsConfig;
 use tauri::AppHandle;
 use tauri::Emitter;
@@ -332,6 +333,24 @@ pub async fn send_preview_notification(
         })
 }
 
+/// Returns the region derived from a game's UID for display in the settings UI.
+/// Client registration applies the same UID-to-region rules.
+///
+/// # Errors
+///
+/// Returns [`CommandError`] when the UID does not identify a supported server.
+#[tauri::command]
+pub fn detect_region(game_id: GameId, uid: &str) -> Result<&'static str, CommandError> {
+    let region = match game_id {
+        GameId::GenshinImpact => Region::from_genshin_uid(uid),
+        GameId::HonkaiStarRail => Region::from_hsr_uid(uid),
+        GameId::ZenlessZoneZero => Region::from_zzz_uid(uid),
+        GameId::WutheringWaves => Region::from_wuwa_uid(uid),
+    }?;
+
+    Ok(region.as_str())
+}
+
 /// Returns the list of supported locale codes.
 #[tauri::command]
 pub fn get_supported_locales() -> Vec<&'static str> {
@@ -342,4 +361,281 @@ pub fn get_supported_locales() -> Vec<&'static str> {
 #[tauri::command]
 pub fn get_effective_locale() -> String {
     i18n::get_current_locale()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::Value;
+    use serde_json::json;
+    use std::collections::BTreeMap;
+    use std::collections::BTreeSet;
+    use storekeeper_core::GenshinResourceType;
+    use storekeeper_core::HsrResourceType;
+    use storekeeper_core::ResourceNotificationConfig;
+    use storekeeper_core::WuwaResourceType;
+    use storekeeper_core::ZzzResourceType;
+
+    const FRONTEND_SETTINGS_TYPES: &str =
+        include_str!("../../frontend/src/modules/settings/settings.types.ts");
+
+    const FRONTEND_GAME_CONSTANTS: &str =
+        include_str!("../../frontend/src/modules/games/games.constants.ts");
+
+    fn populated_config() -> Value {
+        let game = json!({
+            "enabled": true,
+            "uid": "800000000",
+            "auto_claim_time": "04:00",
+            "notifications": {},
+        });
+        let config: AppConfig = serde_json::from_value(json!({
+            "general": { "language": "en" },
+            "games": {
+                "genshin_impact": game,
+                "honkai_star_rail": game,
+                "zenless_zone_zero": game,
+                "wuthering_waves": game,
+            },
+        }))
+        .expect("fixture should parse");
+
+        serde_json::to_value(&config).expect("config should serialize")
+    }
+
+    fn sparse_config() -> Value {
+        let game = json!({ "enabled": true, "uid": "800000000" });
+        let config: AppConfig = serde_json::from_value(json!({
+            "general": {},
+            "games": {
+                "genshin_impact": game,
+                "honkai_star_rail": game,
+                "zenless_zone_zero": game,
+                "wuthering_waves": game,
+            },
+        }))
+        .expect("fixture should parse");
+
+        serde_json::to_value(&config).expect("config should serialize")
+    }
+
+    fn keys_at(json: &Value, pointer: &str) -> BTreeSet<String> {
+        json.pointer(pointer)
+            .and_then(Value::as_object)
+            .expect("the pointer should address an object in the serialized config")
+            .keys()
+            .cloned()
+            .collect()
+    }
+
+    fn ts_interface_members(source: &str, name: &str) -> BTreeMap<String, bool> {
+        let header = format!("export interface {name} {{");
+        assert!(
+            source.contains(&header),
+            "the frontend should declare `{header}`"
+        );
+
+        let mut members = BTreeMap::new();
+
+        for line in source
+            .lines()
+            .skip_while(|line| line.trim() != header)
+            .skip(1)
+        {
+            let trimmed = line.trim();
+
+            if trimmed == "}" {
+                break;
+            }
+            if trimmed.is_empty() || trimmed.starts_with("/*") || trimmed.starts_with('*') {
+                continue;
+            }
+
+            assert!(
+                trimmed.contains(':'),
+                "`{name}` declares a member this parser cannot read: {trimmed}"
+            );
+            let (lhs, _) = trimmed.split_once(':').expect("the line holds a colon");
+            let optional = lhs.ends_with('?');
+            let field = lhs.trim_end_matches('?');
+
+            assert!(
+                !field.is_empty() && field.chars().all(|c| c.is_ascii_alphanumeric() || c == '_'),
+                "`{name}` declares a member this parser cannot read: {trimmed}"
+            );
+            members.insert(field.to_string(), optional);
+        }
+
+        assert!(!members.is_empty(), "`{name}` should declare fields");
+        members
+    }
+
+    fn assert_matches_interface(populated: &Value, sparse: &Value, pointer: &str, interface: &str) {
+        let rust = keys_at(populated, pointer);
+        let members = ts_interface_members(FRONTEND_SETTINGS_TYPES, interface);
+        let typescript: BTreeSet<String> = members.keys().cloned().collect();
+
+        assert_eq!(
+            rust,
+            typescript,
+            "`{pointer}` and `{interface}` disagree; \
+             Rust-only keys {:?}, TypeScript-only keys {:?}",
+            rust.difference(&typescript).collect::<Vec<_>>(),
+            typescript.difference(&rust).collect::<Vec<_>>(),
+        );
+
+        let omitted: BTreeSet<String> = rust
+            .difference(&keys_at(sparse, pointer))
+            .cloned()
+            .collect();
+        let declared_optional: BTreeSet<String> = members
+            .iter()
+            .filter(|&(_, optional)| *optional)
+            .map(|(field, _)| field.clone())
+            .collect();
+
+        assert_eq!(
+            omitted, declared_optional,
+            "`{interface}` marks the wrong fields optional; the backend omits {omitted:?} \
+             when unset and serializes every other field, including null"
+        );
+    }
+
+    fn ts_const_values(source: &str, name: &str) -> BTreeSet<String> {
+        let header = format!("export const {name} = {{");
+        assert!(
+            source.contains(&header),
+            "the frontend should declare `{header}`"
+        );
+
+        source
+            .lines()
+            .skip_while(|line| line.trim() != header)
+            .skip(1)
+            .take_while(|line| !line.trim().starts_with('}'))
+            .filter_map(|line| line.split_once(": \""))
+            .filter_map(|(_, rhs)| rhs.split_once('"'))
+            .map(|(value, _)| value.to_string())
+            .collect()
+    }
+
+    fn serialized<T: Serialize>(values: &[T]) -> BTreeSet<String> {
+        values
+            .iter()
+            .map(|value| {
+                serde_json::to_value(value)
+                    .ok()
+                    .and_then(|v| v.as_str().map(str::to_string))
+                    .expect("a resource type should serialize as a string")
+            })
+            .collect()
+    }
+
+    #[test]
+    fn config_structs_match_their_frontend_interfaces() {
+        let populated = populated_config();
+        let sparse = sparse_config();
+
+        for (pointer, interface) in [
+            ("", "AppConfig"),
+            ("/general", "GeneralConfig"),
+            ("/games", "GamesConfig"),
+            ("/games/genshin_impact", "HoyolabGameConfig"),
+            ("/games/honkai_star_rail", "HoyolabGameConfig"),
+            ("/games/zenless_zone_zero", "HoyolabGameConfig"),
+            ("/games/wuthering_waves", "WuwaConfig"),
+        ] {
+            assert_matches_interface(&populated, &sparse, pointer, interface);
+        }
+    }
+
+    #[test]
+    fn notification_config_matches_frontend_interface() {
+        let populated: ResourceNotificationConfig = serde_json::from_value(json!({
+            "notify_minutes_before_full": 60,
+            "notify_at_value": 180,
+        }))
+        .expect("fixture should parse");
+        let sparse: ResourceNotificationConfig =
+            serde_json::from_value(json!({})).expect("fixture should parse");
+
+        assert_matches_interface(
+            &serde_json::to_value(&populated).expect("should serialize"),
+            &serde_json::to_value(&sparse).expect("should serialize"),
+            "",
+            "ResourceNotificationConfig",
+        );
+    }
+
+    #[test]
+    fn secrets_structs_match_their_frontend_interfaces() {
+        let secrets = serde_json::to_value(SecretsConfig::default()).expect("should serialize");
+
+        for (pointer, interface) in [
+            ("", "SecretsConfig"),
+            ("/hoyolab", "HoyolabSecrets"),
+            ("/kuro", "KuroSecrets"),
+        ] {
+            assert_matches_interface(&secrets, &secrets, pointer, interface);
+        }
+    }
+
+    #[test]
+    fn save_result_matches_frontend_interface() {
+        let result = serde_json::to_value(SaveResult {
+            effective_locale: "en".to_string(),
+        })
+        .expect("should serialize");
+
+        assert_matches_interface(&result, &result, "", "SaveResult");
+    }
+
+    #[test]
+    fn frontend_resource_keys_match_the_backend_defaults() {
+        for (constant, rust) in [
+            ("GenshinResource", serialized(GenshinResourceType::all())),
+            ("HsrResource", serialized(HsrResourceType::all())),
+            ("ZzzResource", serialized(ZzzResourceType::all())),
+            ("WuwaResource", serialized(WuwaResourceType::all())),
+        ] {
+            assert_eq!(
+                ts_const_values(FRONTEND_GAME_CONSTANTS, constant),
+                rust,
+                "`{constant}` and its backend resource type disagree"
+            );
+        }
+    }
+
+    #[test]
+    fn detect_region_reports_each_game_its_own_server() {
+        assert_eq!(
+            detect_region(GameId::GenshinImpact, "900000001").expect("a traditional-Chinese uid"),
+            "china_hmt"
+        );
+        assert_eq!(
+            detect_region(GameId::ZenlessZoneZero, "1712345678")
+                .expect("a traditional-Chinese uid"),
+            "china_hmt"
+        );
+        assert_eq!(
+            detect_region(GameId::WutheringWaves, "902763418").expect("a southeast-asian uid"),
+            "sea"
+        );
+        assert_eq!(
+            detect_region(GameId::HonkaiStarRail, "600000001").expect("an american uid"),
+            "america"
+        );
+    }
+
+    #[test]
+    fn detect_region_rejects_a_uid_naming_no_server() {
+        let err = detect_region(GameId::GenshinImpact, "400000001")
+            .expect_err("prefix 4 names no Genshin server");
+
+        assert!(
+            matches!(err.code, ErrorCode::ConfigInvalid),
+            "an undetectable UID is a configuration problem, got {:?}",
+            err.code
+        );
+    }
 }

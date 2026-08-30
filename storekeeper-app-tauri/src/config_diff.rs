@@ -32,8 +32,9 @@ pub(crate) struct ConfigDiff {
 
     /// Whether game client registries need to be rebuilt.
     ///
-    /// True when any game's client-relevant fields (enabled, uid, region,
-    /// `tracked_resources`) or provider credentials changed.
+    /// Set when a game's `enabled`, `uid`, or `tracked_resources` changes, or
+    /// when provider credentials change. Client regions derive from UIDs, so
+    /// `uid` changes already trigger a registry rebuild.
     pub needs_registry_rebuild: bool,
 
     /// Games whose resources should be re-fetched from API.
@@ -145,7 +146,6 @@ trait ClientFields {
 struct ClientIdentity<'a, R> {
     enabled: bool,
     uid: &'a str,
-    region: Option<&'a storekeeper_core::Region>,
     tracked_resources: &'a [R],
 }
 
@@ -159,7 +159,6 @@ impl ClientFields for storekeeper_core::GenshinConfig {
         ClientIdentity {
             enabled: self.enabled,
             uid: &self.uid,
-            region: self.region.as_ref(),
             tracked_resources: &self.tracked_resources,
         }
     }
@@ -178,7 +177,6 @@ impl ClientFields for storekeeper_core::HsrConfig {
         ClientIdentity {
             enabled: self.enabled,
             uid: &self.uid,
-            region: self.region.as_ref(),
             tracked_resources: &self.tracked_resources,
         }
     }
@@ -197,7 +195,6 @@ impl ClientFields for storekeeper_core::ZzzConfig {
         ClientIdentity {
             enabled: self.enabled,
             uid: &self.uid,
-            region: self.region.as_ref(),
             tracked_resources: &self.tracked_resources,
         }
     }
@@ -216,7 +213,6 @@ impl ClientFields for storekeeper_core::WuwaConfig {
         ClientIdentity {
             enabled: self.enabled,
             uid: &self.uid,
-            region: self.region.as_ref(),
             tracked_resources: &self.tracked_resources,
         }
     }
@@ -293,7 +289,6 @@ mod tests {
         GenshinConfig {
             enabled: true,
             uid: "123456789".to_string(),
-            region: None,
             tracked_resources: storekeeper_core::GenshinResourceType::all().to_vec(),
             auto_claim_daily_rewards: false,
             auto_claim_time: None,
@@ -305,7 +300,6 @@ mod tests {
         WuwaConfig {
             enabled: true,
             uid: "987654321".to_string(),
-            region: None,
             tracked_resources: storekeeper_core::WuwaResourceType::all().to_vec(),
             notifications: std::collections::HashMap::new(),
         }

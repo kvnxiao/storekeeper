@@ -66,9 +66,9 @@ Users can send a preview notification from settings; it uses cached data when av
 
 ## IPC Surface
 
-Commands cover reading resources, reading and saving settings, daily reward status and claiming, and locale queries. Events cover refresh started, a single game updated, all resources updated, and a daily reward claimed. Commands return typed error codes rather than opaque strings, so the frontend can branch on the failure.
+Commands cover reading resources, reading and saving settings, daily reward status and claiming, locale queries, and deriving a game's region from its UID. Events cover refresh started, a single game updated, all resources updated, and a daily reward claimed. Commands return typed error codes rather than opaque strings, so the frontend can branch on the failure.
 
-Event names are the one contract that both sides hardcode, so each side declares them once and a Rust test asserts the frontend's declarations still match the backend's.
+Both sides hardcode shared contracts: event names, config field names and omission rules, and per-game resource keys. Rust tests read the frontend's source and compare those declarations with the backend. Renaming a contract on one side without updating the other fails `cargo test` before the mismatch affects users.
 
 ### Saving Settings Applies the Minimum
 

@@ -48,7 +48,7 @@ impl HsrClient {
         tracing::debug!(uid = %self.uid, region = ?self.region, "Fetching HSR note");
         let url = format!(
             "https://bbs-api-os.hoyolab.com/game_record/hkrpg/api/note?server={}&role_id={}",
-            self.region.hsr_region(),
+            self.region.hsr_region()?,
             self.uid
         );
 

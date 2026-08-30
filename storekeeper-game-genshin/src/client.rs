@@ -152,7 +152,7 @@ impl GenshinClient {
         tracing::debug!(uid = %self.uid, region = ?self.region, "Fetching Genshin daily note");
         let url = format!(
             "https://sg-public-api.hoyolab.com/event/game_record/genshin/api/dailyNote?server={}&role_id={}",
-            self.region.genshin_region(),
+            self.region.genshin_region()?,
             self.uid
         );
 

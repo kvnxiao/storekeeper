@@ -43,6 +43,15 @@ pub enum Error {
     /// Failed to determine region from UID.
     #[error("Could not determine region from UID: {0}")]
     UnknownUidRegion(String),
+
+    /// Region not supported by the requested game.
+    #[error("{game} has no {} server", region.as_str())]
+    UnsupportedRegion {
+        /// Game whose server mapping does not include the region.
+        game: crate::GameId,
+        /// Region absent from the game's server mapping.
+        region: crate::Region,
+    },
 }
 
 /// Result type alias using the core Error type.

@@ -74,6 +74,8 @@
   "settings_logs_open_folder": "Open Logs Folder",
 
   "settings_game_enable_tracking": "Enable {title} tracking",
+  "settings_game_region_detected": "Region: {region}",
+  "settings_game_region_unknown": "Could not determine the region from this UID",
   "settings_game_uid": "UID",
   "settings_game_uid_placeholder": "Enter your UID",
   "settings_game_auto_claim": "Auto-claim daily rewards",
