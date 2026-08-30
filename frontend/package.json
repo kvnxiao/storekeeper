@@ -40,5 +40,5 @@
     "vite-plugin-solid": "^2.11.14",
     "vite-plus": "catalog:"
   },
-  "packageManager": "pnpm@11.9.0"
+  "packageManager": "pnpm@11.24.0"
 }
