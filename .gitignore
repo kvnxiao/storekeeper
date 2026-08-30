@@ -24,3 +24,7 @@ target
 /target
 
 *.local.json
+
+# Frontend
+node_modules/
+
