@@ -47,7 +47,8 @@ pub fn t_args(key: &str, args: &[(&str, Value)]) -> String {
             Some(s) => s.clone(),
             None => return key.to_string(),
         };
-        // PluralRules is neither Send nor Sync, so it cannot be cached in state.
+        // PluralRules is neither Send nor Sync, so it cannot be cached in
+        // state.
         let plural_rules = PluralRules::try_new_cardinal(m.locale.clone().into()).ok();
         format_message(&template, args, plural_rules.as_ref())
     })
@@ -164,7 +165,8 @@ mod tests {
     fn format_duration_zero() {
         ensure_init();
         let result = format_duration(0);
-        // FieldDisplay::Always on minutes renders "0m" rather than an empty string.
+        // FieldDisplay::Always on minutes renders "0m" rather than an empty
+        // string.
         assert_eq!(result, "0m");
     }
 

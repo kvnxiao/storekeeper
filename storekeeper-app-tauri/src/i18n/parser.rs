@@ -19,7 +19,8 @@ pub(super) fn format_message(
 
     while let Some(open) = rest.find('{') {
         // Offsets come from `find` / `find_matching_brace`, so they always land
-        // on char boundaries; the `unwrap_or_default` fallbacks are unreachable.
+        // on char boundaries; the `unwrap_or_default` fallbacks are
+        // unreachable.
         result.push_str(rest.get(..open).unwrap_or_default());
         let from_open = rest.get(open..).unwrap_or_default();
 
