@@ -19,9 +19,13 @@ use storekeeper_core::serde_utils;
 /// Resin regeneration rate: 1 resin per 8 minutes = 480 seconds.
 const RESIN_REGEN_SECONDS: u32 = 480;
 
-/// Realm currency regeneration rate varies by trust rank, assume max trust rank
-/// "Fit for a King" which is 30 coins per hour.
-const REALM_REGEN_SECONDS: u32 = 120;
+/// Realm currency is credited in one hourly lump rather than per coin, so the
+/// API's `current_home_coin` only moves on the hour.
+const REALM_REGEN_SECONDS: u32 = 3600;
+
+/// Coins per hourly credit at the "Fit for a King" adeptal energy tier. A
+/// teapot below that tier credits fewer coins, so the estimate reads low.
+const REALM_STEP_COINS: u32 = 30;
 
 /// API response structure for Genshin daily note.
 #[derive(Debug, Clone, Deserialize)]
@@ -170,11 +174,12 @@ fn build_resources(note: &DailyNoteResponse, now: Timestamp) -> Vec<GenshinResou
         RESIN_REGEN_SECONDS,
     )));
 
-    resources.push(GenshinResource::RealmCurrency(StaminaResource::new(
+    resources.push(GenshinResource::RealmCurrency(StaminaResource::stepped(
         note.current_home_coin,
         note.max_home_coin,
         note.home_coin_recovery_time,
         REALM_REGEN_SECONDS,
+        REALM_STEP_COINS,
     )));
 
     if let Some(ref transformer) = note.transformer
@@ -318,6 +323,23 @@ mod tests {
         let after = Timestamp::now();
 
         assert!(transformer.ready_at >= before && transformer.ready_at <= after);
+    }
+
+    #[test]
+    fn realm_currency_accrues_in_hourly_thirty_coin_steps() {
+        let note = make_note(None, Vec::new(), 0);
+        let resources = build_resources(&note, Timestamp::now());
+
+        let realm = resources
+            .iter()
+            .find_map(|r| match r {
+                GenshinResource::RealmCurrency(stamina) => Some(stamina),
+                _ => None,
+            })
+            .expect("realm currency should be present");
+
+        assert_eq!(realm.regen_rate_seconds, 3600);
+        assert_eq!(realm.regen_step_units, 30);
     }
 
     #[test]

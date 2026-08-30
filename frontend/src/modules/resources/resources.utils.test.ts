@@ -6,6 +6,7 @@ import {
   formatTimeRemaining,
   getResourceLimitsForGame,
   isPastDateTime,
+  minutesToFull,
 } from "@/modules/resources/resources.utils";
 
 vi.mock("@/paraglide/messages", () => ({
@@ -193,7 +194,7 @@ describe("getResourceLimitsForGame", () => {
       [GameId.GenshinImpact]: [
         {
           type: "resin",
-          data: { current: 100, max: 200, fullAt: "", regenRateSeconds: 480 },
+          data: { current: 100, max: 200, fullAt: "", regenRateSeconds: 480, regenStepUnits: 1 },
         },
         {
           type: "parametric_transformer",
@@ -205,7 +206,7 @@ describe("getResourceLimitsForGame", () => {
 
   it("reports max and regen rate for stamina resources", () => {
     expect(getResourceLimitsForGame(resources, GameId.GenshinImpact)).toEqual({
-      resin: { maxValue: 200, regenRateSeconds: 480 },
+      resin: { maxValue: 200, regenRateSeconds: 480, regenStepUnits: 1 },
     });
   });
 
@@ -217,6 +218,22 @@ describe("getResourceLimitsForGame", () => {
   it("is empty for a game with no snapshot yet", () => {
     expect(getResourceLimitsForGame(undefined, GameId.GenshinImpact)).toEqual({});
     expect(getResourceLimitsForGame(resources, GameId.HonkaiStarRail)).toEqual({});
+  });
+});
+
+describe("minutesToFull", () => {
+  it("counts one step per unit", () => {
+    expect(minutesToFull({ maxValue: 200, regenRateSeconds: 480, regenStepUnits: 1 })).toBe(1600);
+  });
+
+  it("counts one step per lump", () => {
+    expect(minutesToFull({ maxValue: 2400, regenRateSeconds: 3600, regenStepUnits: 30 })).toBe(
+      4800,
+    );
+  });
+
+  it("rounds a trailing partial step up to a whole one", () => {
+    expect(minutesToFull({ maxValue: 250, regenRateSeconds: 3600, regenStepUnits: 30 })).toBe(540);
   });
 });
 

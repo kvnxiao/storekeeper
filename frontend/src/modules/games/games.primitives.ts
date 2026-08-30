@@ -2,7 +2,7 @@ import { type Accessor, createMemo } from "solid-js";
 import { core } from "@/modules/core/core.state";
 import type { GameId, GameResourceTypeMap } from "@/modules/games/games.types";
 import {
-  fillStaminaWhenDue,
+  estimateStaminaCurrent,
   readyCooldownWhenDue,
   selectResource,
 } from "@/modules/games/games.utils";
@@ -41,7 +41,7 @@ export function createStaminaResource<G extends GameId>(
   resourceType: Accessor<GameResourceTypeMap[G]>,
 ) {
   const data = createMemo(() =>
-    fillStaminaWhenDue(
+    estimateStaminaCurrent(
       selectResource(resources(), gameId(), resourceType(), isStaminaResource),
       core.tick(),
     ),

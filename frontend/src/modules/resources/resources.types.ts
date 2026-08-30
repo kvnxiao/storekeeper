@@ -7,6 +7,7 @@ export interface StaminaResource {
   max: number;
   fullAt: string; // ISO 8601 datetime
   regenRateSeconds: number;
+  regenStepUnits: number;
 }
 
 /** Cooldown resource data (camelCase from Rust) */
@@ -42,7 +43,13 @@ export interface AllResources {
 
 /** Type guards */
 export function isStaminaResource(data: unknown): data is StaminaResource {
-  return typeof data === "object" && data !== null && "current" in data && "max" in data;
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    "current" in data &&
+    "max" in data &&
+    "regenStepUnits" in data
+  );
 }
 
 export function isCooldownResource(data: unknown): data is CooldownResource {
@@ -63,6 +70,8 @@ export interface FormattedTime {
 export interface ResourceLimits {
   /** Maximum resource value (e.g., 160 for resin, 240 for trailblaze power) */
   maxValue: number;
-  /** Seconds to regenerate one unit */
+  /** Seconds between accrual steps */
   regenRateSeconds: number;
+  /** Units credited per accrual step */
+  regenStepUnits: number;
 }

@@ -1,3 +1,4 @@
+import { parseInstant } from "@/modules/core/core.utils";
 import type { GameId, GameResourceTypeMap } from "@/modules/games/games.types";
 import type {
   AllResources,
@@ -24,18 +25,29 @@ export function selectResource<G extends GameId, T>(
 }
 
 /**
- * Fills a stamina resource once its `fullAt` has passed, so fullness stays
- * consistent with the countdown the UI derives from the same timestamp between
- * backend polls.
+ * Re-derives a stamina resource's `current` from `fullAt` between backend
+ * polls, using the same timestamp as the countdown. While the resource is
+ * incomplete, clamps the estimate to the polled value when `max - current` is
+ * not divisible by the step size.
  */
-export function fillStaminaWhenDue(
+export function estimateStaminaCurrent(
   resource: StaminaResource | null,
   now: Temporal.Instant,
 ): StaminaResource | null {
-  if (!resource || resource.current >= resource.max) {
+  if (!resource || resource.current >= resource.max || resource.regenRateSeconds <= 0) {
     return resource;
   }
-  return isPastDateTime(resource.fullAt, now) ? { ...resource, current: resource.max } : resource;
+  const fullAt = parseInstant(resource.fullAt);
+  if (fullAt === null || Temporal.Instant.compare(fullAt, now) <= 0) {
+    return { ...resource, current: resource.max };
+  }
+  const secondsToFull = now.until(fullAt, {
+    largestUnit: "second",
+    smallestUnit: "second",
+    roundingMode: "trunc",
+  }).seconds;
+  const remaining = Math.ceil(secondsToFull / resource.regenRateSeconds) * resource.regenStepUnits;
+  return { ...resource, current: Math.max(resource.max - remaining, resource.current) };
 }
 
 /** Marks a cooldown resource ready once its `readyAt` has passed. */
