@@ -7,7 +7,10 @@ description: "Rustdoc requirements; public-API and module docs, the module skele
 
 ## Public API Documentation (Default)
 
-Default public library items to useful documentation that states the purpose and any invariants, failure paths, panics, or side effects the signature cannot express. Examples are appropriate when usage is not apparent from the type and name; redundant `# Arguments` sections and fixed paragraph structures are omitted.
+Default public library items to useful documentation that states the purpose and any invariants,
+failure paths, panics, or side effects the signature cannot express. Examples are appropriate when
+usage is not apparent from the type and name; redundant `# Arguments` sections and fixed paragraph
+structures are omitted.
 
 ```rust
 /// Normalize an account name for storage.
@@ -22,9 +25,10 @@ pub fn normalize_name(input: &str) -> Result<AccountName, NameError> {
 
 ## Module Documentation (Default)
 
-Default public modules to a concise model and primary entry points. An example is appropriate when it clarifies how the items compose.
+Default public modules to a concise model and primary entry points. An example is appropriate when
+it clarifies how the items compose.
 
-```rust
+````rust
 //! Load and validate application configuration.
 //!
 //! # Examples
@@ -35,13 +39,15 @@ Default public modules to a concise model and primary entry points. An example i
 //! let config = Config::from_file("config.toml")?;
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
-```
+````
 
 ## Substantial public module guide (Conditional)
 
-When a public module introduces a substantial concept or several related types, document its model, primary entry points, and selection guidance. Use headings that fit the subject; the module does not need a fixed skeleton.
+When a public module introduces a substantial concept or several related types, document its model,
+primary entry points, and selection guidance. Use headings that fit the subject; the module does not
+need a fixed skeleton.
 
-```rust
+````rust
 //! Provide facilities for civil (time-zone-less) datetimes.
 //!
 //! # Overview
@@ -62,19 +68,21 @@ When a public module introduces a substantial concept or several related types, 
 //! # When should I use civil time?
 //!
 //! Use civil time for calendar input before a time zone is known.
-```
+````
 
 ## Crate Root as Cookbook and Spec (Conditional)
 
 For a published library, the crate root:
 
-- Lists what the crate supports and does not support, with each unsupported feature linked to a tracking issue.
+- Lists what the crate supports and does not support, with each unsupported feature linked to a
+  tracking issue.
 - States the panic policy ("APIs that panic by design are few and clearly documented as such").
 - Includes a short cookbook of runnable, task-oriented examples.
 
 ## Long-Form Rationale via `include_str!` (Conditional)
 
-When long-form design rationale exists, keep it in top-level Markdown and render it into rustdoc through a hidden documentation module.
+When long-form design rationale exists, keep it in top-level Markdown and render it into rustdoc
+through a hidden documentation module.
 
 ```rust
 pub mod _documentation {
@@ -87,7 +95,8 @@ pub mod _documentation {
 
 ## Own Your `docs.rs` cfg Knob (Conditional)
 
-When a crate uses nightly-only documentation attributes, use a crate-specific cfg name instead of the shared `docsrs` name. Another crate can otherwise enable the shared cfg unexpectedly.
+When a crate uses nightly-only documentation attributes, use a crate-specific cfg name instead of
+the shared `docsrs` name. Another crate can otherwise enable the shared cfg unexpectedly.
 
 ```toml
 [package.metadata.docs.rs]

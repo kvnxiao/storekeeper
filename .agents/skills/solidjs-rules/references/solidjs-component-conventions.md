@@ -5,11 +5,15 @@ description: "Component-file conventions for SolidJS; one exported component per
 
 # Component Conventions
 
-These standards govern component files. Framework mechanics (props reactivity, children, and component types) live in the other rules.
+These standards govern component files. Framework mechanics (props reactivity, children, and
+component types) live in the other rules.
 
 ## One Exported Component Per File (Default)
 
-Default to one exported component per `.tsx` or `.jsx` file. Keep private helpers beside the exported component, and move independently reusable components to their own files. Export tightly coupled component families or compound components together when their shared contract is clearer in one module.
+Default to one exported component per `.tsx` or `.jsx` file. Keep private helpers beside the
+exported component, and move independently reusable components to their own files. Export tightly
+coupled component families or compound components together when their shared contract is clearer in
+one module.
 
 ```tsx
 interface InitialsProps {
@@ -31,7 +35,10 @@ export const UserAvatar: Component<UserAvatarProps> = (props) => (
 
 ## Declare Components as Typed Consts (Default)
 
-Default to `const PascalCase: Component<Props> = (props) => …` when the Solid component type communicates the children contract. Use a function declaration when hoisting improves module structure or when TypeScript needs a generic component signature that `Component<Props>` cannot express cleanly.
+Default to `const PascalCase: Component<Props> = (props) => …` when the Solid component type
+communicates the children contract. Use a function declaration when hoisting improves module
+structure or when TypeScript needs a generic component signature that `Component<Props>` cannot
+express cleanly.
 
 ```tsx
 import type { Component } from "solid-js";
@@ -51,7 +58,9 @@ export function Select<T>(props: SelectProps<T>) {
 
 ## Name Props `<ComponentName>Props` (Default)
 
-A component-owned contract defaults to `<ComponentName>Props`. When several components share a domain contract, the shared type uses the domain name instead of repeating the shape under component-specific names. Generic names such as `Props` lose context when imported or moved.
+A component-owned contract defaults to `<ComponentName>Props`. When several components share a
+domain contract, the shared type uses the domain name instead of repeating the shape under
+component-specific names. Generic names such as `Props` lose context when imported or moved.
 
 ```tsx
 interface UserCardProps {

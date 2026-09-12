@@ -5,11 +5,15 @@ description: "SolidJS lifecycle and ref rules; onMount/onCleanup pairing, no cle
 
 # Lifecycle and Refs
 
-Components run once, so lifecycle hooks cover mount and disposal: `onMount` runs once after the component's elements are in the DOM, and `onCleanup` runs when the owning scope disposes — on unmount, or before each re-run when registered inside an effect or memo. There is no `componentDidUpdate` equivalent; reactive computations handle updates.
+Components run once, so lifecycle hooks cover mount and disposal: `onMount` runs once after the
+component's elements are in the DOM, and `onCleanup` runs when the owning scope disposes — on
+unmount, or before each re-run when registered inside an effect or memo. There is no
+`componentDidUpdate` equivalent; reactive computations handle updates.
 
 ## Pair Every Imperative Resource With `onCleanup` (Required)
 
-Register cleanup in the same scope that creates the resource: intervals, `window` listeners, observers, third-party widget instances.
+Register cleanup in the same scope that creates the resource: intervals, `window` listeners,
+observers, third-party widget instances.
 
 ```tsx
 onMount(() => {
@@ -20,7 +24,8 @@ onMount(() => {
 
 ## Effects Do Not Return Cleanup Functions (Required)
 
-Returning a function from `createEffect` does nothing. Register `onCleanup` inside the effect instead; it runs before each re-run and on disposal.
+Returning a function from `createEffect` does nothing. Register `onCleanup` inside the effect
+instead; it runs before each re-run and on disposal.
 
 ```tsx
 createEffect(() => {
@@ -40,7 +45,8 @@ createEffect(() => {
 
 ## Refs: Assigned During Render, Ready in `onMount` (Required)
 
-Use a definite-assignment local with the `ref` attribute. The ref is set before `onMount`; perform DOM measurement in `onMount`, never in the component body.
+Use a definite-assignment local with the `ref` attribute. The ref is set before `onMount`; perform
+DOM measurement in `onMount`, never in the component body.
 
 ```tsx
 let el!: HTMLDivElement;
@@ -52,7 +58,9 @@ return <div ref={el} />;
 
 ## Signal Refs for Conditional Elements (Required)
 
-Inside `<Show>` or other control flow, a plain local can be unset or stale. Store the ref in a signal so consumers observe the element's lifetime. Solid does not unobserve a removed element or clear stored references automatically, so branch cleanup must perform both operations.
+Inside `<Show>` or other control flow, a plain local can be unset or stale. Store the ref in a
+signal so consumers observe the element's lifetime. Solid does not unobserve a removed element or
+clear stored references automatically, so branch cleanup must perform both operations.
 
 ```tsx
 const [el, setEl] = createSignal<HTMLDivElement>();
@@ -84,4 +92,5 @@ createEffect(() => {
 
 ## Plain `let` Replaces `useRef` Boxes (Default)
 
-Any `let` in the component body is a stable instance variable because the function runs once. Non-reactive instance state does not need a mutable-box wrapper.
+Any `let` in the component body is a stable instance variable because the function runs once.
+Non-reactive instance state does not need a mutable-box wrapper.
