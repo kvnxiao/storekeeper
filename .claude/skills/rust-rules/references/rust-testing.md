@@ -7,7 +7,8 @@ description: "Rust testing; insta snapshots, table and file-driven tests, invari
 
 ## Centralize snapshot settings in one macro (Default)
 
-Default `insta` assertions to one project macro when snapshots share settings such as redactions, `omit_expression`, or filters. Direct assertions remain appropriate when no project setting applies.
+Default `insta` assertions to one project macro when snapshots share settings such as redactions,
+`omit_expression`, or filters. Direct assertions remain appropriate when no project setting applies.
 
 ```rust
 #[macro_export]
@@ -20,11 +21,13 @@ macro_rules! assert_diagnostics {
 }
 ```
 
-For tests with volatile substrings such as absolute paths or timestamps, apply per-test filters before comparison.
+For tests with volatile substrings such as absolute paths or timestamps, apply per-test filters
+before comparison.
 
 ## Table-driven tests with `#[test_case]` (Default)
 
-When cases share one assertion path, default to a parameterized test instead of copied test functions. Keep separate tests when their setup or failure contracts differ.
+When cases share one assertion path, default to a parameterized test instead of copied test
+functions. Keep separate tests when their setup or failure contracts differ.
 
 ```rust
 use test_case::test_case;
@@ -40,7 +43,8 @@ fn rules(rule: Rule, path: &Path) -> Result<()> {
 
 ## File-driven tests with `datatest-stable` (Conditional)
 
-For large corpora, make each fixture file on disk its own test case. Opt out of the default libtest harness.
+For large corpora, make each fixture file on disk its own test case. Opt out of the default libtest
+harness.
 
 ```toml
 [[test]]
@@ -54,11 +58,15 @@ datatest_stable::harness!(run_test, "resources/mdtest", r"^.*\.md$");
 
 ## Make the shared test helper assert invariants (Default)
 
-Default a shared test helper to checking common invariants on each call instead of only diffing a snapshot. Each invariant failure then identifies the calling test. Useful invariants include **convergence** and preservation of syntax validity during a transformation.
+Default a shared test helper to checking common invariants on each call instead of only diffing a
+snapshot. Each invariant failure then identifies the calling test. Useful invariants include
+**convergence** and preservation of syntax validity during a transformation.
 
 ## Compile-fail UI tests with `trybuild` (Conditional)
 
-When a macro or API has misuse that must fail to compile with a useful diagnostic, use `trybuild` and commit the `.stderr` files. Keep the `rust-src` component consistent across local development and CI because its presence changes standard-library snippets in diagnostics.
+When a macro or API has misuse that must fail to compile with a useful diagnostic, use `trybuild`
+and commit the `.stderr` files. Keep the `rust-src` component consistent across local development
+and CI because its presence changes standard-library snippets in diagnostics.
 
 ```rust
 #[cfg_attr(miri, ignore = "incompatible with miri")]
@@ -74,11 +82,16 @@ fn ui() {
 components = ["rust-src"]
 ```
 
-When expected diagnostics drift after a deliberate toolchain update, run `TRYBUILD=overwrite cargo test`, inspect the diff, and commit the accepted output. When a project treats exact diagnostic text as a compatibility contract, pin the Rust toolchain and update it through a reviewed maintenance process. Trybuild does not require nightly; see its [workflow and troubleshooting guidance](https://github.com/dtolnay/trybuild#workflow).
+When expected diagnostics drift after a deliberate toolchain update, run `TRYBUILD=overwrite cargo
+test`, inspect the diff, and commit the accepted output. When a project treats exact diagnostic text
+as a compatibility contract, pin the Rust toolchain and update it through a reviewed maintenance
+process. Trybuild does not require nightly; see its
+[workflow and troubleshooting guidance](https://github.com/dtolnay/trybuild#workflow).
 
 ## Verify `no_std` with a real `no_std` crate (Required)
 
-A `#[cfg]` alone won't catch an accidental `std::` path. Add a separate crate that is genuinely `#![no_std]` and depends on yours with `default-features = false`.
+A `#[cfg]` alone won't catch an accidental `std::` path. Add a separate crate that is genuinely
+`#![no_std]` and depends on yours with `default-features = false`.
 
 ```toml
 [dependencies]
@@ -103,7 +116,8 @@ assert_impl_all!(NodeId: Ord, Send, Sync);
 
 ## Auto-trait and drop-count tests (Default)
 
-For public libraries, default to compile-time tests for the intended auto-trait surface. A stray `Rc` or raw pointer can remove `Send` or `Sync` and break callers.
+For public libraries, default to compile-time tests for the intended auto-trait surface. A stray
+`Rc` or raw pointer can remove `Send` or `Sync` and break callers.
 
 ```rust
 #[test]
@@ -115,7 +129,8 @@ fn auto_traits() {
 }
 ```
 
-When a type uses custom `Drop` or manual unsafe ownership, add a drop-counting test that asserts each value is dropped exactly once.
+When a type uses custom `Drop` or manual unsafe ownership, add a drop-counting test that asserts
+each value is dropped exactly once.
 
 ```rust
 #[test]
@@ -129,7 +144,8 @@ fn drops_source_once() {
 
 ## A release-profile test profile (Conditional)
 
-When behavior changes under `debug_assertions`, add a test profile that disables them so CI exercises the release path.
+When behavior changes under `debug_assertions`, add a test profile that disables them so CI
+exercises the release path.
 
 ```toml
 [profile.testrelease]
@@ -139,7 +155,8 @@ debug-assertions = false
 
 ## `nextest`: serialize and bound flaky tests (Conditional)
 
-When tests contend for a shared resource or can deadlock, use nextest groups and timeouts to serialize or bound them.
+When tests contend for a shared resource or can deadlock, use nextest groups and timeouts to
+serialize or bound them.
 
 ```toml
 [test-groups]
@@ -153,7 +170,8 @@ slow-timeout = { period = "1s", terminate-after = 60 }
 
 ## CI-enforce generated-code freshness (Required)
 
-If you check in generated code, fail CI when regenerating it would produce a diff; otherwise the checked-in copy can become stale.
+If you check in generated code, fail CI when regenerating it would produce a diff; otherwise the
+checked-in copy can become stale.
 
 ```sh
 cargo run -p my-cli -- generate

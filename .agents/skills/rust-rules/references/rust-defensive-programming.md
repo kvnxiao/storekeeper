@@ -5,11 +5,13 @@ description: "Defensive Rust; validate inputs at boundaries, builder pattern, ne
 
 # Defensive Programming
 
-Validate untrusted inputs at API boundaries, represent constrained values with types, return recoverable errors, and state arithmetic policy explicitly.
+Validate untrusted inputs at API boundaries, represent constrained values with types, return
+recoverable errors, and state arithmetic policy explicitly.
 
 ## Input Validation (Required)
 
-Validate external input before constructing trusted domain values. Reject missing, oversized, malformed, and out-of-range data with an actionable error.
+Validate external input before constructing trusted domain values. Reject missing, oversized,
+malformed, and out-of-range data with an actionable error.
 
 ```rust
 pub fn process_user_input(input: &str) -> Result<ProcessedData> {
@@ -31,7 +33,8 @@ pub fn process_user_input(input: &str) -> Result<ProcessedData> {
 
 ## Builder Pattern for Complex Types (Default)
 
-When a configuration has optional fields or cross-field constraints, default the builder to stored `Option` values and one complete validation in `build()`.
+When a configuration has optional fields or cross-field constraints, default the builder to stored
+`Option` values and one complete validation in `build()`.
 
 ```rust
 #[derive(Debug)]
@@ -71,7 +74,8 @@ impl ConfigBuilder {
 
 ## Newtype Pattern for Type Safety (Default)
 
-When the same primitive represents distinct domain identities, default to newtypes that prevent transposition at the call site. Keep the primitive when no domain distinction exists.
+When the same primitive represents distinct domain identities, default to newtypes that prevent
+transposition at the call site. Keep the primitive when no domain distinction exists.
 
 ```rust
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -90,7 +94,11 @@ fn get_user(id: UserId) -> Result<User> { todo!() }
 
 ## Safe Arithmetic (Required)
 
-Use checked arithmetic for untrusted or unbounded values unless the domain specifies saturation or wrapping. When overflow checks are enabled, ordinary integer overflow panics. When they are disabled, signed and unsigned integers wrap with two's-complement semantics. Integer overflow is never undefined behavior. See [Behavior not considered unsafe](https://doc.rust-lang.org/reference/behavior-not-considered-unsafe.html#integer-overflow).
+Use checked arithmetic for untrusted or unbounded values unless the domain specifies saturation or
+wrapping. When overflow checks are enabled, ordinary integer overflow panics. When they are
+disabled, signed and unsigned integers wrap with two's-complement semantics. Integer overflow is
+never undefined behavior. See
+[Behavior not considered unsafe](https://doc.rust-lang.org/reference/behavior-not-considered-unsafe.html#integer-overflow).
 
 ```rust
 let checked = a.checked_add(b).ok_or(MyLibraryError::ValidationError {

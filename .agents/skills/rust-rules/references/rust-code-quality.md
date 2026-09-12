@@ -1,19 +1,31 @@
 ---
 paths: **/*.{rs,toml}
-description: "General Rust code-quality patterns; edition and MSRV, enums over booleans and strings, #[must_use], and choosing function parameter types."
+description: "General Rust code-quality patterns; edition and MSRV, derived metadata, enums over booleans and strings, #[must_use], and choosing function parameter types."
 ---
 
 # Code Quality Standards
 
 ## Edition and MSRV (Default)
 
-Default the project to a deliberate edition and a declared minimum supported Rust version. A compatibility policy can require an older edition or compiler.
+Default the project to a deliberate edition and a declared minimum supported Rust version. A
+compatibility policy can require an older edition or compiler.
 
 ```toml
 [package]
 edition = "2024"
 rust-version = "1.95"
 ```
+
+## Derive collection and package metadata (Default)
+
+Derive collection lengths and catalog membership from their data. Read package identity from Cargo
+metadata instead of maintaining a separate version or package-name string. Keep deliberate limits,
+protocol constants, and supported-version policies explicit; they define choices that the data
+cannot determine.
+
+For tests over a catalog or fixture directory, discover members and derive counts from the fixtures.
+Keep expected parser results, serialized bytes, and golden outputs independent of the implementation
+under test.
 
 ## Prefer Enums Over Booleans (Default)
 
@@ -23,7 +35,8 @@ A `bool` parameter is opaque at the call site, and adjacent flags invite transpo
 fn process(data: &str, is_verbose: bool, is_strict: bool) {}
 ```
 
-Default to enums when callers choose among named states. Keep booleans for self-evident predicates and setters.
+Default to enums when callers choose among named states. Keep booleans for self-evident predicates
+and setters.
 
 ```rust
 #[derive(Debug, Clone, Copy)]
@@ -66,7 +79,10 @@ fn get_user_by_type(user_type: UserType) -> Result<User> {
 
 ## Use `#[must_use]` strategically (Default)
 
-When discarding an annotated type or return value likely indicates a bug, default it to `#[must_use]`. A message is appropriate only when it gives the caller a non-obvious corrective action. Types such as `Result` already carry the attribute, so a function returning them usually needs no additional annotation.
+When discarding an annotated type or return value likely indicates a bug, default it to
+`#[must_use]`. A message is appropriate only when it gives the caller a non-obvious corrective
+action. Types such as `Result` already carry the attribute, so a function returning them usually
+needs no additional annotation.
 
 ```rust
 #[must_use]
@@ -86,18 +102,25 @@ impl Lock {
 }
 ```
 
-Side-effecting functions whose return is incidental, simple getters, and expensive computations with no discard bug do not meet this criterion. Work cost alone does not justify the attribute.
+Side-effecting functions whose return is incidental, simple getters, and expensive computations with
+no discard bug do not meet this criterion. Work cost alone does not justify the attribute.
 
 ```rust
 pub fn log_event(event: &Event) -> usize { todo!() }
 pub fn len(&self) -> usize { self.items.len() }
 ```
 
-See the Rust Reference for [`must_use`](https://doc.rust-lang.org/reference/attributes/diagnostics.html#the-must_use-attribute) semantics and the rustc [`unused_must_use`](https://doc.rust-lang.org/rustc/lints/listing/warn-by-default.html#unused-must-use) lint.
+See the Rust Reference for
+[`must_use`](https://doc.rust-lang.org/reference/attributes/diagnostics.html#the-must_use-attribute)
+semantics and the rustc
+[`unused_must_use`](https://doc.rust-lang.org/rustc/lints/listing/warn-by-default.html#unused-must-use)
+lint.
 
 ## Choosing Function Parameter Types (Default)
 
-Default to concrete borrowed parameters such as `&str`, `&Utf8Path`, and `&[T]`. Use `impl AsRef<T>` for a read-only API or `impl Into<T>` for an owning API only when accepting several common caller types materially improves ergonomics.
+Default to concrete borrowed parameters such as `&str`, `&Utf8Path`, and `&[T]`. Use `impl AsRef<T>`
+for a read-only API or `impl Into<T>` for an owning API only when accepting several common caller
+types materially improves ergonomics.
 
 Borrow concrete types when callers already have the expected representation:
 
@@ -107,7 +130,8 @@ pub fn validate_name(name: &str) -> bool {
 }
 ```
 
-An `impl AsRef<T>` parameter is appropriate when callers commonly hold multiple borrowed or owned representations:
+An `impl AsRef<T>` parameter is appropriate when callers commonly hold multiple borrowed or owned
+representations:
 
 ```rust
 use camino::Utf8Path;
@@ -118,7 +142,8 @@ pub fn read_config(path: impl AsRef<Utf8Path>) -> Result<Config> {
 }
 ```
 
-An `impl Into<T>` parameter is appropriate when the function needs ownership and conversion at the boundary avoids repeated caller boilerplate:
+An `impl Into<T>` parameter is appropriate when the function needs ownership and conversion at the
+boundary avoids repeated caller boilerplate:
 
 ```rust
 impl User {
@@ -130,9 +155,9 @@ impl User {
 let user = User::new("Alice", "alice@example.com");
 ```
 
-| Scenario                         | Recommended Type            | Example                              |
-| -------------------------------- | --------------------------- | ------------------------------------ |
-| Read-only access                 | `&str`, `&Utf8Path`, `&[T]` | `fn print(msg: &str)`                |
-| Read-only, flexible input        | `impl AsRef<T>`             | `fn read(p: impl AsRef<Utf8Path>)`   |
-| Need ownership, want flexibility | `impl Into<T>`              | `fn new(name: impl Into<String>)`    |
-| Need exact type                  | Concrete type               | `fn process(data: Vec<u8>)`          |
+| Scenario                         | Recommended Type            | Example                            |
+| -------------------------------- | --------------------------- | ---------------------------------- |
+| Read-only access                 | `&str`, `&Utf8Path`, `&[T]` | `fn print(msg: &str)`              |
+| Read-only, flexible input        | `impl AsRef<T>`             | `fn read(p: impl AsRef<Utf8Path>)` |
+| Need ownership, want flexibility | `impl Into<T>`              | `fn new(name: impl Into<String>)`  |
+| Need exact type                  | Concrete type               | `fn process(data: Vec<u8>)`        |

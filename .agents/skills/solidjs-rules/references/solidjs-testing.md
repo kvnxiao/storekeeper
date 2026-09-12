@@ -7,7 +7,10 @@ description: "SolidJS testing rules; vitest + @solidjs/testing-library stack, re
 
 ## Recommended Stack (Default)
 
-Default to `vitest`, `jsdom`, `@solidjs/testing-library`, `@testing-library/user-event`, and `@testing-library/jest-dom`. Use an existing compatible test stack when migration cost outweighs consistency. `vite-plugin-solid` configures Vitest for Solid; if `solid-js` loads twice, correct `resolve.conditions` or dependency inlining.
+Default to `vitest`, `jsdom`, `@solidjs/testing-library`, `@testing-library/user-event`, and
+`@testing-library/jest-dom`. Use an existing compatible test stack when migration cost outweighs
+consistency. `vite-plugin-solid` configures Vitest for Solid; if `solid-js` loads twice, correct
+`resolve.conditions` or dependency inlining.
 
 ## `render` Takes a Function (Required)
 
@@ -25,7 +28,9 @@ const { getByRole } = render(() => <Counter />);
 
 ## Test Behavior, Not Implementation (Default)
 
-Default DOM queries to roles and accessible names, and drive interaction through `user-event`. Use a test ID when the element has no accessible semantic or stable visible text. Assert on behavior instead of signal internals.
+Default DOM queries to roles and accessible names, and drive interaction through `user-event`. Use a
+test ID when the element has no accessible semantic or stable visible text. Assert on behavior
+instead of signal internals.
 
 ```tsx
 const user = userEvent.setup();
@@ -54,7 +59,8 @@ render(() => <RouterProvider router={router} />);
 await screen.findByRole("heading");
 ```
 
-The testing library's `location` render option is `@solidjs/router`-only and does not apply to this stack.
+The testing library's `location` render option is `@solidjs/router`-only and does not apply to this
+stack.
 
 ## `renderHook` for Primitives (Default)
 
@@ -67,7 +73,8 @@ expect(result.count()).toBe(5);
 
 ## `testEffect` for Reactive Assertions (Default)
 
-When an assertion depends on a scheduled reactive update, use `testEffect` to run it inside an effect and resolve through `done()`.
+When an assertion depends on a scheduled reactive update, use `testEffect` to run it inside an
+effect and resolve through `done()`.
 
 ```tsx
 await testEffect((done) =>
