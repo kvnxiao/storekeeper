@@ -38,7 +38,7 @@ toml = "1"
 
 # Time & utilities
 jiff = { version = "0.2", features = ["serde"] }
-dirs = "6"
+dirs = "7"
 
 # Filesystem IO (errors carry path context)
 fs-err = "3"
