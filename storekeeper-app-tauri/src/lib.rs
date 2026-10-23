@@ -94,10 +94,6 @@ fn setup_app(
 /// # Errors
 ///
 /// Returns an error if the Tauri application fails to build.
-#[expect(
-    clippy::exit,
-    reason = "tauri::generate_context! expands to a process::exit path"
-)]
 pub fn run() -> Result<()> {
     let log_filter = logging::init();
     tracing::info!(

@@ -17,6 +17,14 @@ import {
 const NOW = Temporal.Instant.from("2026-08-05T12:00:00Z");
 const PAST = NOW.subtract({ minutes: 1 }).toString();
 const FUTURE = NOW.add({ minutes: 1 }).toString();
+const realm = (secondsToFull: number): StaminaResource =>
+  stamina({
+    current: 1980,
+    max: 2400,
+    fullAt: NOW.add({ seconds: secondsToFull }).toString(),
+    regenRateSeconds: 3600,
+    regenStepUnits: 30,
+  });
 
 function stamina(overrides: Partial<StaminaResource> = {}): StaminaResource {
   return {
@@ -79,15 +87,6 @@ describe("selectResource", () => {
 });
 
 describe("estimateStaminaCurrent", () => {
-  const realm = (secondsToFull: number): StaminaResource =>
-    stamina({
-      current: 1980,
-      max: 2400,
-      fullAt: NOW.add({ seconds: secondsToFull }).toString(),
-      regenRateSeconds: 3600,
-      regenStepUnits: 30,
-    });
-
   it("fills to max once fullAt has passed", () => {
     expect(estimateStaminaCurrent(stamina({ fullAt: PAST }), NOW)?.current).toBe(160);
   });

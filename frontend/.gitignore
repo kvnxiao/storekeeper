@@ -32,3 +32,4 @@ src/paraglide/
 *.njsproj
 *.sln
 *.sw?
+.vitest/
