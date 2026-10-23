@@ -25,19 +25,20 @@ vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(async (command: string) => (command === "read_log_tail" ? TAIL : undefined)),
 }));
 
-// Set a nonzero test height because jsdom reports offsetHeight as 0.
-const offsetHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "offsetHeight");
+// Set a nonzero test height because jsdom reports clientHeight as 0. The
+// virtualizer measures its scroll element with clientHeight.
+const clientHeight = Object.getOwnPropertyDescriptor(Element.prototype, "clientHeight");
 
 beforeAll(() => {
-  Object.defineProperty(HTMLElement.prototype, "offsetHeight", {
+  Object.defineProperty(Element.prototype, "clientHeight", {
     configurable: true,
     get: () => 600,
   });
 });
 
 afterAll(() => {
-  if (offsetHeight) {
-    Object.defineProperty(HTMLElement.prototype, "offsetHeight", offsetHeight);
+  if (clientHeight) {
+    Object.defineProperty(Element.prototype, "clientHeight", clientHeight);
   }
 });
 

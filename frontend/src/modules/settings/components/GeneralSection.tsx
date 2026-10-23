@@ -20,10 +20,12 @@ export interface GeneralSectionProps {
 const SYSTEM_LOCALE = "auto";
 
 // Evaluate at call time to keep labels in the active locale.
-const languageOptions = (): SelectOption<Locale | typeof SYSTEM_LOCALE>[] => [
-  { id: SYSTEM_LOCALE, label: m.settings_general_language_system_default() },
-  ...locales.map((code) => ({ id: code, label: LOCALE_ENDONYMS[code] })),
-];
+function languageOptions(): SelectOption<Locale | typeof SYSTEM_LOCALE>[] {
+  return [
+    { id: SYSTEM_LOCALE, label: m.settings_general_language_system_default() },
+    ...locales.map((code) => ({ id: code, label: LOCALE_ENDONYMS[code] })),
+  ];
+}
 
 export const GeneralSection: VoidComponent<GeneralSectionProps> = (props) => {
   return (

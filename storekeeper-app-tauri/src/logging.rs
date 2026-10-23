@@ -329,10 +329,9 @@ mod tests {
     fn read_tail_is_empty_before_any_log_is_written() {
         let dir = fixture_dir("read-tail-empty");
 
-        assert!(
-            read_tail_from(&dir, TAIL_READ_BYTES, 10)
-                .expect("a missing directory is not an error")
-                .is_empty()
+        assert_eq!(
+            read_tail_from(&dir, TAIL_READ_BYTES, 10).expect("a missing directory is not an error"),
+            Vec::<String>::new()
         );
     }
 

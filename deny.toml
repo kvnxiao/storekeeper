@@ -13,27 +13,18 @@ targets = [
 version = 2
 yanked = "deny"
 # Each ignored advisory is `unmaintained` on a transitive crate that no
-# first-party dependency selects. Re-check them when Tauri publishes a major
-# release; a vulnerability advisory is never ignored here.
+# first-party dependency selects. A vulnerability advisory is never ignored
+# here.
 ignore = [
-    # gtk-rs GTK3 bindings, pulled in by the Tauri Linux backend.
-    { id = "RUSTSEC-2024-0411", reason = "gtk3 via tauri linux backend" },
-    { id = "RUSTSEC-2024-0412", reason = "gtk3 via tauri linux backend" },
-    { id = "RUSTSEC-2024-0413", reason = "gtk3 via tauri linux backend" },
-    { id = "RUSTSEC-2024-0414", reason = "gtk3 via tauri linux backend" },
-    { id = "RUSTSEC-2024-0415", reason = "gtk3 via tauri linux backend" },
-    { id = "RUSTSEC-2024-0416", reason = "gtk3 via tauri linux backend" },
-    { id = "RUSTSEC-2024-0417", reason = "gtk3 via tauri linux backend" },
-    { id = "RUSTSEC-2024-0418", reason = "gtk3 via tauri linux backend" },
-    { id = "RUSTSEC-2024-0419", reason = "gtk3 via tauri linux backend" },
-    { id = "RUSTSEC-2024-0420", reason = "gtk3 via tauri linux backend" },
-    # rust-unic crates, reached through tauri-utils -> urlpattern.
-    { id = "RUSTSEC-2025-0075", reason = "rust-unic via tauri-utils" },
-    { id = "RUSTSEC-2025-0080", reason = "rust-unic via tauri-utils" },
-    { id = "RUSTSEC-2025-0081", reason = "rust-unic via tauri-utils" },
-    { id = "RUSTSEC-2025-0098", reason = "rust-unic via tauri-utils" },
-    { id = "RUSTSEC-2025-0100", reason = "rust-unic via tauri-utils" },
-    # proc-macro-error, a build-time transitive of the gtk3 stack.
+    # zbus 5 and its zvariant/zbus_names crates, pulled in by
+    # tauri-plugin-notification (notify-rust) and tauri-plugin-single-instance.
+    # The latest releases of both plugins still use zbus 5; re-check on each
+    # plugin update.
+    { id = "RUSTSEC-2026-0370", reason = "zvariant via zbus 5 in tauri-plugin-notification and tauri-plugin-single-instance" },
+    { id = "RUSTSEC-2026-0371", reason = "zbus_names via zbus 5 in tauri-plugin-notification and tauri-plugin-single-instance" },
+    { id = "RUSTSEC-2026-0372", reason = "zvariant_derive via zbus 5 in tauri-plugin-notification and tauri-plugin-single-instance" },
+    # proc-macro-error, a build-time transitive of gtk 0.18 (glib-macros) that
+    # Tauri pulls in; re-check on Tauri updates.
     { id = "RUSTSEC-2024-0370", reason = "proc-macro-error, build-time transitive" },
 ]
 

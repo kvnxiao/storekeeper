@@ -143,14 +143,14 @@ mod tests {
         ensure_init();
         let result = format_duration(75);
         // ICU4X may reorder or respell the units, so assert on presence only.
-        assert!(!result.is_empty());
+        assert_ne!(result, "");
     }
 
     #[test]
     fn format_duration_minutes_only() {
         ensure_init();
         let result = format_duration(30);
-        assert!(!result.is_empty());
+        assert_ne!(result, "");
     }
 
     #[test]
@@ -193,7 +193,7 @@ mod tests {
             .checked_add(jiff::SignedDuration::from_hours(1))
             .expect("adding one hour is valid");
         let result = format_time(&completion, &now);
-        assert!(!result.is_empty());
+        assert_ne!(result, "");
         assert!(
             !result.contains("Mon")
                 && !result.contains("Tue")
@@ -213,7 +213,7 @@ mod tests {
             .checked_add(jiff::SignedDuration::from_hours(48))
             .expect("adding 48 hours is valid");
         let result = format_time(&completion, &now);
-        assert!(!result.is_empty());
+        assert_ne!(result, "");
         let has_weekday = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
             .iter()
             .any(|day| result.contains(day));

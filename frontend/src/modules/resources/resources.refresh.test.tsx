@@ -82,13 +82,16 @@ function emit(name: string, payload?: unknown): void {
 }
 
 /** Resolves once the rendered text matches, instead of sleeping on a guess. */
-const showsText = (container: HTMLElement, text: string) =>
-  vi.waitFor(() => expect(container.textContent).toContain(text), {
+function showsText(container: HTMLElement, text: string) {
+  return vi.waitFor(() => expect(container.textContent).toContain(text), {
     timeout: WAIT_TIMEOUT_MS,
   });
+}
 
 /** One icon per card shell, so a re-created card shows up as a new node. */
-const cardIcons = (container: HTMLElement) => [...container.querySelectorAll("img")];
+function cardIcons(container: HTMLElement) {
+  return [...container.querySelectorAll("img")];
+}
 
 /** Stands in for the refresh button, which lives on the route's header. */
 const RefreshTrigger: VoidComponent = () => {
@@ -102,7 +105,9 @@ const RefreshTrigger: VoidComponent = () => {
 };
 
 /** The rendered game section, which a re-created gating chain would replace. */
-const genshinSection = () => screen.getByRole("button", { name: "Genshin Impact" });
+function genshinSection() {
+  return screen.getByRole("button", { name: "Genshin Impact" });
+}
 
 async function mount() {
   const view = render(() => (
