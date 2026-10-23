@@ -32,10 +32,12 @@ export interface NotificationResourceRowProps {
 }
 
 // Evaluate at call time to keep labels in the active locale.
-const modeItems = () => [
-  { id: "minutes", label: m.settings_notification_minutes_before_full() },
-  { id: "value", label: m.settings_notification_at_value() },
-];
+function modeItems() {
+  return [
+    { id: "minutes", label: m.settings_notification_minutes_before_full() },
+    { id: "value", label: m.settings_notification_at_value() },
+  ];
+}
 
 export const NotificationResourceRow: VoidComponent<NotificationResourceRowProps> = (props) => {
   const enabled = () => props.config?.enabled ?? false;
