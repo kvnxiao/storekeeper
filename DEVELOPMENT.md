@@ -76,13 +76,13 @@ settings save.
 
 GitHub Actions runs Rust linting, Rust tests, and frontend linting for pull requests and pushes to `main` (`.github/workflows/`). Run `just lint`, `just test`, and `just lint-web` locally for the checks CI runs. Run `just test-web` for frontend tests.
 
-The `Bundle installers` workflow builds installers for every pull request and push to `main` and uploads them as workflow run artifacts named `storekeeper-<platform>-<commit SHA>`:
+The `Bundle installers` workflow builds installers for every commit pushed or merged to `main` and uploads them as workflow run artifacts named `storekeeper-<platform>-<commit SHA>`:
 
 - `linux-x86_64`: AppImage, deb, and rpm packages, built on GitHub's `ubuntu-latest` runner. They require a glibc version at least as new as that runner's.
 - `macos-universal`: a universal (Apple Silicon and Intel) DMG.
 - `windows-x86_64`: NSIS and MSI installers, plus the standalone `storekeeper.exe`.
 
-Pull request artifacts use the pull request's head commit SHA. Download them from the workflow run's summary page while signed in to GitHub. Downloads are zip files that do not preserve file permissions, so on Linux, run `chmod +x` on the AppImage after extracting it. The builds are unsigned, so Windows SmartScreen warns on first launch and macOS Gatekeeper blocks the app. On macOS, run `xattr -cr /Applications/Storekeeper.app` after copying the app from the DMG to remove the quarantine attribute.
+Download them from the workflow run's summary page while signed in to GitHub. Downloads are zip files that do not preserve file permissions, so on Linux, run `chmod +x` on the AppImage after extracting it. The builds are unsigned, so Windows SmartScreen warns on first launch and macOS Gatekeeper blocks the app. On macOS, run `xattr -cr /Applications/Storekeeper.app` after copying the app from the DMG to remove the quarantine attribute.
 
 ## Further Reading
 
