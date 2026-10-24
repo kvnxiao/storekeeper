@@ -78,7 +78,7 @@ GitHub Actions runs Rust linting, Rust tests, and frontend linting for pull requ
 
 The `Bundle installers` workflow builds installers for every pull request and push to `main` and uploads them as workflow run artifacts named `storekeeper-<platform>-<commit SHA>`:
 
-- `linux-x86_64`: AppImage, deb, and rpm packages, built on Ubuntu 22.04.
+- `linux-x86_64`: AppImage, deb, and rpm packages, built on GitHub's `ubuntu-latest` runner. They require a glibc version at least as new as that runner's.
 - `macos-universal`: a universal (Apple Silicon and Intel) DMG.
 - `windows-x86_64`: NSIS and MSI installers, plus the standalone `storekeeper.exe`.
 
